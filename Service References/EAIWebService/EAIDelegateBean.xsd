@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xsd:schema xmlns:intf="http://ws.eai.hlb.com" xmlns:wsi="http://ws-i.org/profiles/basic/1.1/xsd" xmlns:wsdlsoap="http://schemas.xmlsoap.org/wsdl/soap/" xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/" xmlns:impl="http://ws.eai.hlb.com" xmlns="http://www.w3.org/2001/XMLSchema" targetNamespace="http://ws.eai.hlb.com" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <xsd:element name="serviceRequestResponse">
+    <xsd:complexType>
+      <xsd:sequence>
+        <xsd:element name="serviceRequestReturn" nillable="true" type="impl:XmlHolder" />
+      </xsd:sequence>
+    </xsd:complexType>
+  </xsd:element>
+  <xsd:element name="serviceRequest">
+    <xsd:complexType>
+      <xsd:sequence>
+        <xsd:element name="serviceId" nillable="true" type="xsd:string" />
+        <xsd:element name="xml" nillable="true" type="impl:XmlHolder" />
+      </xsd:sequence>
+    </xsd:complexType>
+  </xsd:element>
+  <xsd:complexType name="XmlHolder">
+    <xsd:sequence>
+      <xsd:element name="content" nillable="true" type="xsd:string" />
+      <xsd:element name="securedContent" type="xsd:boolean" />
+      <xsd:element name="user" nillable="true" type="xsd:string" />
+      <xsd:element name="OID" nillable="true" type="xsd:string" />
+      <xsd:element name="password" nillable="true" type="xsd:string" />
+      <xsd:element name="securedPassword" type="xsd:boolean" />
+    </xsd:sequence>
+  </xsd:complexType>
+</xsd:schema>

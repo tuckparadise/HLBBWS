@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<wsdl:definitions xmlns:ns2="http://schemas.xmlsoap.org/soap/http" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:tns="http://imp.boc.ws.thetasp.com/" xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" xmlns:ns1="http://boc.ws.thetasp.com/" name="WsEIWSLosaAppBocImpService" targetNamespace="http://imp.boc.ws.thetasp.com/" xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/">
+  <wsdl:import namespace="http://boc.ws.thetasp.com/" location="http://10.100.11.59:9081/mg/ws/WsEIWSLosaAppBocImp?wsdl=WsEIWSLosaAppBoc.wsdl" />
+  <wsdl:types />
+  <wsdl:binding name="WsEIWSLosaAppBocImpServiceSoapBinding" type="ns1:WsEIWSLosaAppBoc">
+    <soap:binding transport="http://schemas.xmlsoap.org/soap/http" />
+    <wsdl:operation name="LoanApplicationInfo">
+      <soap:operation soapAction="" style="document" />
+      <wsdl:input name="LoanApplicationInfo">
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output name="LoanApplicationInfoResponse">
+        <soap:body use="literal" />
+      </wsdl:output>
+      <wsdl:fault name="BocException">
+        <soap:fault use="literal" name="BocException" namespace="" />
+      </wsdl:fault>
+    </wsdl:operation>
+    <wsdl:operation name="PFDetailsInfo">
+      <soap:operation soapAction="" style="document" />
+      <wsdl:input name="PFDetailsInfo">
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output name="PFDetailsInfoResponse">
+        <soap:body use="literal" />
+      </wsdl:output>
+      <wsdl:fault name="BocException">
+        <soap:fault use="literal" name="BocException" namespace="" />
+      </wsdl:fault>
+    </wsdl:operation>
+    <wsdl:operation name="LoanApplicantNameAndID">
+      <soap:operation soapAction="" style="document" />
+      <wsdl:input name="LoanApplicantNameAndID">
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output name="LoanApplicantNameAndIDResponse">
+        <soap:body use="literal" />
+      </wsdl:output>
+      <wsdl:fault name="BocException">
+        <soap:fault use="literal" name="BocException" namespace="" />
+      </wsdl:fault>
+    </wsdl:operation>
+  </wsdl:binding>
+  <wsdl:service name="WsEIWSLosaAppBocImpService">
+    <wsdl:port name="WsEIWSLosaAppBocImpPort" binding="tns:WsEIWSLosaAppBocImpServiceSoapBinding">
+      <soap:address location="http://10.100.11.59:9081/mg/ws/WsEIWSLosaAppBocImp" />
+    </wsdl:port>
+  </wsdl:service>
+</wsdl:definitions>

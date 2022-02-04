@@ -1,0 +1,287 @@
+<?xml version="1.0" encoding="utf-8"?>
+<wsdl:definitions xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:ns1="http://boc.ws.thetasp.com/" name="WsEIWSLosaAppBoc" targetNamespace="http://boc.ws.thetasp.com/" xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/">
+  <wsdl:types>
+    <xsd:schema xmlns:tns="http://cxf.apache.org/arrays" attributeFormDefault="qualified" elementFormDefault="qualified" targetNamespace="http://cxf.apache.org/arrays">
+      <xsd:complexType name="ArrayOfAnyType">
+        <xsd:sequence>
+          <xsd:element minOccurs="0" maxOccurs="unbounded" name="anyType" nillable="true" type="xsd:anyType" />
+        </xsd:sequence>
+      </xsd:complexType>
+    </xsd:schema>
+    <xsd:schema xmlns:tns="http://data.ws.thetasp.com" attributeFormDefault="qualified" elementFormDefault="qualified" targetNamespace="http://data.ws.thetasp.com">
+      <xsd:complexType name="WsEIWSLosaLoanApplicantInfo">
+        <xsd:sequence>
+          <xsd:element minOccurs="0" name="appHeader" nillable="true" type="tns:WsEIWSLosaAppHeader" />
+          <xsd:element minOccurs="0" name="loanApplicants" nillable="true" type="tns:ArrayOfWsEIWSLosaLoanApplicant" />
+          <xsd:element minOccurs="0" name="loanApptFullList" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="respInfo" nillable="true" type="tns:WsEIWSLosaResponseInfo" />
+        </xsd:sequence>
+      </xsd:complexType>
+      <xsd:complexType name="WsEIWSLosaAppHeader">
+        <xsd:sequence>
+          <xsd:element minOccurs="0" name="agencyId" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="bizRefNo" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="businessArea" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="date" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="processId" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="tranxId" nillable="true" type="xsd:string" />
+        </xsd:sequence>
+      </xsd:complexType>
+      <xsd:complexType name="WsEIWSLosaFacility">
+        <xsd:sequence>
+          <xsd:element minOccurs="0" name="disbursementManner" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="facilityAmount1" nillable="true" type="xsd:decimal" />
+          <xsd:element minOccurs="0" name="facilityAmount2" nillable="true" type="xsd:decimal" />
+          <xsd:element minOccurs="0" name="facilityAmount3" nillable="true" type="xsd:decimal" />
+          <xsd:element minOccurs="0" name="facilityAmount4" nillable="true" type="xsd:decimal" />
+          <xsd:element minOccurs="0" name="gracePeriod" nillable="true" type="xsd:int" />
+          <xsd:element minOccurs="0" name="productName1" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="productName2" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="productName3" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="productName4" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="purposeCode" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="totFeesAmount" nillable="true" type="xsd:decimal" />
+          <xsd:element minOccurs="0" name="totFinancingAmount" nillable="true" type="xsd:decimal" />
+          <xsd:element minOccurs="0" name="totFinancingAmountIncFlvm" nillable="true" type="xsd:decimal" />
+          <xsd:element minOccurs="0" name="totInsAmount" nillable="true" type="xsd:decimal" />
+          <xsd:element minOccurs="0" name="totValuationFees" nillable="true" type="xsd:decimal" />
+        </xsd:sequence>
+      </xsd:complexType>
+      <xsd:complexType name="WsEIWSLosaLoanGeneralInfo">
+        <xsd:sequence>
+          <xsd:element minOccurs="0" name="appStatus" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="branchAddr1" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="branchAddr2" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="branchAddr3" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="branchAddrCity" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="branchAddrCountry" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="branchAddrPostcode" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="branchAddrState" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="branchManagerEmail" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="branchManagerName" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="closingBranch" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="lendingType" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="loAcceptanceDt" type="xsd:dateTime" />
+          <xsd:element minOccurs="0" name="mortgageCenterCode" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="mortgageCenterEmail" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="salesEmail" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="salesName" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="solicitorAccountType" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="solicitorAddr1" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="solicitorAddr2" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="solicitorAddr3" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="solicitorCity" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="solicitorCode" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="solicitorCountry" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="solicitorEmail" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="solicitorIntStatus" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="solicitorNBR" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="solicitorName" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="solicitorPostcode" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="solicitorState" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="topupLoanInd" nillable="true" type="xsd:string" />
+		  
+		 
+        </xsd:sequence>
+      </xsd:complexType>
+      <xsd:complexType name="WsEIWSLosaResponseInfo">
+        <xsd:sequence>
+          <xsd:element minOccurs="0" name="respCode" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="respDesc" nillable="true" type="xsd:string" />
+        </xsd:sequence>
+      </xsd:complexType>
+      <xsd:complexType name="ArrayOfWsEIWSLosaLoanApplicant">
+        <xsd:sequence>
+          <xsd:element minOccurs="0" maxOccurs="unbounded" name="WsEIWSLosaLoanApplicant" nillable="true" type="tns:WsEIWSLosaLoanApplicant" />
+        </xsd:sequence>
+      </xsd:complexType>
+      <xsd:complexType name="WsEIWSLosaAppLoanInfo">
+        <xsd:sequence>
+          <xsd:element minOccurs="0" name="appHeader" nillable="true" type="tns:WsEIWSLosaAppHeader" />
+          <xsd:element minOccurs="0" name="collaterals" nillable="true" type="tns:WsEIWSLosaCollateral" />
+          <xsd:element minOccurs="0" name="facilities" nillable="true" type="tns:WsEIWSLosaFacility" />
+          <xsd:element minOccurs="0" name="loanApplicationInfo" nillable="true" type="tns:WsEIWSLosaLoanGeneralInfo" />
+          <xsd:element minOccurs="0" name="loanApptPersonnelInfo" nillable="true" type="tns:WsEIWSLosaLoanApplicantPersonnelInfo" />
+          <xsd:element minOccurs="0" name="respInfo" nillable="true" type="tns:WsEIWSLosaResponseInfo" />
+        </xsd:sequence>
+      </xsd:complexType>
+      <xsd:complexType name="WsEIWSLosaCollateral">
+        <xsd:sequence>
+          <xsd:element minOccurs="0" name="buildUpArea" nillable="true" type="xsd:decimal" />
+          <xsd:element minOccurs="0" name="developerCode" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="developerName" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="financingType" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="landArea" nillable="true" type="xsd:decimal" />
+          <xsd:element minOccurs="0" name="projectCode" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="projectName" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="propertyAddress" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="propertyType" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="requiredValReportInd" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="titleDetails" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="valuerAccountNbr" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="valuerAccountType" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="valuerAddr1" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="valuerAddr2" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="valuerAddr3" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="valuerCity" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="valuerCode" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="valuerCountry" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="valuerEmail" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="valuerName" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="valuerPostcode" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="valuerState" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="verbalIndicativeValue" nillable="true" type="xsd:decimal" />
+        </xsd:sequence>
+      </xsd:complexType>
+      <xsd:complexType name="WsEIWSPfmDetailsInfo">
+        <xsd:sequence>
+          <xsd:element minOccurs="0" name="appHeader" nillable="true" type="tns:WsEIWSLosaAppHeader" />
+          <xsd:element minOccurs="0" name="developerName" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="phaseCode" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="phaseName" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="projectName" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="respInfo" nillable="true" type="tns:WsEIWSLosaResponseInfo" />
+          <xsd:element minOccurs="0" name="state" nillable="true" type="xsd:string" />
+        </xsd:sequence>
+      </xsd:complexType>
+      <xsd:complexType name="WsEIWSLosaLoanApplicant">
+        <xsd:sequence>
+          <xsd:element minOccurs="0" name="appCustNameIDNo" nillable="true" type="xsd:string" />
+        </xsd:sequence>
+      </xsd:complexType>
+      <xsd:complexType name="WsEIWSLosaLoanApplicantPersonnelInfo">
+        <xsd:sequence>
+          <xsd:element minOccurs="0" name="applicantAddr1" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="applicantAddr2" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="applicantAddr3" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="applicantAddrCity" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="applicantAddrCountry" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="applicantAddrPostcode" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="applicantAddrState" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="applicantEmails" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="applicantIDs" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="applicantNamesCombine" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="chargorIDs" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="chargorNames" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="eStatementFlagInd" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="guarantorIDs" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="guarantorNames" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="priApplicantName" nillable="true" type="xsd:string" />
+        </xsd:sequence>
+      </xsd:complexType>
+      <xsd:complexType name="AppHeader">
+        <xsd:sequence>
+          <xsd:element minOccurs="0" name="agencyId" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="bizRefNo" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="businessArea" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="date" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="processId" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="tranxId" nillable="true" type="xsd:string" />
+        </xsd:sequence>
+      </xsd:complexType>
+    </xsd:schema>
+    <xsd:schema xmlns:tns="http://lang.java" attributeFormDefault="qualified" elementFormDefault="qualified" targetNamespace="http://lang.java">
+      <xsd:complexType name="Exception">
+        <xsd:sequence />
+      </xsd:complexType>
+    </xsd:schema>
+    <xsd:schema xmlns:tns="http://exception.common.thetasp.com" xmlns:ns1="http://lang.java" xmlns:ns0="http://cxf.apache.org/arrays" attributeFormDefault="qualified" elementFormDefault="qualified" targetNamespace="http://exception.common.thetasp.com">
+      <xsd:import namespace="http://cxf.apache.org/arrays" />
+      <xsd:import namespace="http://lang.java" />
+      <xsd:complexType name="ArrayOfBocException">
+        <xsd:sequence>
+          <xsd:element minOccurs="0" maxOccurs="unbounded" name="BocException" nillable="true" type="tns:BocException" />
+        </xsd:sequence>
+      </xsd:complexType>
+      <xsd:complexType name="BocException">
+        <xsd:sequence>
+          <xsd:element minOccurs="0" name="errCode" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="exception" nillable="true" type="tns:ArrayOfBocException" />
+          <xsd:element minOccurs="0" name="msgId" nillable="true" type="xsd:string" />
+          <xsd:element minOccurs="0" name="nested" type="xsd:boolean" />
+          <xsd:element minOccurs="0" name="object" nillable="true" type="ns0:ArrayOfAnyType" />
+          <xsd:element minOccurs="0" name="userException" type="xsd:boolean" />
+          <xsd:element minOccurs="0" name="wrappedException" nillable="true" type="ns1:Exception" />
+        </xsd:sequence>
+      </xsd:complexType>
+    </xsd:schema>
+    <xsd:schema xmlns="http://boc.ws.thetasp.com/" xmlns:ns1="http://exception.common.thetasp.com" xmlns:tns="http://imp.boc.ws.thetasp.com/" xmlns:ns0="http://data.ws.thetasp.com" attributeFormDefault="unqualified" elementFormDefault="unqualified" targetNamespace="http://boc.ws.thetasp.com/">
+      <xsd:import namespace="http://data.ws.thetasp.com" />
+      <xsd:element name="LoanApplicationInfo" type="LoanApplicationInfo" />
+      <xsd:complexType name="LoanApplicationInfo">
+        <xsd:sequence>
+          <xsd:element minOccurs="0" name="AppHeader" type="ns0:AppHeader" />
+        </xsd:sequence>
+      </xsd:complexType>
+      <xsd:element name="LoanApplicationInfoResponse" type="LoanApplicationInfoResponse" />
+      <xsd:complexType name="LoanApplicationInfoResponse">
+        <xsd:sequence>
+          <xsd:element minOccurs="0" name="WsEIWSLosaAppLoanInfo" type="ns0:WsEIWSLosaAppLoanInfo" />
+        </xsd:sequence>
+      </xsd:complexType>
+      <xsd:element name="PFDetailsInfo" type="PFDetailsInfo" />
+      <xsd:complexType name="PFDetailsInfo">
+        <xsd:sequence>
+          <xsd:element minOccurs="0" name="AppHeader" type="ns0:WsEIWSLosaAppHeader" />
+        </xsd:sequence>
+      </xsd:complexType>
+      <xsd:element name="PFDetailsInfoResponse" type="PFDetailsInfoResponse" />
+      <xsd:complexType name="PFDetailsInfoResponse">
+        <xsd:sequence>
+          <xsd:element minOccurs="0" name="WsEIWSPfmDetailsInfo" type="ns0:WsEIWSPfmDetailsInfo" />
+        </xsd:sequence>
+      </xsd:complexType>
+      <xsd:element name="LoanApplicantNameAndID" type="LoanApplicantNameAndID" />
+      <xsd:complexType name="LoanApplicantNameAndID">
+        <xsd:sequence>
+          <xsd:element minOccurs="0" name="AppHeader" type="ns0:WsEIWSLosaAppHeader" />
+        </xsd:sequence>
+      </xsd:complexType>
+      <xsd:element name="LoanApplicantNameAndIDResponse" type="LoanApplicantNameAndIDResponse" />
+      <xsd:complexType name="LoanApplicantNameAndIDResponse">
+        <xsd:sequence>
+          <xsd:element minOccurs="0" name="WsEIWSLosaLoanApplicantInfo" type="ns0:WsEIWSLosaLoanApplicantInfo" />
+        </xsd:sequence>
+      </xsd:complexType>
+      <xsd:element name="BocException" nillable="true" type="ns1:BocException" />
+    </xsd:schema>
+  </wsdl:types>
+  <wsdl:message name="BocException">
+    <wsdl:part name="BocException" element="ns1:BocException" />
+  </wsdl:message>
+  <wsdl:message name="PFDetailsInfoResponse">
+    <wsdl:part name="parameters" element="ns1:PFDetailsInfoResponse" />
+  </wsdl:message>
+  <wsdl:message name="LoanApplicantNameAndID">
+    <wsdl:part name="parameters" element="ns1:LoanApplicantNameAndID" />
+  </wsdl:message>
+  <wsdl:message name="PFDetailsInfo">
+    <wsdl:part name="parameters" element="ns1:PFDetailsInfo" />
+  </wsdl:message>
+  <wsdl:message name="LoanApplicantNameAndIDResponse">
+    <wsdl:part name="parameters" element="ns1:LoanApplicantNameAndIDResponse" />
+  </wsdl:message>
+  <wsdl:message name="LoanApplicationInfo">
+    <wsdl:part name="parameters" element="ns1:LoanApplicationInfo" />
+  </wsdl:message>
+  <wsdl:message name="LoanApplicationInfoResponse">
+    <wsdl:part name="parameters" element="ns1:LoanApplicationInfoResponse" />
+  </wsdl:message>
+  <wsdl:portType name="WsEIWSLosaAppBoc">
+    <wsdl:operation name="LoanApplicationInfo">
+      <wsdl:input name="LoanApplicationInfo" message="ns1:LoanApplicationInfo" />
+      <wsdl:output name="LoanApplicationInfoResponse" message="ns1:LoanApplicationInfoResponse" />
+      <wsdl:fault name="BocException" message="ns1:BocException" />
+    </wsdl:operation>
+    <wsdl:operation name="PFDetailsInfo">
+      <wsdl:input name="PFDetailsInfo" message="ns1:PFDetailsInfo" />
+      <wsdl:output name="PFDetailsInfoResponse" message="ns1:PFDetailsInfoResponse" />
+      <wsdl:fault name="BocException" message="ns1:BocException" />
+    </wsdl:operation>
+    <wsdl:operation name="LoanApplicantNameAndID">
+      <wsdl:input name="LoanApplicantNameAndID" message="ns1:LoanApplicantNameAndID" />
+      <wsdl:output name="LoanApplicantNameAndIDResponse" message="ns1:LoanApplicantNameAndIDResponse" />
+      <wsdl:fault name="BocException" message="ns1:BocException" />
+    </wsdl:operation>
+  </wsdl:portType>
+</wsdl:definitions>

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<DiscoveryClientResultsFile xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <Results>
+    <DiscoveryClientResult referenceType="System.Web.Services.Discovery.ContractReference" url="http://10.100.11.59:9081/mg/ws/WsEIWSLosaAppBocImp?wsdl" filename="WsEIWSLosaAppBocImpService.wsdl" />
+    <DiscoveryClientResult referenceType="System.Web.Services.Discovery.ContractReference" url="http://10.100.11.59:9081/mg/ws/WsEIWSLosaAppBocImp?wsdl=WsEIWSLosaAppBoc.wsdl" filename="WsEIWSLosaAppBoc.wsdl" />
+  </Results>
+</DiscoveryClientResultsFile>
