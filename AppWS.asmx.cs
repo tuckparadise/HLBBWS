@@ -13415,7 +13415,7 @@ namespace HLBBWS
                         //end call usp_SolicitorLogin_GetExpiryWarning
 
                     }
-                    DP_CompletedSolicitorDisbursement_Attachment
+                    
                     else
                     {
                         // start call usp_SolicitorLoginSessionCheck  
