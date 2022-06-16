@@ -25,6 +25,12 @@ using System.Runtime.InteropServices;
 using System.Net.Mail;
 using System.Net.Security;
 using System.Collections;
+using System.Threading;
+using System.ServiceModel;
+using RestSharp;
+using System.Configuration;
+using System.Web.Script.Services;
+//using HttpServletRequest;
 
 namespace HLBBWS
 {
@@ -38,372 +44,20 @@ namespace HLBBWS
     [System.Web.Script.Services.ScriptService]
     public class AppWS : System.Web.Services.WebService
     {
-        [System.Runtime.Serialization.DataContract]
-        public class Workflows
-        {
-            [DataMember(Name = "itemCount")]
-            public long ItemCount
-            {
-                get;
-                set;
-            }
+       
 
-            [DataMember(Name = "workflows")]
-            public List<Workflow> K2Workflows
-            {
-                get;
-                set;
-            }
-        }
-
-        [System.Runtime.Serialization.DataContract]
-        public partial class Workflow
-        {
-            [DataMember(Name = "id")]
-            public int Id
-            {
-                get;
-                set;
-            }
-
-            [DataMember(Name = "defaultVersionId")]
-            public int DefaultVersionId
-            {
-                get;
-                set;
-            }
-
-            [DataMember(Name = "name")]
-            public string Name
-            {
-                get;
-                set;
-            }
-
-            [DataMember(Name = "folder")]
-            public string Folder
-            {
-                get;
-                set;
-            }
-
-            [DataMember(Name = "systemName")]
-            public string SystemName
-            {
-                get;
-                set;
-            }
-
-        }
-
-        [DataContract]
-        public class WorkflowInstanceXmlField
-        {
-            [DataMember(Name = "name")]
-            public string Name
-            {
-                get;
-                set;
-            }
-
-            [DataMember(Name = "value")]
-            public string Value
-            {
-                get;
-                set;
-            }
-        }
-
-        [DataContract]
-        public class ActivityDataFields { }
-
-        [System.Runtime.Serialization.DataContract]
-        public class Tasks
-        {
-            [DataMember(Name = "itemCount")]
-            public long ItemCount
-            {
-                get;
-                set;
-            }
-
-            [DataMember(Name = "tasks")]
-            public List<K2Task> K2Tasks
-            {
-                get;
-                set;
-            }
-        }
-
-        [DataContract]
-        public class K2Task
-        {
-            [DataMember(Name = "actions")]
-            public Actions Actions
-            {
-                get;
-                set;
-            }
-
-            [DataMember(Name = "activityDataFields")]
-            public ActivityDataFields ActivityDataFields
-            {
-                get;
-                set;
-            }
-
-            [DataMember(Name = "activityInstanceDestinationID")]
-            public long ActivityInstanceDestinationID
-            {
-                get;
-                set;
-            }
-
-            [DataMember(Name = "activityInstanceID")]
-            public long ActivityInstanceID
-            {
-                get;
-                set;
-            }
-
-            [DataMember(Name = "activityName")]
-            public string ActivityName
-            {
-                get;
-                set;
-            }
-
-            [DataMember(Name = "eventDescription")]
-            public string EventDescription
-            {
-                get;
-                set;
-            }
-
-            [DataMember(Name = "eventName")]
-            public string EventName
-            {
-                get;
-                set;
-            }
-
-            [DataMember(Name = "formURL")]
-            public string FormURL
-            {
-                get;
-                set;
-            }
-
-            [DataMember(Name = "instruction")]
-            public string Instruction
-            {
-                get;
-                set;
-            }
-
-            [DataMember(Name = "itemReferences")]
-            public ActivityDataFields ItemReferences
-            {
-                get;
-                set;
-            }
-
-            [DataMember(Name = "itemReferencesString")]
-            public string ItemReferencesString
-            {
-                get;
-                set;
-            }
-
-            [DataMember(Name = "originator")]
-            public Originator Originator
-            {
-                get;
-                set;
-            }
-
-            [DataMember(Name = "priority")]
-            public long Priority
-            {
-                get;
-                set;
-            }
-
-            [DataMember(Name = "serialNumber")]
-            public string SerialNumber
-            {
-                get;
-                set;
-            }
-
-            [DataMember(Name = "sleepUntil")]
-            public string SleepUntil
-            {
-                get;
-                set;
-            }
-
-            [DataMember(Name = "status")]
-            public string Status
-            {
-                get;
-                set;
-            }
-
-            [DataMember(Name = "taskStartDate")]
-            public string TaskStartDate
-            {
-                get;
-                set;
-            }
-
-            [DataMember(Name = "viewFlowURL")]
-            public string ViewFlowURL
-            {
-                get;
-                set;
-            }
-
-            [DataMember(Name = "workflowCategory")]
-            public string WorkflowCategory
-            {
-                get;
-                set;
-            }
-
-            [DataMember(Name = "workflowDisplayName")]
-            public string WorkflowDisplayName
-            {
-                get;
-                set;
-            }
-
-            [DataMember(Name = "workflowID")]
-            public long WorkflowID
-            {
-                get;
-                set;
-            }
-
-            [DataMember(Name = "workflowInstanceDataFields")]
-            public ActivityDataFields WorkflowInstanceDataFields
-            {
-                get;
-                set;
-            }
-
-            [DataMember(Name = "workflowInstanceDataFieldsString")]
-            public string WorkflowInstanceDataFieldsString
-            {
-                get;
-                set;
-            }
-
-            [DataMember(Name = "workflowInstanceFolio")]
-            public string WorkflowInstanceFolio
-            {
-                get;
-                set;
-            }
-
-            [DataMember(Name = "workflowInstanceID")]
-            public long WorkflowInstanceID
-            {
-                get;
-                set;
-            }
-
-            [DataMember(Name = "workflowInstanceXmlFields")]
-            public WorkflowInstanceXmlField[] WorkflowInstanceXmlFields
-            {
-                get;
-                set;
-            }
-
-            [DataMember(Name = "workflowName")]
-            public string WorkflowName
-            {
-                get;
-                set;
-            }
-        }
-
-        public class Actions
-        {
-            [DataMember(Name = "nonBatchableActions")]
-            public List<object> NonBatchableActions
-            {
-                get;
-                set;
-            }
-
-            [DataMember(Name = "batchableActions")]
-            public List<string> BatchableActions
-            {
-                get;
-                set;
-            }
-
-            [DataMember(Name = "systemActions")]
-            public List<string> SystemActions
-            {
-                get;
-                set;
-            }
-        }
-
-        [DataContract]
-        public class Originator
-        {
-            [DataMember(Name = "email")]
-            public string Email
-            {
-                get;
-                set;
-            }
-
-            [DataMember(Name = "manager")]
-            public string Manager
-            {
-                get;
-                set;
-            }
-
-            [DataMember(Name = "displayName")]
-            public string DisplayName
-            {
-                get;
-                set;
-            }
-
-            [DataMember(Name = "fqn")]
-            public string Fqn
-            {
-                get;
-                set;
-            }
-
-            [DataMember(Name = "username")]
-            public string Username
-            {
-                get;
-                set;
-            }
-
-
-        }
-        public enum EnumResponseType
-        {
-            ExportFile,
-            SearchFile,
-            DownloadFile,
-            DeleteFile,
-            CifDetailsInquiryByIDNo,
-            CifDetailsInquiryByCIFNum,
-            TradeTxnInquiry,
-            LdapAuthentication,
-            LdapSearchUser
-        }
+        //public enum EnumResponseType
+        //{
+        //    ExportFile,
+        //    SearchFile,
+        //    DownloadFile,
+        //    DeleteFile,
+        //    CifDetailsInquiryByIDNo,
+        //    CifDetailsInquiryByCIFNum,
+        //    TradeTxnInquiry,
+        //    LdapAuthentication,
+        //    LdapSearchUser
+        //}
 
         public class LdapAuthenticationResponseData
         {
@@ -530,7 +184,1258 @@ namespace HLBBWS
             }
             return strResult;
         }
-        
+
+        [WebMethod]
+        public void tbd_test_messagecontext()
+        {
+            System.Web.HttpContext context = System.Web.HttpContext.Current;
+
+            string IP = context.Request.UserHostName;
+
+        }
+
+        [WebMethod]
+        public void tbd_test_contextinfo()
+        {
+            DataSet ds = null;
+            DataTable dt = null;
+            SqlConnection conn = null;
+            SqlDataAdapter sqlDA = null;
+
+            string strDataSource = clsGlobal.MG_SQL_DATA_SOURCE;
+            string strDBName = clsGlobal.MG_SQL_DB_NAME;
+            string strID = clsGlobal.MG_SQL_ID;
+            string strPassword = clsGlobal.MG_SQL_PASSWORD;
+            bool blnIsWinAuth = clsGlobal.MG_SQL_IS_WIN_AUTH;
+
+            string connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Persist Security Info=True;User ID=" + strID + ";Password=" + strPassword;
+            if (blnIsWinAuth)
+            {
+                connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Integrated Security=True;";
+            }
+
+            // start get encrypted key
+            SqlConnection connBeta = null;
+            SqlDataAdapter sqlDABeta = null;
+            DataTable dtBeta = null;
+
+            connBeta = new SqlConnection(connstr);
+
+            sqlDABeta = new SqlDataAdapter();
+            sqlDABeta.SelectCommand = new SqlCommand("dbo.tbd_getcontextinfo ", connBeta);
+
+            DataSet dsBETA = new DataSet("ds");
+            sqlDABeta.Fill(dsBETA);
+
+            DataTable dtBETA = dsBETA.Tables[0];
+            string user = dtBETA.Rows[0]["user"].ToString();
+        }
+
+        [WebMethod]
+        public void tbd_sessiontest_setsession(string value)
+        {
+
+            Session["testsession"] = value;
+
+        }
+
+        [WebMethod]
+        public void tbd_sessiontest_getsession(ref string output)
+        {
+
+            output = Session["testsession"].ToString();
+
+        }
+
+
+        [WebMethod]
+        public void DP_ResetSubUserPassword2(string id, string admin, ref string receiver, ref string error)
+        {
+            error = "";
+            //ForcePasswordChange = "";
+            //PasswordExpiryWarning = "";
+            //encryptedusername = "";
+            //encryptedpassword = "";
+
+            try
+            {
+
+                DataSet ds = null;
+                DataTable dt = null;
+                SqlConnection conn = null;
+                SqlDataAdapter sqlDA = null;
+
+                string strDataSource = clsGlobal.MG_SQL_DATA_SOURCE;
+                string strDBName = clsGlobal.MG_SQL_DB_NAME;
+                string strID = clsGlobal.MG_SQL_ID;
+                string strPassword = clsGlobal.MG_SQL_PASSWORD;
+                bool blnIsWinAuth = clsGlobal.MG_SQL_IS_WIN_AUTH;
+
+                string connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Persist Security Info=True;User ID=" + strID + ";Password=" + strPassword;
+                if (blnIsWinAuth)
+                {
+                    connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Integrated Security=True;";
+                }
+
+                // start get encrypted key
+                SqlConnection connBeta = null;
+                SqlDataAdapter sqlDABeta = null;
+                DataTable dtBeta = null;
+
+                connBeta = new SqlConnection(connstr);
+
+                sqlDABeta = new SqlDataAdapter();
+                sqlDABeta.SelectCommand = new SqlCommand("dbo.usp_get_encryptionkey ", connBeta);
+
+                DataSet dsBETA = new DataSet("ds");
+                sqlDABeta.Fill(dsBETA);
+
+                DataTable dtBETA = dsBETA.Tables[0];
+                string EncryptionKey = dtBETA.Rows[0]["EncryptionKey"].ToString();
+
+                // end get encrypted key
+
+                // start call ddProjectDeveloperSubUser_PasswordReset               
+
+                //ALTER procedure[dbo].[ddProjectDeveloperSubUser_PasswordReset]
+                //@ID nvarchar(max),
+                //@LoginUserEmail nvarchar(max) = null, 	
+                // @DecryptedDefaultPassword nvarchar(max) = null output
+
+                SqlConnection connAlpha = null;
+                SqlDataAdapter sqlDAlpha = null;
+
+                connAlpha = new SqlConnection(connstr);
+
+                sqlDAlpha = new SqlDataAdapter();
+                sqlDAlpha.SelectCommand = new SqlCommand("dbo.ddProjectDeveloperSubUser_PasswordReset @ID, @LoginUserEmail, @DecryptedDefaultPassword output", connAlpha);
+                sqlDAlpha.SelectCommand.Parameters.AddWithValue("@ID", id);
+                sqlDAlpha.SelectCommand.Parameters.AddWithValue("@LoginUserEmail", admin);
+
+                sqlDAlpha.SelectCommand.Parameters.Add("@DecryptedDefaultPassword", SqlDbType.NVarChar, -1);
+                sqlDAlpha.SelectCommand.Parameters["@DecryptedDefaultPassword"].Direction = ParameterDirection.Output;
+
+                DataSet dsAlpha = new DataSet("ds");
+                sqlDAlpha.Fill(dsAlpha);
+
+                string DecryptedDefaultPassword = sqlDAlpha.SelectCommand.Parameters["@DecryptedDefaultPassword"].Value.ToString();
+                // end call ddProjectDeveloperSubUser_PasswordReset
+
+                // start gen password 
+                string encrypteddefaultpw = EncryptText(DecryptedDefaultPassword, EncryptionKey);
+                // end gen password 
+
+                // start call ddProjectDeveloperSubUser_PasswordReset_Final               
+
+                //ALTER procedure[dbo].[ddProjectDeveloperSubUser_PasswordReset_Final]
+                //@ID nvarchar(max) = null,
+                //@LoginUserEmail nvarchar(max) = null, 	
+                //@EncryptedDefaultPassword nvarchar(max) = null
+
+                connAlpha = new SqlConnection(connstr);
+
+                sqlDAlpha = new SqlDataAdapter();
+                sqlDAlpha.SelectCommand = new SqlCommand("dbo.ddProjectDeveloperSubUser_PasswordReset_Final @ID, @LoginUserEmail, @EncryptedDefaultPassword", connAlpha);
+                sqlDAlpha.SelectCommand.Parameters.AddWithValue("@ID", id);
+                sqlDAlpha.SelectCommand.Parameters.AddWithValue("@LoginUserEmail", admin);
+                sqlDAlpha.SelectCommand.Parameters.AddWithValue("@EncryptedDefaultPassword", encrypteddefaultpw);
+
+                dsAlpha = new DataSet("ds");
+                sqlDAlpha.Fill(dsAlpha);
+                // end call ddProjectDeveloperSubUser_PasswordReset_Final
+
+                // start call save log sp
+                // ALTER procedure[dbo].[ddProject_Admin_PasswordReset_SaveLog]
+                // @ID nvarchar(max) = null ,
+                // @LoginUserEmail nvarchar(max) = null
+
+                sqlDAlpha = new SqlDataAdapter();
+                sqlDAlpha.SelectCommand = new SqlCommand("dbo.ddProject_Admin_PasswordReset_SaveLog @ID, @LoginUserEmail", connAlpha);
+                sqlDAlpha.SelectCommand.Parameters.AddWithValue("@ID", id);
+                sqlDAlpha.SelectCommand.Parameters.AddWithValue("@LoginUserEmail", admin);
+               
+
+                dsAlpha = new DataSet("ds");
+                sqlDAlpha.Fill(dsAlpha);
+
+                // end call save log sp
+
+
+
+
+                // start gen email content 
+
+                //@ID nvarchar(max) = null,
+                //@password nvarchar(max) = null, 	
+                //@senderemail nvarchar(max)  = null output,
+                //@receiveremail nvarchar(max)  = null output,
+                //@emailheader nvarchar(max)  = null output,
+                //@emailbody nvarchar(max)  = null output
+
+                SqlConnection conn_GenEmail = null;
+                SqlDataAdapter sqlDA_GenEmail = null;
+
+                conn_GenEmail = new SqlConnection(connstr);
+
+                sqlDA_GenEmail = new SqlDataAdapter();
+                sqlDA_GenEmail.SelectCommand = new SqlCommand("dbo.ddProjectDeveloperSubUser_PasswordReset_GenerateEmail @ID , @password ,@senderemail output,@receiveremail output,@emailheader output,@emailbody output ", conn_GenEmail);
+                sqlDA_GenEmail.SelectCommand.Parameters.AddWithValue("@ID", id);
+                sqlDA_GenEmail.SelectCommand.Parameters.AddWithValue("@password", DecryptedDefaultPassword);
+
+
+                sqlDA_GenEmail.SelectCommand.Parameters.Add("@senderemail", SqlDbType.NVarChar, -1);
+                sqlDA_GenEmail.SelectCommand.Parameters["@senderemail"].Direction = ParameterDirection.Output;
+
+                sqlDA_GenEmail.SelectCommand.Parameters.Add("@receiveremail", SqlDbType.NVarChar, -1);
+                sqlDA_GenEmail.SelectCommand.Parameters["@receiveremail"].Direction = ParameterDirection.Output;
+
+                sqlDA_GenEmail.SelectCommand.Parameters.Add("@emailheader", SqlDbType.NVarChar, -1);
+                sqlDA_GenEmail.SelectCommand.Parameters["@emailheader"].Direction = ParameterDirection.Output;
+
+                sqlDA_GenEmail.SelectCommand.Parameters.Add("@emailbody", SqlDbType.NVarChar, -1);
+                sqlDA_GenEmail.SelectCommand.Parameters["@emailbody"].Direction = ParameterDirection.Output;
+
+                DataSet ds_GenEmail = new DataSet("ds");
+                sqlDA_GenEmail.Fill(ds_GenEmail);
+
+                string emailbody = sqlDA_GenEmail.SelectCommand.Parameters["@emailbody"].Value.ToString();
+                receiver = sqlDA_GenEmail.SelectCommand.Parameters["@receiveremail"].Value.ToString();
+                string emailheader = sqlDA_GenEmail.SelectCommand.Parameters["@emailheader"].Value.ToString();
+
+                //SendMailWFParser_NoAttachment(receiver, emailheader, emailbody);
+                //SendMail(receiver, emailheader, emailbody, null, null);
+                //Infobip enhancement 
+                SendMailV2("SendToDeveloper-ResetPassword", "DeveloperLoginID", id, emailheader, emailbody, receiver, 0, 1, "", "");
+
+
+                // end gen email content 
+
+
+                // save record 
+                /*
+                SqlConnection conn_SaveRecord = null;
+                SqlDataAdapter sqlDA_SaveRecord = null;
+
+                conn_SaveRecord = new SqlConnection(connstr);
+
+                sqlDA_SaveRecord = new SqlDataAdapter();
+                sqlDA_SaveRecord.SelectCommand = new SqlCommand("dbo.ddProject_UserIDEmail_SaveRecord @LoginID , @IsSubUser", conn_SaveRecord);
+                sqlDA_SaveRecord.SelectCommand.Parameters.AddWithValue("@LoginID", LoginID);
+                sqlDA_SaveRecord.SelectCommand.Parameters.AddWithValue("@IsSubUser", IsSubUser);
+
+
+                DataSet ds_SaveRecord = new DataSet("ds");
+                sqlDA_SaveRecord.Fill(ds_SaveRecord);
+                */
+
+                // end save record 
+            }
+            catch (Exception ex)
+            {
+                error = "DP_ResetSubUserPassword failed with exception: " + ex.Message.ToString();
+                string errorDetail;
+                errorDetail = "Input Param:" + " ID:" + id;
+                LogErrorToDB("DP_ResetSubUserPassword", "Exception", error, errorDetail);
+            }
+        }
+
+        [WebMethod]
+        public void DP_ResetSubUserPassword(string id, string admin, ref string receiver, ref string error)
+        {
+            error = "";
+            //ForcePasswordChange = "";
+            //PasswordExpiryWarning = "";
+            //encryptedusername = "";
+            //encryptedpassword = "";
+
+            try
+            {
+
+                DataSet ds = null;
+                DataTable dt = null;
+                SqlConnection conn = null;
+                SqlDataAdapter sqlDA = null;
+
+                string strDataSource = clsGlobal.MG_SQL_DATA_SOURCE;
+                string strDBName = clsGlobal.MG_SQL_DB_NAME;
+                string strID = clsGlobal.MG_SQL_ID;
+                string strPassword = clsGlobal.MG_SQL_PASSWORD;
+                bool blnIsWinAuth = clsGlobal.MG_SQL_IS_WIN_AUTH;
+
+                string connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Persist Security Info=True;User ID=" + strID + ";Password=" + strPassword;
+                if (blnIsWinAuth)
+                {
+                    connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Integrated Security=True;";
+                }
+
+                // start get encrypted key
+                SqlConnection connBeta = null;
+                SqlDataAdapter sqlDABeta = null;
+                DataTable dtBeta = null;
+
+                connBeta = new SqlConnection(connstr);
+
+                sqlDABeta = new SqlDataAdapter();
+                sqlDABeta.SelectCommand = new SqlCommand("dbo.usp_get_encryptionkey ", connBeta);
+
+                DataSet dsBETA = new DataSet("ds");
+                sqlDABeta.Fill(dsBETA);
+
+                DataTable dtBETA = dsBETA.Tables[0];
+                string EncryptionKey = dtBETA.Rows[0]["EncryptionKey"].ToString();
+
+                // end get encrypted key
+
+                // start call ddProjectDeveloperSubUser_PasswordReset               
+
+                //ALTER procedure[dbo].[ddProjectDeveloperSubUser_PasswordReset]
+                //@ID nvarchar(max),
+                //@LoginUserEmail nvarchar(max) = null, 	
+                // @DecryptedDefaultPassword nvarchar(max) = null output
+
+                SqlConnection connAlpha = null;
+                SqlDataAdapter sqlDAlpha = null;
+
+                connAlpha = new SqlConnection(connstr);
+
+                sqlDAlpha = new SqlDataAdapter();
+                sqlDAlpha.SelectCommand = new SqlCommand("dbo.ddProjectDeveloperSubUser_PasswordReset @ID, @LoginUserEmail, @DecryptedDefaultPassword output", connAlpha);
+                sqlDAlpha.SelectCommand.Parameters.AddWithValue("@ID", id);
+                sqlDAlpha.SelectCommand.Parameters.AddWithValue("@LoginUserEmail", admin);
+
+                sqlDAlpha.SelectCommand.Parameters.Add("@DecryptedDefaultPassword", SqlDbType.NVarChar, -1);
+                sqlDAlpha.SelectCommand.Parameters["@DecryptedDefaultPassword"].Direction = ParameterDirection.Output;
+
+                DataSet dsAlpha = new DataSet("ds");
+                sqlDAlpha.Fill(dsAlpha);
+
+                string DecryptedDefaultPassword = sqlDAlpha.SelectCommand.Parameters["@DecryptedDefaultPassword"].Value.ToString();
+                // end call ddProjectDeveloperSubUser_PasswordReset
+
+                // start gen password 
+                string encrypteddefaultpw = EncryptText(DecryptedDefaultPassword, EncryptionKey);
+                // end gen password 
+
+                // start call ddProjectDeveloperSubUser_PasswordReset_Final               
+
+                //ALTER procedure[dbo].[ddProjectDeveloperSubUser_PasswordReset_Final]
+                //@ID nvarchar(max) = null,
+                //@LoginUserEmail nvarchar(max) = null, 	
+                //@EncryptedDefaultPassword nvarchar(max) = null
+
+                connAlpha = new SqlConnection(connstr);
+
+                sqlDAlpha = new SqlDataAdapter();
+                sqlDAlpha.SelectCommand = new SqlCommand("dbo.ddProjectDeveloperSubUser_PasswordReset_Final @ID, @LoginUserEmail, @EncryptedDefaultPassword", connAlpha);
+                sqlDAlpha.SelectCommand.Parameters.AddWithValue("@ID", id);
+                sqlDAlpha.SelectCommand.Parameters.AddWithValue("@LoginUserEmail", admin);
+                sqlDAlpha.SelectCommand.Parameters.AddWithValue("@EncryptedDefaultPassword", encrypteddefaultpw);
+
+
+                dsAlpha = new DataSet("ds");
+                sqlDAlpha.Fill(dsAlpha);              
+                // end call ddProjectDeveloperSubUser_PasswordReset_Final
+
+
+                // start gen email content 
+
+                //@ID nvarchar(max) = null,
+                //@password nvarchar(max) = null, 	
+                //@senderemail nvarchar(max)  = null output,
+                //@receiveremail nvarchar(max)  = null output,
+                //@emailheader nvarchar(max)  = null output,
+                //@emailbody nvarchar(max)  = null output
+
+                SqlConnection conn_GenEmail = null;
+                SqlDataAdapter sqlDA_GenEmail = null;
+
+                conn_GenEmail = new SqlConnection(connstr);
+
+                sqlDA_GenEmail = new SqlDataAdapter();
+                sqlDA_GenEmail.SelectCommand = new SqlCommand("dbo.ddProjectDeveloperSubUser_PasswordReset_GenerateEmail @ID , @password ,@senderemail output,@receiveremail output,@emailheader output,@emailbody output ", conn_GenEmail);
+                sqlDA_GenEmail.SelectCommand.Parameters.AddWithValue("@ID", id);
+                sqlDA_GenEmail.SelectCommand.Parameters.AddWithValue("@password", DecryptedDefaultPassword);
+
+
+                sqlDA_GenEmail.SelectCommand.Parameters.Add("@senderemail", SqlDbType.NVarChar, -1);
+                sqlDA_GenEmail.SelectCommand.Parameters["@senderemail"].Direction = ParameterDirection.Output;
+
+                sqlDA_GenEmail.SelectCommand.Parameters.Add("@receiveremail", SqlDbType.NVarChar, -1);
+                sqlDA_GenEmail.SelectCommand.Parameters["@receiveremail"].Direction = ParameterDirection.Output;
+
+                sqlDA_GenEmail.SelectCommand.Parameters.Add("@emailheader", SqlDbType.NVarChar, -1);
+                sqlDA_GenEmail.SelectCommand.Parameters["@emailheader"].Direction = ParameterDirection.Output;
+
+                sqlDA_GenEmail.SelectCommand.Parameters.Add("@emailbody", SqlDbType.NVarChar, -1);
+                sqlDA_GenEmail.SelectCommand.Parameters["@emailbody"].Direction = ParameterDirection.Output;
+
+                DataSet ds_GenEmail = new DataSet("ds");
+                sqlDA_GenEmail.Fill(ds_GenEmail);
+
+                string emailbody = sqlDA_GenEmail.SelectCommand.Parameters["@emailbody"].Value.ToString();
+                receiver = sqlDA_GenEmail.SelectCommand.Parameters["@receiveremail"].Value.ToString();
+                string emailheader = sqlDA_GenEmail.SelectCommand.Parameters["@emailheader"].Value.ToString();
+
+                //SendMailWFParser_NoAttachment(receiver, emailheader, emailbody);
+                //SendMail(receiver, emailheader, emailbody, null, null);
+                // end gen email content 
+                //Infobip enhancement 
+                SendMailV2("SendToDeveloper-ResetPassword", "DeveloperLoginID", id, emailheader, emailbody, receiver, 0, 1, "", "");
+
+                // save record 
+                /*
+                SqlConnection conn_SaveRecord = null;
+                SqlDataAdapter sqlDA_SaveRecord = null;
+
+                conn_SaveRecord = new SqlConnection(connstr);
+
+                sqlDA_SaveRecord = new SqlDataAdapter();
+                sqlDA_SaveRecord.SelectCommand = new SqlCommand("dbo.ddProject_UserIDEmail_SaveRecord @LoginID , @IsSubUser", conn_SaveRecord);
+                sqlDA_SaveRecord.SelectCommand.Parameters.AddWithValue("@LoginID", LoginID);
+                sqlDA_SaveRecord.SelectCommand.Parameters.AddWithValue("@IsSubUser", IsSubUser);
+
+
+                DataSet ds_SaveRecord = new DataSet("ds");
+                sqlDA_SaveRecord.Fill(ds_SaveRecord);
+                */
+
+                // end save record 
+            }
+            catch (Exception ex)
+            {
+                error = "DP_ResetSubUserPassword failed with exception: " + ex.Message.ToString();
+                string errorDetail;
+                errorDetail = "Input Param:" + " ID:" + id;
+                LogErrorToDB("DP_ResetSubUserPassword", "Exception", error, errorDetail);
+            }
+        }
+
+
+        [WebMethod]
+        public void DP_UpdateSubUserPassword(string id, string password, string passwordconfirmation,  string admin, ref string error)
+        {
+            error = "";
+            //ForcePasswordChange = "";
+            //PasswordExpiryWarning = "";
+            //encryptedusername = "";
+            //encryptedpassword = "";
+
+            try
+            {
+
+                DataSet ds = null;
+                DataTable dt = null;
+                SqlConnection conn = null;
+                SqlDataAdapter sqlDA = null;
+
+                string strDataSource = clsGlobal.MG_SQL_DATA_SOURCE;
+                string strDBName = clsGlobal.MG_SQL_DB_NAME;
+                string strID = clsGlobal.MG_SQL_ID;
+                string strPassword = clsGlobal.MG_SQL_PASSWORD;
+                bool blnIsWinAuth = clsGlobal.MG_SQL_IS_WIN_AUTH;
+
+                string connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Persist Security Info=True;User ID=" + strID + ";Password=" + strPassword;
+                if (blnIsWinAuth)
+                {
+                    connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Integrated Security=True;";
+                }
+
+                // start get encrypted key
+                SqlConnection connBeta = null;
+                SqlDataAdapter sqlDABeta = null;
+                DataTable dtBeta = null;
+
+                connBeta = new SqlConnection(connstr);
+
+                sqlDABeta = new SqlDataAdapter();
+                sqlDABeta.SelectCommand = new SqlCommand("dbo.usp_get_encryptionkey ", connBeta);
+
+                DataSet dsBETA = new DataSet("ds");
+                sqlDABeta.Fill(dsBETA);
+
+                DataTable dtBETA = dsBETA.Tables[0];
+                string EncryptionKey = dtBETA.Rows[0]["EncryptionKey"].ToString();
+
+                // end get encrypted key
+
+
+
+                if (error == "")
+                {
+                    // start call ddProjectDeveloperSubUser_Update_Password sp
+
+                   // ALTER procedure[dbo].[ddProjectDeveloperSubUser_Update_Password]
+                    //@ID nvarchar(max) = null,
+                   // @Password nvarchar(max) = null,
+                   // @PasswordConfirmation nvarchar(max) = null,
+                   // @LoginUserEmail nvarchar(max) = null, 	
+                   // @Error nvarchar(max) = null output
+
+                    SqlDataAdapter sqlDAlpha_PwReset;
+                    sqlDAlpha_PwReset = new SqlDataAdapter();
+                    sqlDAlpha_PwReset.SelectCommand = new SqlCommand("dbo.ddProjectDeveloperSubUser_Update_Password @ID, @Password, @PasswordConfirmation,@LoginUserEmail, @error output ", connBeta);
+                    sqlDAlpha_PwReset.SelectCommand.Parameters.AddWithValue("@ID", id);
+                    sqlDAlpha_PwReset.SelectCommand.Parameters.AddWithValue("@Password", password);
+                    sqlDAlpha_PwReset.SelectCommand.Parameters.AddWithValue("@PasswordConfirmation", passwordconfirmation);
+                    sqlDAlpha_PwReset.SelectCommand.Parameters.AddWithValue("@LoginUserEmail", admin);
+
+                    sqlDAlpha_PwReset.SelectCommand.Parameters.Add("@Error", SqlDbType.NVarChar, -1);
+                    sqlDAlpha_PwReset.SelectCommand.Parameters["@Error"].Direction = ParameterDirection.Output;
+
+                    DataSet dsAlpha_PwReset = new DataSet("ds");
+                    sqlDAlpha_PwReset.Fill(dsAlpha_PwReset);
+
+                    error = sqlDAlpha_PwReset.SelectCommand.Parameters["@Error"].Value.ToString();
+                    // end call ddProjectDeveloperSubUser_Update_Password sp
+
+                    if (error == "")
+                    {
+                        // encrypt pw
+                        string encryptedpw = EncryptText(password, EncryptionKey);
+
+                        // start call final sp
+
+                        //ALTER procedure[dbo].[ddProjectDeveloperSubUser_Update_Password_Final]
+                        //@ID nvarchar(max) = null,
+                        //@EncryptedPassword nvarchar(max) = null,
+                        //@LoginUserEmail nvarchar(max) = null
+
+                        SqlDataAdapter sqlDAlphaFinal;
+
+                        sqlDAlphaFinal = new SqlDataAdapter();
+                        sqlDAlphaFinal.SelectCommand = new SqlCommand("dbo.ddProjectDeveloperSubUser_Update_Password_Final @ID, @EncryptedPassword,  @LoginUserEmail", connBeta);
+                        sqlDAlphaFinal.SelectCommand.Parameters.AddWithValue("@ID", id);
+                        sqlDAlphaFinal.SelectCommand.Parameters.AddWithValue("@EncryptedPassword", encryptedpw);                      
+                        sqlDAlphaFinal.SelectCommand.Parameters.AddWithValue("@LoginUserEmail", admin);
+                        
+
+                        //sqlDAlphaFinal.SelectCommand.Parameters.Add("@NewSubUserID", SqlDbType.NVarChar, -1);
+                        //sqlDAlphaFinal.SelectCommand.Parameters["@NewSubUserID"].Direction = ParameterDirection.Output;
+
+                        DataSet dsAlphaFinal = new DataSet("ds");
+                        sqlDAlphaFinal.Fill(dsAlphaFinal);
+
+                        //NewSubUserID = sqlDAlphaFinal.SelectCommand.Parameters["@NewSubUserID"].Value.ToString();
+                        // start call final sp
+                    }
+
+                }
+
+            }
+            catch (Exception ex)
+            {
+                 error = "DP_UpdateSubUserPassword failed with exception: " + ex.Message.ToString();
+                string errorDetail;
+                errorDetail = "Input Param:N/A";
+                LogErrorToDB("DP_UpdateSubUserPassword", "Exception", error, errorDetail);
+            }
+        }
+
+
+        [WebMethod]
+        public void DP_CreateSubUser(string name, string email, string status, string devcode, string admin, ref string NewSubUserID)
+        {
+            //error = "";
+            //ForcePasswordChange = "";
+            //PasswordExpiryWarning = "";
+            //encryptedusername = "";
+            //encryptedpassword = "";
+
+            try
+            {
+
+                DataSet ds = null;
+                DataTable dt = null;
+                SqlConnection conn = null;
+                SqlDataAdapter sqlDA = null;
+
+                string strDataSource = clsGlobal.MG_SQL_DATA_SOURCE;
+                string strDBName = clsGlobal.MG_SQL_DB_NAME;
+                string strID = clsGlobal.MG_SQL_ID;
+                string strPassword = clsGlobal.MG_SQL_PASSWORD;
+                bool blnIsWinAuth = clsGlobal.MG_SQL_IS_WIN_AUTH;
+
+                string connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Persist Security Info=True;User ID=" + strID + ";Password=" + strPassword;
+                if (blnIsWinAuth)
+                {
+                    connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Integrated Security=True;";
+                }
+
+                // start get encrypted key
+                SqlConnection connBeta = null;
+                SqlDataAdapter sqlDABeta = null;
+                DataTable dtBeta = null;
+
+                connBeta = new SqlConnection(connstr);
+
+                sqlDABeta = new SqlDataAdapter();
+                sqlDABeta.SelectCommand = new SqlCommand("dbo.usp_get_encryptionkey ", connBeta);
+
+                DataSet dsBETA = new DataSet("ds");
+                sqlDABeta.Fill(dsBETA);
+
+                DataTable dtBETA = dsBETA.Tables[0];
+                string EncryptionKey = dtBETA.Rows[0]["EncryptionKey"].ToString();
+
+                // end get encrypted key
+
+                // start call ddProjectDeveloperSubUser_Create
+               
+                SqlConnection connAlpha = null;
+                SqlDataAdapter sqlDAlpha = null;
+
+                connAlpha = new SqlConnection(connstr);
+                /*
+               //@ID nvarchar(max) = null,
+               //@Password nvarchar(max) = null,
+               //@Status nvarchar(max) = null,
+               //@Name nvarchar(max) = null, 	
+               //@Email nvarchar(max) = null, 	
+               //@DeveloperCode nvarchar(max) = null, 	
+               //@SADA bit = null,
+               //@LoginUserEmail nvarchar(max) = null, 	
+               //@Error nvarchar(max) = null output
+
+               sqlDAlpha = new SqlDataAdapter();
+               sqlDAlpha.SelectCommand = new SqlCommand("dbo.ddProjectDeveloperSubUser_Create @ID, @Password, @Status, @Name, @Email, @DeveloperCode, @SADA, @LoginUserEmail,  @Error output", connAlpha);
+               sqlDAlpha.SelectCommand.Parameters.AddWithValue("@ID", "");
+               sqlDAlpha.SelectCommand.Parameters.AddWithValue("@Password", "");
+               sqlDAlpha.SelectCommand.Parameters.AddWithValue("@Status", "");
+               sqlDAlpha.SelectCommand.Parameters.AddWithValue("@Name", name);
+               sqlDAlpha.SelectCommand.Parameters.AddWithValue("@Email", email);
+               sqlDAlpha.SelectCommand.Parameters.AddWithValue("@DeveloperCode", "");
+               sqlDAlpha.SelectCommand.Parameters.AddWithValue("@SADA", "");
+               sqlDAlpha.SelectCommand.Parameters.AddWithValue("@LoginUserEmail", "");
+
+               sqlDAlpha.SelectCommand.Parameters.Add("@Error", SqlDbType.NVarChar, -1);
+               sqlDAlpha.SelectCommand.Parameters["@Error"].Direction = ParameterDirection.Output;
+
+               DataSet dsAlpha = new DataSet("ds");
+               sqlDAlpha.Fill(dsAlpha);                
+
+               string error = sqlDAlpha.SelectCommand.Parameters["@Error"].Value.ToString();
+               */
+
+                string error = "";
+
+                if (error == "")
+                {
+                    // start call reseet sp
+
+                    //ALTER procedure[dbo].[ddAdmin_Project_PasswordReset]
+                    //@ProjectCode nvarchar(max),
+                    //@LoginUserEmail nvarchar(max) = null, 	
+                    //@DecryptedDefaultPassword nvarchar(max) = null output
+
+                    SqlDataAdapter sqlDAlpha_PwReset;
+                    sqlDAlpha_PwReset = new SqlDataAdapter();
+                    sqlDAlpha_PwReset.SelectCommand = new SqlCommand("dbo.ddAdmin_Project_PasswordReset @ProjectCode, @LoginUserEmail, @DecryptedDefaultPassword output ", connAlpha);
+                    sqlDAlpha_PwReset.SelectCommand.Parameters.AddWithValue("@ProjectCode", devcode);
+                    sqlDAlpha_PwReset.SelectCommand.Parameters.AddWithValue("@LoginUserEmail", admin);
+                    
+
+                    sqlDAlpha_PwReset.SelectCommand.Parameters.Add("@DecryptedDefaultPassword", SqlDbType.NVarChar, -1);
+                    sqlDAlpha_PwReset.SelectCommand.Parameters["@DecryptedDefaultPassword"].Direction = ParameterDirection.Output;
+
+                    DataSet dsAlpha_PwReset = new DataSet("ds");
+                    sqlDAlpha_PwReset.Fill(dsAlpha_PwReset);
+
+                    string decrypteddefaultpw = sqlDAlpha_PwReset.SelectCommand.Parameters["@DecryptedDefaultPassword"].Value.ToString();
+                    // end call reset sp
+
+                    // encrypt pw
+                    string encryptedpw = EncryptText(decrypteddefaultpw, EncryptionKey);
+
+                    // start call final sp
+
+                    //@ID nvarchar(max) = null,
+                    //@EncryptedPassword nvarchar(max) = null,
+                    //@Status nvarchar(max) = null,
+                    //@Name nvarchar(max) = null, 	
+                    //@Email nvarchar(max) = null, 	
+                    //@SADA bit = null,
+                    //@LoginUserEmail nvarchar(max) = null,
+                    //@DeveloperCode nvarchar(max) = null,
+                    //@NewSubUserID nvarchar(max) = null output
+
+                    SqlDataAdapter sqlDAlphaFinal;
+
+                    sqlDAlphaFinal = new SqlDataAdapter();
+                    sqlDAlphaFinal.SelectCommand = new SqlCommand("dbo.ddProjectDeveloperSubUser_Create_Final @ID, @EncryptedPassword, @Status, @Name, @Email, @SADA, @LoginUserEmail, @DeveloperCode, @NewSubUserID output", connAlpha);
+                    sqlDAlphaFinal.SelectCommand.Parameters.AddWithValue("@ID", "");
+                    sqlDAlphaFinal.SelectCommand.Parameters.AddWithValue("@EncryptedPassword", encryptedpw);
+                    sqlDAlphaFinal.SelectCommand.Parameters.AddWithValue("@Status", status);
+                    sqlDAlphaFinal.SelectCommand.Parameters.AddWithValue("@Name", name);
+                    sqlDAlphaFinal.SelectCommand.Parameters.AddWithValue("@Email", email);
+                    sqlDAlphaFinal.SelectCommand.Parameters.AddWithValue("@SADA", "");
+                    sqlDAlphaFinal.SelectCommand.Parameters.AddWithValue("@LoginUserEmail", admin);
+                    sqlDAlphaFinal.SelectCommand.Parameters.AddWithValue("@DeveloperCode", devcode);
+
+                    sqlDAlphaFinal.SelectCommand.Parameters.Add("@NewSubUserID", SqlDbType.NVarChar, -1);
+                    sqlDAlphaFinal.SelectCommand.Parameters["@NewSubUserID"].Direction = ParameterDirection.Output;
+
+                    DataSet dsAlphaFinal = new DataSet("ds");
+                    sqlDAlphaFinal.Fill(dsAlphaFinal);
+
+                     NewSubUserID = sqlDAlphaFinal.SelectCommand.Parameters["@NewSubUserID"].Value.ToString();
+                    // start call final sp
+                }
+                
+            }
+            catch (Exception ex)
+            {
+                string error = "DP_CreateSubUser failed with exception: " + ex.Message.ToString();
+                string errorDetail;
+                errorDetail = "Input Param:N/A";
+                LogErrorToDB("DP_CreateSubUser", "Exception", error, errorDetail);
+            }
+        }
+
+        [WebMethod]
+        public void DP_MailDeveloperLoginID(string LoginID, ref string error)
+        {
+            error = "";
+            //ForcePasswordChange = "";
+            //PasswordExpiryWarning = "";
+            //encryptedusername = "";
+            //encryptedpassword = "";
+
+            try
+            {
+
+                DataSet ds = null;
+                DataTable dt = null;
+                SqlConnection conn = null;
+                SqlDataAdapter sqlDA = null;
+
+                string strDataSource = clsGlobal.MG_SQL_DATA_SOURCE;
+                string strDBName = clsGlobal.MG_SQL_DB_NAME;
+                string strID = clsGlobal.MG_SQL_ID;
+                string strPassword = clsGlobal.MG_SQL_PASSWORD;
+                bool blnIsWinAuth = clsGlobal.MG_SQL_IS_WIN_AUTH;
+
+                string connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Persist Security Info=True;User ID=" + strID + ";Password=" + strPassword;
+                if (blnIsWinAuth)
+                {
+                    connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Integrated Security=True;";
+                }
+
+                // start get encrypted key
+                SqlConnection connBeta = null;
+                SqlDataAdapter sqlDABeta = null;
+                DataTable dtBeta = null;
+
+                connBeta = new SqlConnection(connstr);
+
+                sqlDABeta = new SqlDataAdapter();
+                sqlDABeta.SelectCommand = new SqlCommand("dbo.usp_get_encryptionkey ", connBeta);
+
+                DataSet dsBETA = new DataSet("ds");
+                sqlDABeta.Fill(dsBETA);
+
+                DataTable dtBETA = dsBETA.Tables[0];
+                string EncryptionKey = dtBETA.Rows[0]["EncryptionKey"].ToString();
+
+                // end get encrypted key
+
+                // start get login detail               
+
+                SqlConnection connAlpha = null;
+                SqlDataAdapter sqlDAlpha = null;
+
+                connAlpha = new SqlConnection(connstr);
+
+                sqlDAlpha = new SqlDataAdapter();
+                sqlDAlpha.SelectCommand = new SqlCommand("dbo.ddProject_UserIDEmail_Select @LoginID", connAlpha);
+                sqlDAlpha.SelectCommand.Parameters.AddWithValue("@LoginID", LoginID);               
+
+                DataSet dsAlpha = new DataSet("ds");
+                sqlDAlpha.Fill(dsAlpha);
+                
+                DataTable dtAlpha = dsAlpha.Tables[0];
+                
+                string Password = dtAlpha.Rows[0]["Password"].ToString();
+                string Email = dtAlpha.Rows[0]["Email"].ToString();
+                string IsSubUser = dtAlpha.Rows[0]["IsSubUser"].ToString();
+
+                // end get login detail
+
+                // start gen password 
+                string decryptedpw = DecryptText(Password, EncryptionKey);
+                // end gen password 
+
+                // start gen email content 
+                SqlConnection conn_GenEmail = null;
+                SqlDataAdapter sqlDA_GenEmail = null;               
+
+                conn_GenEmail = new SqlConnection(connstr);
+
+                sqlDA_GenEmail = new SqlDataAdapter();
+                sqlDA_GenEmail.SelectCommand = new SqlCommand("dbo.ddProject_UserIDEmail_GenerateEmail @LoginID , @DecryptedPassword ,@Receiver ,@IsSubUser ,@EmailHeader output,@EmailContent output,@EmailSender output,@EmailReceiver output ", conn_GenEmail);
+                sqlDA_GenEmail.SelectCommand.Parameters.AddWithValue("@LoginID", LoginID);
+                sqlDA_GenEmail.SelectCommand.Parameters.AddWithValue("@DecryptedPassword", decryptedpw);
+                sqlDA_GenEmail.SelectCommand.Parameters.AddWithValue("@Receiver", Email);
+                sqlDA_GenEmail.SelectCommand.Parameters.AddWithValue("@IsSubUser", IsSubUser);
+
+                sqlDA_GenEmail.SelectCommand.Parameters.Add("@EmailHeader", SqlDbType.NVarChar, -1);
+                sqlDA_GenEmail.SelectCommand.Parameters["@EmailHeader"].Direction = ParameterDirection.Output;
+
+                sqlDA_GenEmail.SelectCommand.Parameters.Add("@EmailContent", SqlDbType.NVarChar, -1);
+                sqlDA_GenEmail.SelectCommand.Parameters["@EmailContent"].Direction = ParameterDirection.Output;
+
+                sqlDA_GenEmail.SelectCommand.Parameters.Add("@EmailSender", SqlDbType.NVarChar, -1);
+                sqlDA_GenEmail.SelectCommand.Parameters["@EmailSender"].Direction = ParameterDirection.Output;
+
+                sqlDA_GenEmail.SelectCommand.Parameters.Add("@EmailReceiver", SqlDbType.NVarChar, -1);
+                sqlDA_GenEmail.SelectCommand.Parameters["@EmailReceiver"].Direction = ParameterDirection.Output;
+
+                DataSet ds_GenEmail = new DataSet("ds");
+                sqlDA_GenEmail.Fill(ds_GenEmail);
+
+                string EmailHeader = sqlDA_GenEmail.SelectCommand.Parameters["@EmailHeader"].Value.ToString();
+                string EmailContent = sqlDA_GenEmail.SelectCommand.Parameters["@EmailContent"].Value.ToString();
+                string EmailReceiver = sqlDA_GenEmail.SelectCommand.Parameters["@EmailReceiver"].Value.ToString();
+
+                //SendMailWFParser_NoAttachment(EmailReceiver, EmailHeader, EmailContent);
+                //SendMail(EmailReceiver, EmailHeader, EmailContent, null, null);
+                // end gen email content 
+                //Infobip enhancement 
+               SendMailV2("SendToDeveloper-SendLoginID", "DeveloperLoginID", LoginID, EmailHeader, EmailContent, EmailReceiver, 0, 1, "", "");
+
+                // save record 
+                SqlConnection conn_SaveRecord = null;
+                SqlDataAdapter sqlDA_SaveRecord = null;
+
+                conn_SaveRecord = new SqlConnection(connstr);
+
+                sqlDA_SaveRecord = new SqlDataAdapter();
+                sqlDA_SaveRecord.SelectCommand = new SqlCommand("dbo.ddProject_UserIDEmail_SaveRecord @LoginID , @IsSubUser", conn_SaveRecord);
+                sqlDA_SaveRecord.SelectCommand.Parameters.AddWithValue("@LoginID", LoginID);
+                sqlDA_SaveRecord.SelectCommand.Parameters.AddWithValue("@IsSubUser", IsSubUser);
+              
+
+                DataSet ds_SaveRecord = new DataSet("ds");
+                sqlDA_SaveRecord.Fill(ds_SaveRecord);
+                
+               
+                // end save record 
+            }
+            catch (Exception ex)
+            {
+                error = "DP_MailDeveloperLoginID failed with exception: " + ex.Message.ToString();
+                string errorDetail;
+                errorDetail = "Input Param:" + " LoginID:" + LoginID;
+                LogErrorToDB("DP_MailDeveloperLoginID", "Exception", error, errorDetail);
+            }
+        }
+
+        [WebMethod]
+        public void DP_DeveloperLogin_V2(string DevCode, string DevPassword, ref string ForcePasswordChange, ref string PasswordExpiryWarning, ref string error, ref string encryptedusername, ref string encryptedpassword, ref string sessionid)
+        {
+            error = "";
+            ForcePasswordChange = "";
+            PasswordExpiryWarning = "";
+            encryptedusername = "";
+            encryptedpassword = "";
+
+            try
+            {
+
+                DataSet ds = null;
+                DataTable dt = null;
+                SqlConnection conn = null;
+                SqlDataAdapter sqlDA = null;
+
+                string strDataSource = clsGlobal.MG_SQL_DATA_SOURCE;
+                string strDBName = clsGlobal.MG_SQL_DB_NAME;
+                string strID = clsGlobal.MG_SQL_ID;
+                string strPassword = clsGlobal.MG_SQL_PASSWORD;
+                bool blnIsWinAuth = clsGlobal.MG_SQL_IS_WIN_AUTH;
+
+                string connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Persist Security Info=True;User ID=" + strID + ";Password=" + strPassword;
+                if (blnIsWinAuth)
+                {
+                    connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Integrated Security=True;";
+                }
+
+                // start get encrypted key
+                SqlConnection connBeta = null;
+                SqlDataAdapter sqlDABeta = null;
+                DataTable dtBeta = null;
+
+                connBeta = new SqlConnection(connstr);
+
+                sqlDABeta = new SqlDataAdapter();
+                sqlDABeta.SelectCommand = new SqlCommand("dbo.usp_get_encryptionkey ", connBeta);
+
+                DataSet dsBETA = new DataSet("ds");
+                sqlDABeta.Fill(dsBETA);
+
+                DataTable dtBETA = dsBETA.Tables[0];
+                string EncryptionKey = dtBETA.Rows[0]["EncryptionKey"].ToString();
+
+                // end get encrypted key
+
+                // start call usp_SQDeveloper_Login                               
+
+                SqlConnection connAlpha = null;
+                SqlDataAdapter sqlDAlpha = null;
+
+                connAlpha = new SqlConnection(connstr);
+
+                sqlDAlpha = new SqlDataAdapter();
+                sqlDAlpha.SelectCommand = new SqlCommand("dbo.ddProject_Login @DeveloperCode, @DeveloperPassword, @error output ", connAlpha);
+                sqlDAlpha.SelectCommand.Parameters.AddWithValue("@DeveloperCode", DevCode);
+                sqlDAlpha.SelectCommand.Parameters.AddWithValue("@DeveloperPassword", DevPassword);
+
+                sqlDAlpha.SelectCommand.Parameters.Add("@error", SqlDbType.NVarChar, 4000);
+                sqlDAlpha.SelectCommand.Parameters["@error"].Direction = ParameterDirection.Output;
+
+                DataSet dsAlpha = new DataSet("ds");
+                sqlDAlpha.Fill(dsAlpha);
+
+                error = sqlDAlpha.SelectCommand.Parameters["@error"].Value.ToString();
+
+                // end call usp_SQDeveloper_Login
+
+                if (error == "")
+                {
+                    // start call usp_SQLDeveloper_getPassword     
+
+                    SqlConnection connPRE = null;
+                    SqlDataAdapter sqlDAPRE = null;
+
+                    connPRE = new SqlConnection(connstr);
+
+                    sqlDAPRE = new SqlDataAdapter();
+                    sqlDAPRE.SelectCommand = new SqlCommand("dbo.ddProject_getPassword @DeveloperCode, @DeveloperPassword output,@EncryptionKey output ", connPRE);
+                    sqlDAPRE.SelectCommand.Parameters.AddWithValue("@DeveloperCode", DevCode);
+
+                    sqlDAPRE.SelectCommand.Parameters.Add("@DeveloperPassword", SqlDbType.NVarChar, 4000);
+                    sqlDAPRE.SelectCommand.Parameters["@DeveloperPassword"].Direction = ParameterDirection.Output;
+
+                    sqlDAPRE.SelectCommand.Parameters.Add("@EncryptionKey", SqlDbType.NVarChar, 4000);
+                    sqlDAPRE.SelectCommand.Parameters["@EncryptionKey"].Direction = ParameterDirection.Output;
+
+                    DataSet dsPRE = new DataSet("ds");
+                    sqlDAPRE.Fill(dsPRE);
+
+                    string EncryptedDeveloperPasswordFromDB = sqlDAPRE.SelectCommand.Parameters["@DeveloperPassword"].Value.ToString();
+
+                    // end call usp_SQLDeveloper_getPassword     
+
+                    string DecryptedDeveloperPasswordFromDB = DecryptText(EncryptedDeveloperPasswordFromDB, EncryptionKey);
+
+                    if (DecryptedDeveloperPasswordFromDB == DevPassword)
+                    {
+                        //start call usp_DeveloperLogin_ForcePasswordChangeCheck
+                        SqlConnection connEpsilon = null;
+                        SqlDataAdapter sqlDAEpsilon = null;
+                        DataTable dtEpsilon = null;
+
+                        connEpsilon = new SqlConnection(connstr);
+
+                        sqlDAEpsilon = new SqlDataAdapter();
+                        sqlDAEpsilon.SelectCommand = new SqlCommand("dbo.ddProjectLogin_ForcePasswordChangeCheck @DeveloperCode,@error output ", connEpsilon);
+                        sqlDAEpsilon.SelectCommand.Parameters.AddWithValue("@DeveloperCode", DevCode);
+
+                        sqlDAEpsilon.SelectCommand.Parameters.Add("@error", SqlDbType.NVarChar, 4000);
+                        sqlDAEpsilon.SelectCommand.Parameters["@error"].Direction = ParameterDirection.Output;
+
+                        DataSet dsEpsilon = new DataSet("ds");
+                        sqlDAEpsilon.Fill(dsEpsilon);
+
+                        ForcePasswordChange = sqlDAEpsilon.SelectCommand.Parameters["@error"].Value.ToString();
+                        //end call usp_DeveloperLogin_ForcePasswordChangeCheck
+
+                        //start call usp_DeveloperLogin_GetExpiryWarning
+                        SqlConnection connZata = null;
+                        SqlDataAdapter sqlDAZata = null;
+                        DataTable dtZata = null;
+
+                        connZata = new SqlConnection(connstr);
+
+                        sqlDAZata = new SqlDataAdapter();
+                        sqlDAZata.SelectCommand = new SqlCommand("dbo.ddProjectLogin_GetExpiryWarning @DeveloperCode,@error output ", connZata);
+                        sqlDAZata.SelectCommand.Parameters.AddWithValue("@DeveloperCode", DevCode);
+
+                        sqlDAZata.SelectCommand.Parameters.Add("@error", SqlDbType.NVarChar, 4000);
+                        sqlDAZata.SelectCommand.Parameters["@error"].Direction = ParameterDirection.Output;
+
+                        DataSet dsZata = new DataSet("ds");
+                        sqlDAZata.Fill(dsZata);
+
+                        PasswordExpiryWarning = sqlDAZata.SelectCommand.Parameters["@error"].Value.ToString();
+                        //end call usp_DeveloperLogin_GetExpiryWarning
+
+                        encryptedusername = EncryptText(DevCode, EncryptionKey);
+                        encryptedpassword = EncryptText(DecryptedDeveloperPasswordFromDB, EncryptionKey);
+
+                        //DataSet dsSession = null;
+                        DataTable dtSession = null;
+                        SqlConnection connSession = null;
+                        SqlDataAdapter sqlDASession = null;
+
+                        string strDataSourceSession = clsGlobal.MG_SQL_DATA_SOURCE;
+                        string strDBNameSession = clsGlobal.MG_SQL_DB_NAME;
+                        string strIDSession = clsGlobal.MG_SQL_ID;
+                        string strPasswordSession = clsGlobal.MG_SQL_PASSWORD;
+                        bool blnIsWinAuthSession = clsGlobal.MG_SQL_IS_WIN_AUTH;
+
+                        connSession = new SqlConnection(connstr);
+
+                        sqlDASession = new SqlDataAdapter();
+                        sqlDASession.SelectCommand = new SqlCommand("dbo.ddProjectSession_Create2 @DeveloperCode,@ClientSessionID output,@error output ", connSession);
+                        sqlDASession.SelectCommand.Parameters.AddWithValue("@DeveloperCode", DevCode);
+
+                        sqlDASession.SelectCommand.Parameters.Add("@ClientSessionID", SqlDbType.BigInt);
+                        sqlDASession.SelectCommand.Parameters["@ClientSessionID"].Direction = ParameterDirection.Output;
+
+                        sqlDASession.SelectCommand.Parameters.Add("@error", SqlDbType.NVarChar, 4000);
+                        sqlDASession.SelectCommand.Parameters["@error"].Direction = ParameterDirection.Output;
+
+                        DataSet dsSession = new DataSet("ds");
+                        sqlDASession.Fill(dsSession);
+
+                        sessionid = sqlDASession.SelectCommand.Parameters["@ClientSessionID"].Value.ToString();
+                    }
+                    else
+                    {
+                        // start call usp_DeveloperLoginSessionCheck  
+                        SqlConnection connDELTA = null;
+                        SqlDataAdapter sqlDADELTA = null;
+                        DataTable dtDELTA = null;
+
+                        connDELTA = new SqlConnection(connstr);
+
+                        sqlDADELTA = new SqlDataAdapter();
+                        sqlDADELTA.SelectCommand = new SqlCommand("dbo.ddProjectLoginSessionCheck @DeveloperCode,  @error output", connDELTA);
+                        sqlDADELTA.SelectCommand.Parameters.AddWithValue("@DeveloperCode", DevCode);
+
+                        sqlDADELTA.SelectCommand.Parameters.Add("@error", SqlDbType.NVarChar, 4000);
+                        sqlDADELTA.SelectCommand.Parameters["@error"].Direction = ParameterDirection.Output;
+
+                        DataSet dsDELTA = new DataSet("ds");
+                        sqlDADELTA.Fill(dsDELTA);
+
+                        error = sqlDADELTA.SelectCommand.Parameters["@error"].Value.ToString();
+
+                        //end call usp_DeveloperLoginSessionCheck
+
+                        if (error == "")
+                        {
+                            //start call usp_DeveloperLogin_getNumberOfTrialLeft
+                            SqlConnection connGAMA = null;
+                            SqlDataAdapter sqlDAGAMA = null;
+                            DataTable dtGAMA = null;
+
+                            connGAMA = new SqlConnection(connstr);
+
+                            sqlDAGAMA = new SqlDataAdapter();
+                            sqlDAGAMA.SelectCommand = new SqlCommand("dbo.ddProjectLogin_getNumberOfTrialLeft @DeveloperCode,@error output ", connGAMA);
+                            sqlDAGAMA.SelectCommand.Parameters.AddWithValue("@DeveloperCode", DevCode);
+
+                            sqlDAGAMA.SelectCommand.Parameters.Add("@error", SqlDbType.NVarChar, 4000);
+                            sqlDAGAMA.SelectCommand.Parameters["@error"].Direction = ParameterDirection.Output;
+
+                            DataSet dsGAMA = new DataSet("ds");
+                            sqlDAGAMA.Fill(dsGAMA);
+
+                            error = dsGAMA.Tables[0].Rows[0]["msg"].ToString();
+
+                            //end call usp_DeveloperLogin_getNumberOfTrialLeft
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                error = "DP_DeveloperLogin failed with exception: " + ex.Message.ToString();
+                string errorDetail;
+                errorDetail = "Input Param:" + " DevCode:" + DevCode;
+                LogErrorToDB("DP_DeveloperLogin", "Exception", error, errorDetail);
+            }
+        }
+
+
+        [WebMethod]
+        public void DP_DeveloperForcePasswordChangeLogin_v2(string EncryptedUIDevCode, string EncryptedUIDevPassword, ref string error, ref string devcode)
+        {
+            error = "";
+
+            string DecryptedUIDevCode = "";
+            string DecryptedUIDevPassword = "";
+
+            try
+            {
+
+                DataSet ds = null;
+                DataTable dt = null;
+                SqlConnection conn = null;
+                SqlDataAdapter sqlDA = null;
+
+                string strDataSource = clsGlobal.MG_SQL_DATA_SOURCE;
+                string strDBName = clsGlobal.MG_SQL_DB_NAME;
+                string strID = clsGlobal.MG_SQL_ID;
+                string strPassword = clsGlobal.MG_SQL_PASSWORD;
+                bool blnIsWinAuth = clsGlobal.MG_SQL_IS_WIN_AUTH;
+
+                string connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Persist Security Info=True;User ID=" + strID + ";Password=" + strPassword;
+                if (blnIsWinAuth)
+                {
+                    connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Integrated Security=True;";
+                }
+
+                // start get encrypted key
+                SqlConnection connBeta = null;
+                SqlDataAdapter sqlDABeta = null;
+                DataTable dtBeta = null;
+
+                connBeta = new SqlConnection(connstr);
+
+                sqlDABeta = new SqlDataAdapter();
+                sqlDABeta.SelectCommand = new SqlCommand("dbo.usp_get_encryptionkey ", connBeta);
+
+                DataSet dsBETA = new DataSet("ds");
+                sqlDABeta.Fill(dsBETA);
+
+                DataTable dtBETA = dsBETA.Tables[0];
+                string EncryptionKey = dtBETA.Rows[0]["EncryptionKey"].ToString();
+
+                // end get encrypted key
+
+                DecryptedUIDevCode = DecryptText(EncryptedUIDevCode, EncryptionKey);
+                DecryptedUIDevPassword = DecryptText(EncryptedUIDevPassword, EncryptionKey);
+                // start call usp_Maintenance_SQLSolicitor_Login_Check                               
+
+                SqlConnection connAlpha = null;
+                SqlDataAdapter sqlDAlpha = null;
+
+                connAlpha = new SqlConnection(connstr);
+
+                sqlDAlpha = new SqlDataAdapter();
+                sqlDAlpha.SelectCommand = new SqlCommand("dbo.ddMaintenance_SQLDeveloper_Login_Check @DeveloperCode, @DeveloperPassword, @error output ", connAlpha);
+                sqlDAlpha.SelectCommand.Parameters.AddWithValue("@DeveloperCode", DecryptedUIDevCode);
+                sqlDAlpha.SelectCommand.Parameters.AddWithValue("@DeveloperPassword", DecryptedUIDevPassword);
+
+                sqlDAlpha.SelectCommand.Parameters.Add("@error", SqlDbType.NVarChar, 4000);
+                sqlDAlpha.SelectCommand.Parameters["@error"].Direction = ParameterDirection.Output;
+
+                DataSet dsAlpha = new DataSet("ds");
+                sqlDAlpha.Fill(dsAlpha);
+
+                error = sqlDAlpha.SelectCommand.Parameters["@error"].Value.ToString();
+
+                // end call usp_Maintenance_SQLSolicitor_Login_Check
+
+                if (error == "")
+                {
+                    // start call usp_SQLSolicitor_getPassword     
+
+                    SqlConnection connPRE = null;
+                    SqlDataAdapter sqlDAPRE = null;
+
+                    connPRE = new SqlConnection(connstr);
+
+                    sqlDAPRE = new SqlDataAdapter();
+                    sqlDAPRE.SelectCommand = new SqlCommand("dbo.ddProject_getPassword @DeveloperCode, @DeveloperPassword output,@EncryptionKey output ", connPRE);
+                    sqlDAPRE.SelectCommand.Parameters.AddWithValue("@DeveloperCode", DecryptedUIDevCode);
+
+                    sqlDAPRE.SelectCommand.Parameters.Add("@DeveloperPassword", SqlDbType.NVarChar, 4000);
+                    sqlDAPRE.SelectCommand.Parameters["@DeveloperPassword"].Direction = ParameterDirection.Output;
+
+                    sqlDAPRE.SelectCommand.Parameters.Add("@EncryptionKey", SqlDbType.NVarChar, 4000);
+                    sqlDAPRE.SelectCommand.Parameters["@EncryptionKey"].Direction = ParameterDirection.Output;
+
+                    DataSet dsPRE = new DataSet("ds");
+                    sqlDAPRE.Fill(dsPRE);
+
+                    string EncryptedDeveloperPasswordFromDB = sqlDAPRE.SelectCommand.Parameters["@DeveloperPassword"].Value.ToString();
+
+                    // end call usp_SQLSolicitor_getPassword     
+
+                    string DecryptedDeveloperPasswordFromDB = DecryptText(EncryptedDeveloperPasswordFromDB, EncryptionKey);
+                    devcode = DecryptedUIDevCode;
+
+                    if (DecryptedDeveloperPasswordFromDB != DecryptedUIDevPassword)
+                    {
+                        error = "Please login to continue";
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                error = "DP_DeveloperForcePasswordChangeLogin failed with exception: " + ex.Message.ToString();
+                string errorDetail;
+                errorDetail = "Input Param:" + " DevCode:" + DecryptedUIDevCode;
+                LogErrorToDB("DP_DeveloperForcePasswordChangeLogin", "Exception", error, errorDetail);
+            }
+        }
+
+
+        [WebMethod]
+        public void getURL(string callback, string username)
+        {
+            string output = "";
+
+            DataSet ds = null;
+            DataTable dt = null;
+            SqlConnection conn = null;
+            SqlDataAdapter sqlDA = null;
+
+            string strDataSource = clsGlobal.MG_SQL_DATA_SOURCE;
+            string strDBName = clsGlobal.MG_SQL_DB_NAME;
+            string strID = clsGlobal.MG_SQL_ID;
+            string strPassword = clsGlobal.MG_SQL_PASSWORD;
+            bool blnIsWinAuth = clsGlobal.MG_SQL_IS_WIN_AUTH;
+
+            string connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Persist Security Info=True;User ID=" + strID + ";Password=" + strPassword;
+            if (blnIsWinAuth)
+            {
+                connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Integrated Security=True;";
+            }
+
+            // start get encrypted key
+            SqlConnection connBeta = null;
+            SqlDataAdapter sqlDABeta = null;
+            DataTable dtBeta = null;
+
+            connBeta = new SqlConnection(connstr);
+
+            //create or ALTER procedure[dbo].[usp_concurrentforcedlogout_check2]
+            //@userid nvarchar(max) = null ,
+            //@error nvarchar(max) = null output
+
+            sqlDABeta = new SqlDataAdapter();
+            sqlDABeta.SelectCommand = new SqlCommand("dbo.usp_concurrentforcedlogout_check2 @userid, @error output", connBeta);
+            sqlDABeta.SelectCommand.Parameters.AddWithValue("@userid", username);
+            sqlDABeta.SelectCommand.Parameters.Add("@error", SqlDbType.NVarChar, -1);
+            sqlDABeta.SelectCommand.Parameters["@error"].Direction = ParameterDirection.Output;
+
+            DataSet dsBETA = new DataSet("ds");
+            sqlDABeta.Fill(dsBETA);
+
+            output = sqlDABeta.SelectCommand.Parameters["@error"].Value.ToString();
+
+            StringBuilder sb = new StringBuilder();
+            JavaScriptSerializer js = new JavaScriptSerializer();
+            sb.Append(callback + "(");
+            sb.Append(js.Serialize(output));
+           
+            sb.Append(");");
+
+            Context.Response.Clear();
+            Context.Response.ContentType = "application/json";
+            Context.Response.Write(sb.ToString());
+            //Context.Response.End();
+
+            Context.Response.Flush(); // Sends all currently buffered output to the client.
+            Context.Response.SuppressContent = true;  // Gets or sets a value indicating whether to send HTTP content to the client.
+            Context.ApplicationInstance.CompleteRequest(); // Causes ASP.NET to bypass all events and filtering in the HTTP pipeline chain of execution and directly execute the EndRequest event.
+            
+            //return null;
+        }
+
         [WebMethod]
         public string getIP(string callback)
         {            
@@ -561,69 +1466,69 @@ namespace HLBBWS
         }
        
 
-        [WebMethod]
-        public LdapAuthenticationResponseData LdapAuthentication(string DomainName, string UserName, string Password)
-        {
-            LdapAuthenticationResponseData response = new LdapAuthenticationResponseData();
-            response.Status = "-1";
-            response.ErrorCode = "";
-            response.ErrorMessage = "";
-            response.AccountName = "";
-            response.DisplayName = "";
-            response.Department = "";
-            response.Mail = "";
+        //[WebMethod]
+        //public LdapAuthenticationResponseData LdapAuthentication(string DomainName, string UserName, string Password)
+        //{
+        //    LdapAuthenticationResponseData response = new LdapAuthenticationResponseData();
+        //    response.Status = "-1";
+        //    response.ErrorCode = "";
+        //    response.ErrorMessage = "";
+        //    response.AccountName = "";
+        //    response.DisplayName = "";
+        //    response.Department = "";
+        //    response.Mail = "";
 
-            try
-            {
-                string path = "LDAP://" + DomainName.Trim();
-                string strLoginAccountId = DomainName.Trim() + @"\" + UserName.Trim();
-                string strFindAccountId = UserName.Trim();
-                string strPassword = Password.Trim();
+        //    try
+        //    {
+        //        string path = "LDAP://" + DomainName.Trim();
+        //        string strLoginAccountId = DomainName.Trim() + @"\" + UserName.Trim();
+        //        string strFindAccountId = UserName.Trim();
+        //        string strPassword = Password.Trim();
 
-                using (DirectoryEntry adsEntry = new DirectoryEntry(path, strLoginAccountId, strPassword))
-                {
-                    using (DirectorySearcher adsSearcher = new DirectorySearcher(adsEntry))
-                    {
-                        //adsSearcher.Filter = "(sAMAccountName=" + strFindAccountId + ")";
-                        adsSearcher.Filter = "(&(objectCategory=person)(objectClass=user)(sAMAccountName=" + strFindAccountId + "))";
+        //        using (DirectoryEntry adsEntry = new DirectoryEntry(path, strLoginAccountId, strPassword))
+        //        {
+        //            using (DirectorySearcher adsSearcher = new DirectorySearcher(adsEntry))
+        //            {
+        //                //adsSearcher.Filter = "(sAMAccountName=" + strFindAccountId + ")";
+        //                adsSearcher.Filter = "(&(objectCategory=person)(objectClass=user)(sAMAccountName=" + strFindAccountId + "))";
 
-                        SearchResult adsSearchResult = adsSearcher.FindOne();
-                        //this.txtResult.Text = adsSearchResult.Path.ToString();
-                        clsLog.WriteSystemLog(clsLog.MessageType.Info, "Response", "Result=" + adsSearchResult.Path.ToString());
+        //                SearchResult adsSearchResult = adsSearcher.FindOne();
+        //                //this.txtResult.Text = adsSearchResult.Path.ToString();
+        //                clsLog.WriteSystemLog(clsLog.MessageType.Info, "Response", "Result=" + adsSearchResult.Path.ToString());
 
-                        response.AccountName = GetValueByPropertiesName(adsSearchResult, "samaccountname");
-                        response.DisplayName = GetValueByPropertiesName(adsSearchResult, "displayname");
-                        response.Department = GetValueByPropertiesName(adsSearchResult, "department");
-                        response.Mail = GetValueByPropertiesName(adsSearchResult, "mail");
+        //                response.AccountName = GetValueByPropertiesName(adsSearchResult, "samaccountname");
+        //                response.DisplayName = GetValueByPropertiesName(adsSearchResult, "displayname");
+        //                response.Department = GetValueByPropertiesName(adsSearchResult, "department");
+        //                response.Mail = GetValueByPropertiesName(adsSearchResult, "mail");
 
-                        //response.AccountName = adsSearchResult.Properties["samaccountname"][0].ToString();
-                        //response.DisplayName = adsSearchResult.Properties["displayname"][0].ToString();
-                        //response.Department = adsSearchResult.Properties["department"][0].ToString();
-                        //response.Mail = adsSearchResult.Properties["mail"][0].ToString();
+        //                //response.AccountName = adsSearchResult.Properties["samaccountname"][0].ToString();
+        //                //response.DisplayName = adsSearchResult.Properties["displayname"][0].ToString();
+        //                //response.Department = adsSearchResult.Properties["department"][0].ToString();
+        //                //response.Mail = adsSearchResult.Properties["mail"][0].ToString();
 
-                        response.Status = "1";
-                        response.ErrorCode = "";
-                        response.ErrorMessage = "";
+        //                response.Status = "1";
+        //                response.ErrorCode = "";
+        //                response.ErrorMessage = "";
 
-                        adsEntry.Close();
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                response.Status = "-1";
-                response.ErrorCode = "1";
-                response.ErrorMessage = "Unexpected Error: " + ex.Message;
-                clsLog.WriteSystemLog(clsLog.MessageType.Error, "LdapAuthentication()", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-            finally
-            {
+        //                adsEntry.Close();
+        //            }
+        //        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        response.Status = "-1";
+        //        response.ErrorCode = "1";
+        //        response.ErrorMessage = "Unexpected Error: " + ex.Message;
+        //        clsLog.WriteSystemLog(clsLog.MessageType.Error, "LdapAuthentication()", ex.Message + Environment.NewLine + ex.StackTrace);
+        //    }
+        //    finally
+        //    {
 
-            }
+        //    }
 
-            clsLog.WriteSystemLog(clsLog.MessageType.Info, "Response", ConvertResponseToXmlText(EnumResponseType.LdapAuthentication, "UserName=" + DomainName + @"\" + UserName, response));
-            return response;
-        }
+        //    clsLog.WriteSystemLog(clsLog.MessageType.Info, "Response", ConvertResponseToXmlText(EnumResponseType.LdapAuthentication, "UserName=" + DomainName + @"\" + UserName, response));
+        //    return response;
+        //}
 
         [WebMethod]
         public void DP_LdapAuthentication(string DomainName, string UserName, string Password, ref string str_error, ref string str_Status, ref string str_ErrorCode, ref string str_ErrorMessage, ref string str_AccountName, ref string str_DisplayName, ref string str_Department, ref string str_Mail)
@@ -708,73 +1613,73 @@ namespace HLBBWS
         }
 
 
-        [WebMethod]
-        public LdapSearchUserResponseData LdapSearchUser(string DomainName, string UserName)
-        {
-            LdapSearchUserResponseData response = new LdapSearchUserResponseData();
-            response.Status = "-1";
-            response.ErrorCode = "";
-            response.ErrorMessage = "";
-            response.AccountName = "";
-            response.DisplayName = "";
-            response.Department = "";
-            response.Mail = "";
+        //[WebMethod]
+        //public LdapSearchUserResponseData LdapSearchUser(string DomainName, string UserName)
+        //{
+        //    LdapSearchUserResponseData response = new LdapSearchUserResponseData();
+        //    response.Status = "-1";
+        //    response.ErrorCode = "";
+        //    response.ErrorMessage = "";
+        //    response.AccountName = "";
+        //    response.DisplayName = "";
+        //    response.Department = "";
+        //    response.Mail = "";
 
-            try
-            {
-                string path = "LDAP://" + DomainName.Trim();
-                //string strLoginAccountId = DomainName.Trim() + @"\" + UserName.Trim();
-                string strFindAccountId = UserName.Trim();
-                //string strPassword = Password.Trim();
+        //    try
+        //    {
+        //        string path = "LDAP://" + DomainName.Trim();
+        //        //string strLoginAccountId = DomainName.Trim() + @"\" + UserName.Trim();
+        //        string strFindAccountId = UserName.Trim();
+        //        //string strPassword = Password.Trim();
 
-                using (DirectoryEntry adsEntry = new DirectoryEntry(path))
-                {
-                    using (DirectorySearcher adsSearcher = new DirectorySearcher(adsEntry))
-                    {
-                        adsSearcher.Filter = "(&(objectCategory=person)(objectClass=user)(sAMAccountName=" + strFindAccountId + "))";
+        //        using (DirectoryEntry adsEntry = new DirectoryEntry(path))
+        //        {
+        //            using (DirectorySearcher adsSearcher = new DirectorySearcher(adsEntry))
+        //            {
+        //                adsSearcher.Filter = "(&(objectCategory=person)(objectClass=user)(sAMAccountName=" + strFindAccountId + "))";
 
-                        SearchResult adsSearchResult = adsSearcher.FindOne();
-                        if (adsSearchResult != null)
-                        {
-                            clsLog.WriteSystemLog(clsLog.MessageType.Info, "Response", "Result=" + adsSearchResult.Path.ToString());
+        //                SearchResult adsSearchResult = adsSearcher.FindOne();
+        //                if (adsSearchResult != null)
+        //                {
+        //                    clsLog.WriteSystemLog(clsLog.MessageType.Info, "Response", "Result=" + adsSearchResult.Path.ToString());
 
-                            response.AccountName = GetValueByPropertiesName(adsSearchResult, "samaccountname");
-                            response.DisplayName = GetValueByPropertiesName(adsSearchResult, "displayname");
-                            response.Department = GetValueByPropertiesName(adsSearchResult, "department");
-                            response.Mail = GetValueByPropertiesName(adsSearchResult, "mail");
+        //                    response.AccountName = GetValueByPropertiesName(adsSearchResult, "samaccountname");
+        //                    response.DisplayName = GetValueByPropertiesName(adsSearchResult, "displayname");
+        //                    response.Department = GetValueByPropertiesName(adsSearchResult, "department");
+        //                    response.Mail = GetValueByPropertiesName(adsSearchResult, "mail");
 
-                            response.Status = "1";
-                            response.ErrorCode = "";
-                            response.ErrorMessage = "";
+        //                    response.Status = "1";
+        //                    response.ErrorCode = "";
+        //                    response.ErrorMessage = "";
 
-                        }
-                        else
-                        {
-                            clsLog.WriteSystemLog(clsLog.MessageType.Info, "Response", "Result=Account not found in domain server");
+        //                }
+        //                else
+        //                {
+        //                    clsLog.WriteSystemLog(clsLog.MessageType.Info, "Response", "Result=Account not found in domain server");
 
-                            response.Status = "0";
-                            response.ErrorCode = "";
-                            response.ErrorMessage = "Account not found in domain server";
-                        }
-                    }
-                    adsEntry.Close();
-                }
-            }
-            catch (Exception ex)
-            {
-                response.Status = "-1";
-                response.ErrorCode = "1";
-                response.ErrorMessage = "Unexpected Error: " + ex.Message;
-                clsLog.WriteSystemLog(clsLog.MessageType.Error, "LdapSearchUser()", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-            finally
-            {
+        //                    response.Status = "0";
+        //                    response.ErrorCode = "";
+        //                    response.ErrorMessage = "Account not found in domain server";
+        //                }
+        //            }
+        //            adsEntry.Close();
+        //        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        response.Status = "-1";
+        //        response.ErrorCode = "1";
+        //        response.ErrorMessage = "Unexpected Error: " + ex.Message;
+        //        clsLog.WriteSystemLog(clsLog.MessageType.Error, "LdapSearchUser()", ex.Message + Environment.NewLine + ex.StackTrace);
+        //    }
+        //    finally
+        //    {
 
-            }
+        //    }
 
-            clsLog.WriteSystemLog(clsLog.MessageType.Info, "Response", ConvertResponseToXmlText(EnumResponseType.LdapSearchUser, "UserName=" + DomainName + @"\" + UserName, response));
-            return response;
-        }
+        //    clsLog.WriteSystemLog(clsLog.MessageType.Info, "Response", ConvertResponseToXmlText(EnumResponseType.LdapSearchUser, "UserName=" + DomainName + @"\" + UserName, response));
+        //    return response;
+        //}
 
         [WebMethod]
         public void DP_LdapSearchUser(string DomainName, string UserName, ref string str_error, ref string str_Status, ref string str_ErrorCode, ref string str_ErrorMessage, ref string str_AccountName, ref string str_DisplayName, ref string str_Department, ref string str_Mail)
@@ -797,6 +1702,34 @@ namespace HLBBWS
             response.DisplayName = "";
             response.Department = "";
             response.Mail = "";
+
+            //// 20220329- start get access permission 
+            //string strDataSource = clsGlobal.MG_SQL_DATA_SOURCE;
+            //string strDBName = clsGlobal.MG_SQL_DB_NAME;
+            //string strID = clsGlobal.MG_SQL_ID;
+            //string strPassword = clsGlobal.MG_SQL_PASSWORD;
+            //bool blnIsWinAuth = clsGlobal.MG_SQL_IS_WIN_AUTH;
+
+            //string connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Persist Security Info=True;User ID=" + strID + ";Password=" + strPassword;
+            //if (blnIsWinAuth)
+            //{
+            //    connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Integrated Security=True;";
+            //}            
+
+            //SqlConnection conny = new SqlConnection(connstr);
+
+            //SqlDataAdapter sqlDAy = new SqlDataAdapter();
+            //sqlDAy.SelectCommand = new SqlCommand("dbo.[usp_InternalUser_CheckClosed] @username", conny);
+            //sqlDAy.SelectCommand.Parameters.AddWithValue("@username", "");
+            
+
+            //DataSet dsy = new DataSet("ds");
+            //DataTable dty = null;
+
+            //sqlDAy.Fill(dsy);
+            //dty = dsy.Tables[0];
+            ////var IsClosed = dty.Rows[0]["result"].ToString();
+            //// 20220329- end get access permission 
 
             try
             {
@@ -822,7 +1755,7 @@ namespace HLBBWS
                             SqlConnection conn = null;
                             SqlDataAdapter sqlDA = null;
 
-                            string strDataSource = clsGlobal.MG_SQL_DATA_SOURCE;
+                             string strDataSource = clsGlobal.MG_SQL_DATA_SOURCE;
                             string strDBName = clsGlobal.MG_SQL_DB_NAME;
                             string strID = clsGlobal.MG_SQL_ID;
                             string strPassword = clsGlobal.MG_SQL_PASSWORD;
@@ -901,274 +1834,274 @@ namespace HLBBWS
         }
 
 
-        [WebMethod]
-        public SearchFileResponseData SearchFileFromEDMS(string ProfileName, string RefNo, List<SearchFileRequest> SearchFile)
-        {
-            SearchFileResponseData response = new SearchFileResponseData();
+        //[WebMethod]
+        //public SearchFileResponseData SearchFileFromEDMS(string ProfileName, string RefNo, List<SearchFileRequest> SearchFile)
+        //{
+        //    SearchFileResponseData response = new SearchFileResponseData();
 
-            System.ServiceModel.BasicHttpBinding binding = null;
-            EDMS_WSSDK.WSSDKSoapClient client = null;
+        //    System.ServiceModel.BasicHttpBinding binding = null;
+        //    EDMS_WSSDK.WSSDKSoapClient client = null;
 
-            List<SearchFileResults> fl = new List<SearchFileResults>();
-            SearchFileResults sfr = null;
+        //    List<SearchFileResults> fl = new List<SearchFileResults>();
+        //    SearchFileResults sfr = null;
 
-            try
-            {
-                //Specify the binding to be used for the client.
-                binding = new System.ServiceModel.BasicHttpBinding();
-                client = new EDMS_WSSDK.WSSDKSoapClient("WSSDKSoap", clsGlobal.EDMS_HOST_URL);
+        //    try
+        //    {
+        //        //Specify the binding to be used for the client.
+        //        binding = new System.ServiceModel.BasicHttpBinding();
+        //        client = new EDMS_WSSDK.WSSDKSoapClient("WSSDKSoap", clsGlobal.EDMS_HOST_URL);
 
-                string strChannelID = clsGlobal.EDMS_HOST_ID;
-                string strErrorCode = "";
-                string strErrorMsg = "";
-                bool blnHasFailed = false;
+        //        string strChannelID = clsGlobal.EDMS_HOST_ID;
+        //        string strErrorCode = "";
+        //        string strErrorMsg = "";
+        //        bool blnHasFailed = false;
 
-                if (SearchFile.Count > 0)
-                {
-                    string[] strColumns = new String[SearchFile.Count];
-                    string[] strKeywords = new String[SearchFile.Count];
-                    for (int i = 0; i < SearchFile.Count; i++)
-                    {
-                        strColumns[i] = SearchFile[i].ColumnName;
-                        strKeywords[i] = SearchFile[i].ColumnKeyword;
-                    }
+        //        if (SearchFile.Count > 0)
+        //        {
+        //            string[] strColumns = new String[SearchFile.Count];
+        //            string[] strKeywords = new String[SearchFile.Count];
+        //            for (int i = 0; i < SearchFile.Count; i++)
+        //            {
+        //                strColumns[i] = SearchFile[i].ColumnName;
+        //                strKeywords[i] = SearchFile[i].ColumnKeyword;
+        //            }
 
-                    EDMS_WSSDK.DataProfileResult1[] dpResult = client.ProfileSearch(ProfileName, strColumns, strKeywords, strChannelID, ref strErrorCode, ref strErrorMsg);
-                    clsLog.WriteSystemLog(clsLog.MessageType.Info, "Response", "Result=" + dpResult.Length.ToString());
-                    if (strErrorCode == "0")
-                    {
-                        for (int i = 0; i < dpResult.Length; i++)
-                        {
-                            sfr = new SearchFileResults();
-                            sfr.VerID = dpResult[i].VerID.ToString();
-                            sfr.ProfileID = dpResult[i].ProfileID.ToString();
-                            sfr.ImageName = dpResult[i].ImageName.ToString();
-                            sfr.FileSize = dpResult[i].FileSize.ToString();
-                            sfr.DocID = dpResult[i].DocID.ToString();
-                            sfr.Datecreated = dpResult[i].Datecreated.ToString();
+        //            EDMS_WSSDK.DataProfileResult1[] dpResult = client.ProfileSearch(ProfileName, strColumns, strKeywords, strChannelID, ref strErrorCode, ref strErrorMsg);
+        //            clsLog.WriteSystemLog(clsLog.MessageType.Info, "Response", "Result=" + dpResult.Length.ToString());
+        //            if (strErrorCode == "0")
+        //            {
+        //                for (int i = 0; i < dpResult.Length; i++)
+        //                {
+        //                    sfr = new SearchFileResults();
+        //                    sfr.VerID = dpResult[i].VerID.ToString();
+        //                    sfr.ProfileID = dpResult[i].ProfileID.ToString();
+        //                    sfr.ImageName = dpResult[i].ImageName.ToString();
+        //                    sfr.FileSize = dpResult[i].FileSize.ToString();
+        //                    sfr.DocID = dpResult[i].DocID.ToString();
+        //                    sfr.Datecreated = dpResult[i].Datecreated.ToString();
 
-                            EDMS_WSSDK.DataColumn1[] arr = dpResult[i].Arr_DataValue;
-                            if (arr != null)
-                            {
-                                for (int x = 0; x < arr.Length; x++)
-                                {
-                                    if (arr[x].Col_Name.ToUpper() == "FIELD1")
-                                    {
-                                        sfr.Field1 = arr[x].ProfileValue;
-                                    }
-                                    else if (arr[x].Col_Name.ToUpper() == "FIELD2")
-                                    {
-                                        sfr.Field2 = arr[x].ProfileValue;
-                                    }
-                                    else if (arr[x].Col_Name.ToUpper() == "FIELD3")
-                                    {
-                                        sfr.Field3 = arr[x].ProfileValue;
-                                    }
-                                    else if (arr[x].Col_Name.ToUpper() == "FIELD4")
-                                    {
-                                        sfr.Field4 = arr[x].ProfileValue;
-                                    }
-                                    else if (arr[x].Col_Name.ToUpper() == "FIELD5")
-                                    {
-                                        sfr.Field5 = arr[x].ProfileValue;
-                                    }
-                                    else if (arr[x].Col_Name.ToUpper() == "FIELD6")
-                                    {
-                                        sfr.Field6 = arr[x].ProfileValue;
-                                    }
-                                    else if (arr[x].Col_Name.ToUpper() == "FIELD7")
-                                    {
-                                        sfr.Field7 = arr[x].ProfileValue;
-                                    }
-                                    else if (arr[x].Col_Name.ToUpper() == "FIELD8")
-                                    {
-                                        sfr.Field8 = arr[x].ProfileValue;
-                                    }
-                                    else if (arr[x].Col_Name.ToUpper() == "FIELD9")
-                                    {
-                                        sfr.Field9 = arr[x].ProfileValue;
-                                    }
-                                    else if (arr[x].Col_Name.ToUpper() == "FIELD10")
-                                    {
-                                        sfr.Field10 = arr[x].ProfileValue;
-                                    }
-                                    else if (arr[x].Col_Name.ToUpper() == "BATCH NO")
-                                    {
-                                        sfr.BatchNo = arr[x].ProfileValue;
-                                    }
-                                    else if (arr[x].Col_Name.ToUpper() == "BATCH DESCRIPTION")
-                                    {
-                                        sfr.BatchDesc = arr[x].ProfileValue;
-                                    }
-                                }
-                            }
+        //                    EDMS_WSSDK.DataColumn1[] arr = dpResult[i].Arr_DataValue;
+        //                    if (arr != null)
+        //                    {
+        //                        for (int x = 0; x < arr.Length; x++)
+        //                        {
+        //                            if (arr[x].Col_Name.ToUpper() == "FIELD1")
+        //                            {
+        //                                sfr.Field1 = arr[x].ProfileValue;
+        //                            }
+        //                            else if (arr[x].Col_Name.ToUpper() == "FIELD2")
+        //                            {
+        //                                sfr.Field2 = arr[x].ProfileValue;
+        //                            }
+        //                            else if (arr[x].Col_Name.ToUpper() == "FIELD3")
+        //                            {
+        //                                sfr.Field3 = arr[x].ProfileValue;
+        //                            }
+        //                            else if (arr[x].Col_Name.ToUpper() == "FIELD4")
+        //                            {
+        //                                sfr.Field4 = arr[x].ProfileValue;
+        //                            }
+        //                            else if (arr[x].Col_Name.ToUpper() == "FIELD5")
+        //                            {
+        //                                sfr.Field5 = arr[x].ProfileValue;
+        //                            }
+        //                            else if (arr[x].Col_Name.ToUpper() == "FIELD6")
+        //                            {
+        //                                sfr.Field6 = arr[x].ProfileValue;
+        //                            }
+        //                            else if (arr[x].Col_Name.ToUpper() == "FIELD7")
+        //                            {
+        //                                sfr.Field7 = arr[x].ProfileValue;
+        //                            }
+        //                            else if (arr[x].Col_Name.ToUpper() == "FIELD8")
+        //                            {
+        //                                sfr.Field8 = arr[x].ProfileValue;
+        //                            }
+        //                            else if (arr[x].Col_Name.ToUpper() == "FIELD9")
+        //                            {
+        //                                sfr.Field9 = arr[x].ProfileValue;
+        //                            }
+        //                            else if (arr[x].Col_Name.ToUpper() == "FIELD10")
+        //                            {
+        //                                sfr.Field10 = arr[x].ProfileValue;
+        //                            }
+        //                            else if (arr[x].Col_Name.ToUpper() == "BATCH NO")
+        //                            {
+        //                                sfr.BatchNo = arr[x].ProfileValue;
+        //                            }
+        //                            else if (arr[x].Col_Name.ToUpper() == "BATCH DESCRIPTION")
+        //                            {
+        //                                sfr.BatchDesc = arr[x].ProfileValue;
+        //                            }
+        //                        }
+        //                    }
 
-                            fl.Add(sfr);
-                        }
+        //                    fl.Add(sfr);
+        //                }
 
-                        if (!blnHasFailed)
-                        {
-                            response.Status = "1";
-                            response.ErrorCode = "";
-                            response.ErrorMessage = "";
-                            response.FileList = fl;
-                        }
-                    }
-                    else
-                    {
-                        blnHasFailed = true;
-                        response.Status = "-1";
-                        response.ErrorCode = strErrorCode;
-                        response.ErrorMessage = strErrorMsg;
-                    }
-                }
-                else
-                {
-                    response.Status = "0";
-                    response.ErrorCode = "";
-                    response.ErrorMessage = "Warning: No record found";
-                }
-            }
-            catch (Exception ex)
-            {
-                response.Status = "-1";
-                response.ErrorCode = "1";
-                response.ErrorMessage = "Unexpected Error: " + ex.Message;
-                clsLog.WriteSystemLog(clsLog.MessageType.Error, "SearchFileFromEDMS()", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-            finally
-            {
-                fl = null;
-                sfr = null;
+        //                if (!blnHasFailed)
+        //                {
+        //                    response.Status = "1";
+        //                    response.ErrorCode = "";
+        //                    response.ErrorMessage = "";
+        //                    response.FileList = fl;
+        //                }
+        //            }
+        //            else
+        //            {
+        //                blnHasFailed = true;
+        //                response.Status = "-1";
+        //                response.ErrorCode = strErrorCode;
+        //                response.ErrorMessage = strErrorMsg;
+        //            }
+        //        }
+        //        else
+        //        {
+        //            response.Status = "0";
+        //            response.ErrorCode = "";
+        //            response.ErrorMessage = "Warning: No record found";
+        //        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        response.Status = "-1";
+        //        response.ErrorCode = "1";
+        //        response.ErrorMessage = "Unexpected Error: " + ex.Message;
+        //        clsLog.WriteSystemLog(clsLog.MessageType.Error, "SearchFileFromEDMS()", ex.Message + Environment.NewLine + ex.StackTrace);
+        //    }
+        //    finally
+        //    {
+        //        fl = null;
+        //        sfr = null;
 
-                binding = null;
-                client = null;
-            }
+        //        binding = null;
+        //        client = null;
+        //    }
 
-            clsLog.WriteSystemLog(clsLog.MessageType.Info, "Response", ConvertResponseToXmlText(EnumResponseType.SearchFile, "RefNo=" + RefNo, response));
-            return response;
-        }
+        //    clsLog.WriteSystemLog(clsLog.MessageType.Info, "Response", ConvertResponseToXmlText(EnumResponseType.SearchFile, "RefNo=" + RefNo, response));
+        //    return response;
+        //}
 
-        [WebMethod]
-        public DownloadFileResponseData DownloadFileFromEDMS(string RefNo, string UserName, string VerID, string ProfileID, string FileType)
-        {
-            DownloadFileResponseData response = new DownloadFileResponseData();
+        //[WebMethod]
+        //public DownloadFileResponseData DownloadFileFromEDMS(string RefNo, string UserName, string VerID, string ProfileID, string FileType)
+        //{
+        //    DownloadFileResponseData response = new DownloadFileResponseData();
 
-            System.ServiceModel.BasicHttpBinding binding = null;
-            EDMS_WSSDK.WSSDKSoapClient client = null;
+        //    System.ServiceModel.BasicHttpBinding binding = null;
+        //    EDMS_WSSDK.WSSDKSoapClient client = null;
 
-            try
-            {
-                //Specify the binding to be used for the client.
-                binding = new System.ServiceModel.BasicHttpBinding();
-                client = new EDMS_WSSDK.WSSDKSoapClient("WSSDKSoap", clsGlobal.EDMS_HOST_URL);
+        //    try
+        //    {
+        //        //Specify the binding to be used for the client.
+        //        binding = new System.ServiceModel.BasicHttpBinding();
+        //        client = new EDMS_WSSDK.WSSDKSoapClient("WSSDKSoap", clsGlobal.EDMS_HOST_URL);
 
-                string strChannelID = clsGlobal.EDMS_HOST_ID;
-                string strErrorCode = "";
-                string strErrorMsg = "";
-                string strFileUrl = "";
-                string strResult = "";
-                bool blnHasFailed = false;
+        //        string strChannelID = clsGlobal.EDMS_HOST_ID;
+        //        string strErrorCode = "";
+        //        string strErrorMsg = "";
+        //        string strFileUrl = "";
+        //        string strResult = "";
+        //        bool blnHasFailed = false;
 
-                strResult = client.ViewFile_with_Requestor(Convert.ToInt64(VerID), Convert.ToInt64(ProfileID), Convert.ToInt16(FileType), ref strFileUrl, strChannelID, ref strErrorCode, ref strErrorMsg);
-                clsLog.WriteSystemLog(clsLog.MessageType.Info, "Response", "Result=" + strResult);
-                if (strResult == "1")
-                {
-                    response.FileUrl = strFileUrl;
-                }
-                else
-                {
-                    blnHasFailed = true;
-                    response.Status = strResult;
-                    response.ErrorCode = strErrorCode;
-                    response.ErrorMessage = strErrorMsg;
-                }
+        //        strResult = client.ViewFile_with_Requestor(Convert.ToInt64(VerID), Convert.ToInt64(ProfileID), Convert.ToInt16(FileType), ref strFileUrl, strChannelID, ref strErrorCode, ref strErrorMsg);
+        //        clsLog.WriteSystemLog(clsLog.MessageType.Info, "Response", "Result=" + strResult);
+        //        if (strResult == "1")
+        //        {
+        //            response.FileUrl = strFileUrl;
+        //        }
+        //        else
+        //        {
+        //            blnHasFailed = true;
+        //            response.Status = strResult;
+        //            response.ErrorCode = strErrorCode;
+        //            response.ErrorMessage = strErrorMsg;
+        //        }
 
-                if (!blnHasFailed)
-                {
-                    response.Status = "1";
-                    response.ErrorCode = "";
-                    response.ErrorMessage = "";
-                }
-            }
-            catch (Exception ex)
-            {
-                response.Status = "-1";
-                response.ErrorCode = "1";
-                response.ErrorMessage = "Unexpected Error: " + ex.Message;
-                clsLog.WriteSystemLog(clsLog.MessageType.Error, "DownloadFileFromEDMS()", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-            finally
-            {
-                binding = null;
-                client = null;
-            }
+        //        if (!blnHasFailed)
+        //        {
+        //            response.Status = "1";
+        //            response.ErrorCode = "";
+        //            response.ErrorMessage = "";
+        //        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        response.Status = "-1";
+        //        response.ErrorCode = "1";
+        //        response.ErrorMessage = "Unexpected Error: " + ex.Message;
+        //        clsLog.WriteSystemLog(clsLog.MessageType.Error, "DownloadFileFromEDMS()", ex.Message + Environment.NewLine + ex.StackTrace);
+        //    }
+        //    finally
+        //    {
+        //        binding = null;
+        //        client = null;
+        //    }
 
-            clsLog.WriteSystemLog(clsLog.MessageType.Info, "Response", ConvertResponseToXmlText(EnumResponseType.DownloadFile, "RefNo=" + RefNo, response));
-            return response;
-        }
+        //    clsLog.WriteSystemLog(clsLog.MessageType.Info, "Response", ConvertResponseToXmlText(EnumResponseType.DownloadFile, "RefNo=" + RefNo, response));
+        //    return response;
+        //}
 
         ///<summary>
         ///DeleteFileFromEDMS | EDMS | To delete file by DocID and ProfileID
         ///</summary>
-        [WebMethod]
-        public DeleteFileResponseData DeleteFileFromEDMS(string DocID, string ProfileID, string RequestorID)
-        {
-            DeleteFileResponseData response = new DeleteFileResponseData();
+        //[WebMethod]
+        //public DeleteFileResponseData DeleteFileFromEDMS(string DocID, string ProfileID, string RequestorID)
+        //{
+        //    DeleteFileResponseData response = new DeleteFileResponseData();
 
-            System.ServiceModel.BasicHttpBinding binding = null;
-            EDMS_WSSDK.WSSDKSoapClient client = null;
+        //    System.ServiceModel.BasicHttpBinding binding = null;
+        //    EDMS_WSSDK.WSSDKSoapClient client = null;
 
-            try
-            {
-                //Specify the binding to be used for the client.
-                binding = new System.ServiceModel.BasicHttpBinding();
-                client = new EDMS_WSSDK.WSSDKSoapClient("WSSDKSoap", clsGlobal.EDMS_HOST_URL);
+        //    try
+        //    {
+        //        //Specify the binding to be used for the client.
+        //        binding = new System.ServiceModel.BasicHttpBinding();
+        //        client = new EDMS_WSSDK.WSSDKSoapClient("WSSDKSoap", clsGlobal.EDMS_HOST_URL);
 
-                string strChannelID = clsGlobal.EDMS_HOST_ID;
-                string strErrorCode = "";
-                string strErrorMsg = "";
-                string strResult = "";
-                bool blnHasFailed = false;
+        //        string strChannelID = clsGlobal.EDMS_HOST_ID;
+        //        string strErrorCode = "";
+        //        string strErrorMsg = "";
+        //        string strResult = "";
+        //        bool blnHasFailed = false;
 
-                strResult = client.DeleteDocument(DocID, ProfileID, RequestorID, ref strErrorCode, ref strErrorMsg);
-                clsLog.WriteSystemLog(clsLog.MessageType.Info, "Response", "Result=" + strResult);
-                if (strResult == "1")
-                {
-                    //-- successful --
-                }
-                else
-                {
-                    //-- failed --
-                    blnHasFailed = true;
-                    response.Status = strResult;
-                    response.ErrorCode = strErrorCode;
-                    response.ErrorMessage = strErrorMsg;
-                }
+        //        strResult = client.DeleteDocument(DocID, ProfileID, RequestorID, ref strErrorCode, ref strErrorMsg);
+        //        clsLog.WriteSystemLog(clsLog.MessageType.Info, "Response", "Result=" + strResult);
+        //        if (strResult == "1")
+        //        {
+        //            //-- successful --
+        //        }
+        //        else
+        //        {
+        //            //-- failed --
+        //            blnHasFailed = true;
+        //            response.Status = strResult;
+        //            response.ErrorCode = strErrorCode;
+        //            response.ErrorMessage = strErrorMsg;
+        //        }
 
-                if (!blnHasFailed)
-                {
-                    response.Status = "1";
-                    response.ErrorCode = "";
-                    response.ErrorMessage = "";
-                }
-            }
-            catch (Exception ex)
-            {
-                response.Status = "-1";
-                response.ErrorCode = "1";
-                response.ErrorMessage = "Unexpected Error: " + ex.Message;
-                clsLog.WriteSystemLog(clsLog.MessageType.Error, "DeleteFileFromEDMS()", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-            finally
-            {
-                binding = null;
-                client = null;
-            }
+        //        if (!blnHasFailed)
+        //        {
+        //            response.Status = "1";
+        //            response.ErrorCode = "";
+        //            response.ErrorMessage = "";
+        //        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        response.Status = "-1";
+        //        response.ErrorCode = "1";
+        //        response.ErrorMessage = "Unexpected Error: " + ex.Message;
+        //        clsLog.WriteSystemLog(clsLog.MessageType.Error, "DeleteFileFromEDMS()", ex.Message + Environment.NewLine + ex.StackTrace);
+        //    }
+        //    finally
+        //    {
+        //        binding = null;
+        //        client = null;
+        //    }
 
-            clsLog.WriteSystemLog(clsLog.MessageType.Info, "Response", ConvertResponseToXmlText(EnumResponseType.DeleteFile, "DocID=" + DocID + ",ProfileID=" + ProfileID, response));
-            return response;
-        }
+        //    clsLog.WriteSystemLog(clsLog.MessageType.Info, "Response", ConvertResponseToXmlText(EnumResponseType.DeleteFile, "DocID=" + DocID + ",ProfileID=" + ProfileID, response));
+        //    return response;
+        //}
         
         ///// <summary>
         ///// Test
@@ -1210,72 +2143,72 @@ namespace HLBBWS
         //    return strResult = "1";
         //}
 
-        private string ConvertResponseToXmlText(EnumResponseType enumType, string strKey, object response)
-        {
-            System.Text.StringBuilder strOutput = new System.Text.StringBuilder();
-            strOutput.AppendLine(strKey);
-            strOutput.AppendLine("<response>");
+        //private string ConvertResponseToXmlText(EnumResponseType enumType, string strKey, object response)
+        //{
+        //    System.Text.StringBuilder strOutput = new System.Text.StringBuilder();
+        //    strOutput.AppendLine(strKey);
+        //    strOutput.AppendLine("<response>");
 
-            if (enumType == EnumResponseType.ExportFile)
-            {
-                foreach (var prop in ((ExportFileResponseData)response).GetType().GetProperties())
-                {
-                    strOutput.AppendLine("    <" + prop.Name + ">" + prop.GetValue(response, null) + "</" + prop.Name + ">");
-                }
-            }
-            else if (enumType == EnumResponseType.SearchFile)
-            {
-                foreach (var prop in ((SearchFileResponseData)response).GetType().GetProperties())
-                {
-                    strOutput.AppendLine("    <" + prop.Name + ">" + prop.GetValue(response, null) + "</" + prop.Name + ">");
-                }
-            }
-            else if (enumType == EnumResponseType.DownloadFile)
-            {
-                foreach (var prop in ((DownloadFileResponseData)response).GetType().GetProperties())
-                {
-                    strOutput.AppendLine("    <" + prop.Name + ">" + prop.GetValue(response, null) + "</" + prop.Name + ">");
-                }
-            }
-            else if (enumType == EnumResponseType.DeleteFile)
-            {
-                foreach (var prop in ((DeleteFileResponseData)response).GetType().GetProperties())
-                {
-                    strOutput.AppendLine("    <" + prop.Name + ">" + prop.GetValue(response, null) + "</" + prop.Name + ">");
-                }
-            }
-            else if (enumType == EnumResponseType.CifDetailsInquiryByIDNo || enumType == EnumResponseType.CifDetailsInquiryByCIFNum)
-            {
-                foreach (var prop in ((SearchCifResponseData)response).GetType().GetProperties())
-                {
-                    strOutput.AppendLine("    <" + prop.Name + ">" + prop.GetValue(response, null) + "</" + prop.Name + ">");
-                }
-            }
-            else if (enumType == EnumResponseType.TradeTxnInquiry)
-            {
-                foreach (var prop in ((SearchTradeTxnResponseData)response).GetType().GetProperties())
-                {
-                    strOutput.AppendLine("    <" + prop.Name + ">" + prop.GetValue(response, null) + "</" + prop.Name + ">");
-                }
-            }
-            else if (enumType == EnumResponseType.LdapAuthentication)
-            {
-                foreach (var prop in ((LdapAuthenticationResponseData)response).GetType().GetProperties())
-                {
-                    strOutput.AppendLine("    <" + prop.Name + ">" + prop.GetValue(response, null) + "</" + prop.Name + ">");
-                }
-            }
-            else if (enumType == EnumResponseType.LdapSearchUser)
-            {
-                foreach (var prop in ((LdapSearchUserResponseData)response).GetType().GetProperties())
-                {
-                    strOutput.AppendLine("    <" + prop.Name + ">" + prop.GetValue(response, null) + "</" + prop.Name + ">");
-                }
-            }
+        //    if (enumType == EnumResponseType.ExportFile)
+        //    {
+        //        foreach (var prop in ((ExportFileResponseData)response).GetType().GetProperties())
+        //        {
+        //            strOutput.AppendLine("    <" + prop.Name + ">" + prop.GetValue(response, null) + "</" + prop.Name + ">");
+        //        }
+        //    }
+        //    else if (enumType == EnumResponseType.SearchFile)
+        //    {
+        //        foreach (var prop in ((SearchFileResponseData)response).GetType().GetProperties())
+        //        {
+        //            strOutput.AppendLine("    <" + prop.Name + ">" + prop.GetValue(response, null) + "</" + prop.Name + ">");
+        //        }
+        //    }
+        //    else if (enumType == EnumResponseType.DownloadFile)
+        //    {
+        //        foreach (var prop in ((DownloadFileResponseData)response).GetType().GetProperties())
+        //        {
+        //            strOutput.AppendLine("    <" + prop.Name + ">" + prop.GetValue(response, null) + "</" + prop.Name + ">");
+        //        }
+        //    }
+        //    else if (enumType == EnumResponseType.DeleteFile)
+        //    {
+        //        foreach (var prop in ((DeleteFileResponseData)response).GetType().GetProperties())
+        //        {
+        //            strOutput.AppendLine("    <" + prop.Name + ">" + prop.GetValue(response, null) + "</" + prop.Name + ">");
+        //        }
+        //    }
+        //    else if (enumType == EnumResponseType.CifDetailsInquiryByIDNo || enumType == EnumResponseType.CifDetailsInquiryByCIFNum)
+        //    {
+        //        foreach (var prop in ((SearchCifResponseData)response).GetType().GetProperties())
+        //        {
+        //            strOutput.AppendLine("    <" + prop.Name + ">" + prop.GetValue(response, null) + "</" + prop.Name + ">");
+        //        }
+        //    }
+        //    else if (enumType == EnumResponseType.TradeTxnInquiry)
+        //    {
+        //        foreach (var prop in ((SearchTradeTxnResponseData)response).GetType().GetProperties())
+        //        {
+        //            strOutput.AppendLine("    <" + prop.Name + ">" + prop.GetValue(response, null) + "</" + prop.Name + ">");
+        //        }
+        //    }
+        //    else if (enumType == EnumResponseType.LdapAuthentication)
+        //    {
+        //        foreach (var prop in ((LdapAuthenticationResponseData)response).GetType().GetProperties())
+        //        {
+        //            strOutput.AppendLine("    <" + prop.Name + ">" + prop.GetValue(response, null) + "</" + prop.Name + ">");
+        //        }
+        //    }
+        //    else if (enumType == EnumResponseType.LdapSearchUser)
+        //    {
+        //        foreach (var prop in ((LdapSearchUserResponseData)response).GetType().GetProperties())
+        //        {
+        //            strOutput.AppendLine("    <" + prop.Name + ">" + prop.GetValue(response, null) + "</" + prop.Name + ">");
+        //        }
+        //    }
 
-            strOutput.AppendLine("</response>");
-            return strOutput.ToString();
-        }
+        //    strOutput.AppendLine("</response>");
+        //    return strOutput.ToString();
+        //}
 
         private string FormatSqlValue(string strValue)
         {
@@ -2007,14 +2940,14 @@ namespace HLBBWS
             structureLOADS loads = new structureLOADS();
             try
             {
-                SearchFileResponseData response = new SearchFileResponseData();
+               // SearchFileResponseData response = new SearchFileResponseData();
 
 
                 //System.ServiceModel.BasicHttpBinding binding = null;
                 //LOADS_API.WsEIWSLosaLoanApplicantInfo proxy = new LOADS_API.WsEIWSLosaLoanApplicantInfo();
                 LOADS_API.WsEIWSLosaAppBocImpService client = new LOADS_API.WsEIWSLosaAppBocImpService();
-                //LOADS_API.AppHeader xmlAppHeader = new LOADS_API.AppHeader();
-                LOADS_API.WsEIWSLosaAppHeader xmlAppHeader =  new LOADS_API.WsEIWSLosaAppHeader();
+                LOADS_API.AppHeader xmlAppHeader = new LOADS_API.AppHeader();
+                //LOADS_API.WsEIWSLosaAppHeader xmlAppHeader =  new LOADS_API.WsEIWSLosaAppHeader();
                 xmlAppHeader.agencyId = "?";
                 xmlAppHeader.bizRefNo = arn;
                 xmlAppHeader.businessArea = "?";
@@ -2023,6 +2956,7 @@ namespace HLBBWS
                 
                 LOADS_API.WsEIWSLosaAppLoanInfo output = client.LoanApplicationInfo(xmlAppHeader);
                 
+
                 /*
                 // log the result in db
                 DataSet ds = null;
@@ -2572,13 +3506,13 @@ namespace HLBBWS
                         loads.loanApplicationInfo_lendingType = output.loanApplicationInfo.lendingType.ToString();
                     }
 
-                    if (string.IsNullOrEmpty(output.loanApplicationInfo.loAcceptanceDt))
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.loAcceptanceDt.ToString()))
                     {
                         loads.loanApplicationInfo_loAcceptanceDt = "";
                     }
                     else
                     {
-                        loads.loanApplicationInfo_loAcceptanceDt = DateTime.ParseExact(output.loanApplicationInfo.loAcceptanceDt, "dd/MM/yyyy", null).ToString();
+                        loads.loanApplicationInfo_loAcceptanceDt = DateTime.ParseExact(output.loanApplicationInfo.loAcceptanceDt.ToString(), "dd/MM/yyyy", null).ToString();
                     }
 
                     if (string.IsNullOrEmpty(output.loanApplicationInfo.mortgageCenterCode))
@@ -3085,8 +4019,8 @@ namespace HLBBWS
             //System.ServiceModel.BasicHttpBinding binding = null;
             //LOADS_API.WsEIWSLosaLoanApplicantInfo proxy = new LOADS_API.WsEIWSLosaLoanApplicantInfo();
             LOADS_API.WsEIWSLosaAppBocImpService client = new LOADS_API.WsEIWSLosaAppBocImpService();
-            //LOADS_API.AppHeader xmlAppHeader = new LOADS_API.AppHeader();
-            LOADS_API.WsEIWSLosaAppHeader xmlAppHeader = new LOADS_API.WsEIWSLosaAppHeader();
+            LOADS_API.AppHeader xmlAppHeader = new LOADS_API.AppHeader();
+            //LOADS_API.WsEIWSLosaAppHeader xmlAppHeader = new LOADS_API.WsEIWSLosaAppHeader();
 
             xmlAppHeader.agencyId = "?";
             xmlAppHeader.bizRefNo = arn;
@@ -3095,7 +4029,7 @@ namespace HLBBWS
             xmlAppHeader.processId = "?";
 
             LOADS_API.WsEIWSLosaAppLoanInfo output = client.LoanApplicationInfo(xmlAppHeader);
-
+            
             /*
             // log the result in db
             DataSet ds = null;
@@ -3645,13 +4579,13 @@ namespace HLBBWS
                     loads.loanApplicationInfo_lendingType = output.loanApplicationInfo.lendingType.ToString();
                 }
 
-                if (string.IsNullOrEmpty(output.loanApplicationInfo.loAcceptanceDt))
+                if (string.IsNullOrEmpty(output.loanApplicationInfo.loAcceptanceDt.ToString()))
                 {
                     loads.loanApplicationInfo_loAcceptanceDt = "";
                 }
                 else
                 {
-                    loads.loanApplicationInfo_loAcceptanceDt = DateTime.ParseExact(output.loanApplicationInfo.loAcceptanceDt, "dd/MM/yyyy", null).ToString();
+                    loads.loanApplicationInfo_loAcceptanceDt = DateTime.ParseExact(output.loanApplicationInfo.loAcceptanceDt.ToString(), "dd/MM/yyyy", null).ToString();
                 }
 
                 if (string.IsNullOrEmpty(output.loanApplicationInfo.mortgageCenterCode))
@@ -5857,9 +6791,14 @@ namespace HLBBWS
 
                             if (ReceiverEmail != "")
                             {
-                                SendMailWFParser_WithAttachment(ReceiverEmail, EmailHeader, EmailBody, EncryptedFile, filename);
+                                //SendMailWFParser_WithAttachment(ReceiverEmail, EmailHeader, EmailBody, EncryptedFile, filename);
+
+                                //SendMail(ReceiverEmail, EmailHeader, EmailBody, EncryptedFile, filename);
+
+                                //Infobip enhancement 
+                                SendMailV2("SendToDeveloper-NotificationOfPayment", "PhaseCode", PhaseCode, EmailHeader, EmailBody, ReceiverEmail, 1, 1, filename,EncryptedFile );
                             }
-                            
+
 
                             SqlConnection connEDMS_EMAIL_LOG = new SqlConnection(connstr);
                             SqlDataAdapter sqlDEDMS_EMAIL_LOG;
@@ -8476,7 +9415,11 @@ namespace HLBBWS
                                     var email_header = dtZeta.Rows[0]["email_header"].ToString();
                                     var email_body = dtZeta.Rows[0]["email_body"].ToString();
 
-                                    SendMail(receiveremail, email_header, email_body, null,null);
+                                    //SendMail(receiveremail, email_header, email_body, null,null);
+
+                                    //Infobip enhancement 
+                                    SendMailV2("SendToSolicitor-Documentation", "CRA", arn, email_header, email_body, receiveremail, 0, 1, "", "");
+
                                 }
                                 // 20200827 end direct send email from WS
 
@@ -8839,7 +9782,10 @@ namespace HLBBWS
                                     var email_header = dtZeta.Rows[0]["email_header"].ToString();
                                     var email_body = dtZeta.Rows[0]["email_body"].ToString();
 
-                                    SendMail(receiveremail, email_header, email_body, null,null);
+                                    //SendMail(receiveremail, email_header, email_body, null,null);
+
+                                    //Infobip enhancement 
+                                    SendMailV2("SendToSolicitor-Disbursement", "CRA", arn, email_header, email_body, receiveremail, 0, 1, "", "");
                                 }
                                 // 20200827 end direct send email from WS
                                 // start delete VS master data and detail data 
@@ -9227,7 +10173,9 @@ namespace HLBBWS
 
                             if (receiveremail != "")
                             {
-                                SendMail(receiveremail, emailheader, emailcontent, null, null);
+                                //SendMail(receiveremail, emailheader, emailcontent, null, null);
+                                //Infobip enhancement 
+                                SendMailV2("SendToDeveloper-Disbursement", "CRA", arn.ToString(), emailheader, emailcontent, receiveremail, 0, 1, "", "");
                             }
 
 
@@ -9558,7 +10506,9 @@ namespace HLBBWS
 
                             if (receiveremail != "")
                             {
-                                SendMail(receiveremail, emailheader, emailcontent, null, null);
+                                //SendMail(receiveremail, emailheader, emailcontent, null, null);
+                                //Infobip enhancement 
+                                SendMailV2("SendToDeveloper-Disbursement", "CRA", arn.ToString(), emailheader, emailcontent, receiveremail, 0, 1, "", "");
                             }
 
 
@@ -9944,7 +10894,10 @@ namespace HLBBWS
                                     var email_header = dtZeta.Rows[0]["email_header"].ToString();
                                     var email_body = dtZeta.Rows[0]["email_body"].ToString();
 
-                                    SendMail(receiveremail, email_header, email_body, null,null);
+                                    //SendMail(receiveremail, email_header, email_body, null,null);
+                                    
+                                    //Infobip enhancement 
+                                    SendMailV2("SendToValuer-VR", "CRA", arn, email_header, email_body, receiveremail, 0, 1, "", "");
                                 }
                                 // 20200827 end direct send email from WS  
 
@@ -11884,23 +12837,23 @@ namespace HLBBWS
             
         }
 
-        [WebMethod]
-        public void SendMailWFParser_NoAttachment(string recipient, string subject, string body)
-        {
-            try
-            {
-                SendMail(recipient, subject, body, null, null);
-            }
-            catch (Exception ex)
-            {
-                string error;
-                error = "POC_SendMailWFParser_NoAttachment failed with exception: " + ex.Message.ToString();
-                string errorDetail;
-                //errorDetail = "Input Param: N/A";
-                errorDetail = "Input Param: recipient:" + recipient + ",subject:" + subject + ",body:" + body;
-                LogErrorToDB("POC_SendMailWFParser_NoAttachment", "Exception", error, errorDetail);
-            }            
-        }
+        //[WebMethod]
+        //public void SendMailWFParser_NoAttachment(string recipient, string subject, string body)
+        //{
+        //    try
+        //    {
+        //        SendMail(recipient, subject, body, null, null);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        string error;
+        //        error = "POC_SendMailWFParser_NoAttachment failed with exception: " + ex.Message.ToString();
+        //        string errorDetail;
+        //        //errorDetail = "Input Param: N/A";
+        //        errorDetail = "Input Param: recipient:" + recipient + ",subject:" + subject + ",body:" + body;
+        //        LogErrorToDB("POC_SendMailWFParser_NoAttachment", "Exception", error, errorDetail);
+        //    }            
+        //}
 
         /*
         [WebMethod]
@@ -11921,48 +12874,222 @@ namespace HLBBWS
         }
         */
 
-        [WebMethod]
-        public void SendMailWFParser_WithAttachment(string recipient, string subject, string body, string attachment, string AttachmentFileName)
-        {
-            try
-            {
-                SendMail(recipient, subject, body, attachment, AttachmentFileName);
-                //SendMail(recipient, subject, body, null, null);
-            }
-            catch (Exception ex)
-            {
-                string error;
-                error = "SendMailWFParser_WithAttachment failed with exception: " + ex.Message.ToString();
-                string errorDetail;
-                //errorDetail = "Input Param: N/A";
-                errorDetail = "Input Param: recipient:" + recipient + ",subject:" + subject + ",body:" + body;
-                LogErrorToDB("SendMailWFParser_WithAttachment", "Exception", error, errorDetail);
-            }
+        //[WebMethod]
+        //public void SendMailWFParser_WithAttachment(string recipient, string subject, string body, string attachment, string AttachmentFileName)
+        //{
+        //    try
+        //    {
+        //        SendMail(recipient, subject, body, attachment, AttachmentFileName);
+        //        //SendMail(recipient, subject, body, null, null);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        string error;
+        //        error = "SendMailWFParser_WithAttachment failed with exception: " + ex.Message.ToString();
+        //        string errorDetail;
+        //        //errorDetail = "Input Param: N/A";
+        //        errorDetail = "Input Param: recipient:" + recipient + ",subject:" + subject + ",body:" + body;
+        //        LogErrorToDB("SendMailWFParser_WithAttachment", "Exception", error, errorDetail);
+        //    }
             
-        }
+        //}
 
-        [WebMethod]
-        public void SendMailWFParser_WithMultipleAttachments(string recipient, string subject, string body, ArrayList attachment, ArrayList AttachmentFileName)
+        //[WebMethod]
+        //public void SendMailWFParser_WithMultipleAttachments(string recipient, string subject, string body, ArrayList attachment, ArrayList AttachmentFileName)
+        //{
+        //    try
+        //    {
+        //        SendMail_MultipleAttachment(recipient, subject, body, attachment, AttachmentFileName);
+        //        //SendMail(recipient, subject, body, null, null);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        string error;
+        //        error = "SendMailWFParser_WithMultipleAttachments failed with exception: " + ex.Message.ToString();
+        //        string errorDetail;
+        //        errorDetail = "Input Param: recipient:" + recipient + ",subject:" + subject + ",body:" + body;
+        //        LogErrorToDB("SendMailWFParser_WithMultipleAttachments", "Exception", error, errorDetail);
+        //    }
+
+        //}
+
+        public string FormatEmailAddressDelimiter (string list)
         {
-            try
-            {
-                SendMail_MultipleAttachment(recipient, subject, body, attachment, AttachmentFileName);
-                //SendMail(recipient, subject, body, null, null);
-            }
-            catch (Exception ex)
-            {
-                string error;
-                error = "SendMailWFParser_WithMultipleAttachments failed with exception: " + ex.Message.ToString();
-                string errorDetail;
-                errorDetail = "Input Param: recipient:" + recipient + ",subject:" + subject + ",body:" + body;
-                LogErrorToDB("SendMailWFParser_WithMultipleAttachments", "Exception", error, errorDetail);
-            }
+            string newlist = "";
 
+            newlist = list.Replace(";", ",");
+
+            return newlist;
         }
+
+        //[WebMethod]
+        //public void SendMail_Old(string recipient, string subject, string body, string attachment, string AttachmentFileName)
+        //{
+
+        //    try
+        //    {
+        //        MailMessage msg = new MailMessage();
+
+        //        //msg.From = new MailAddress("HLBBEIWS-SIT@hlbb.hongleong.com.my");
+        //        msg.From = new MailAddress(MailConst.From);
+        //        //msg.To.Add(new MailAddress("ShaikAlavudeen@hlbb.hongleong.com.my"));
+        //        //20210712 - add support to multiple receiver 
+
+        //        //msg.To.Add(new MailAddress(recipient));
+        //         msg.To.Add(recipient);
+
+        //        /*
+        //        int Commafreq = recipient.Split(',').Length - 1;
+        //        int SemiCommafreq = recipient.Split(';').Length - 1;
+
+        //        if (Commafreq != 0 && SemiCommafreq != 0)
+        //        {
+        //            //throw new Exception("Invalid Email Address Seperator");
+        //            foreach (var address in recipient.Split(new[] { "," }, StringSplitOptions.RemoveEmptyEntries))
+        //            {
+        //                SemiCommafreq = address.Split(';').Length - 1;
+        //                if (SemiCommafreq != 0)
+        //                {
+        //                    foreach (var address2 in address.Split(new[] { ";" }, StringSplitOptions.RemoveEmptyEntries))
+        //                    {
+        //                        msg.To.Add(new MailAddress(address2));
+        //                    }
+        //                }
+        //                else
+        //                {
+        //                    msg.To.Add(new MailAddress(address));
+        //                }
+
+
+        //            }
+
+        //        }
+        //        else
+        //        {
+        //            if (Commafreq > 0 && SemiCommafreq == 0)
+        //            {
+        //                foreach (var address in recipient.Split(new[] { "," }, StringSplitOptions.RemoveEmptyEntries))
+        //                {
+        //                    //msg.To.Add(address);
+        //                    msg.To.Add(new MailAddress(address));
+        //                    //recipient = address;
+        //                    //break;
+        //                }
+        //            }
+
+        //            if (Commafreq == 0 && SemiCommafreq > 0)
+        //            {
+        //                foreach (var address in recipient.Split(new[] { ";" }, StringSplitOptions.RemoveEmptyEntries))
+        //                {
+
+        //                    //msg.To.Add(address);
+        //                    msg.To.Add(new MailAddress(address));
+        //                    // recipient = address;
+        //                    // break;
+        //                }
+        //            }
+
+        //            if (Commafreq == 0 && SemiCommafreq == 0)
+        //            {
+        //                msg.To.Add(new MailAddress(recipient));
+        //                //msg.To.Add(recipient);                    
+        //            }
+        //        }
+        //        */
+        //        //20210712 - end support to multiple receiver
+
+        //        msg.Subject = subject;
+        //        msg.Body = body;
+        //        msg.IsBodyHtml = true;
+        //        //SmtpClient client = new SmtpClient("hlgmail.hongleong.com.my");
+        //        SmtpClient client = new SmtpClient(MailConst.SmtpServer);
+        //        client.EnableSsl = false;
+        //        //client.Credentials = new System.Net.NetworkCredential("EIWSSIT", "W1gg$168");
+        //        client.Credentials = new System.Net.NetworkCredential(MailConst.Username, MailConst.Password);
+        //        client.Port = 25;
+        //        //client.Port = 587;
+
+
+        //        if (attachment != null)
+        //        {
+        //            byte[] byteFileContent = null;
+        //            byteFileContent = Convert.FromBase64String(attachment);
+
+        //            Stream stream = new MemoryStream(byteFileContent);
+        //            Attachment att = System.Net.Mail.Attachment.CreateAttachmentFromString(attachment, AttachmentFileName);
+
+        //            System.Net.Mime.ContentType ct = new System.Net.Mime.ContentType(System.Net.Mime.MediaTypeNames.Application.Pdf);
+        //            // Attach the log file stream to the email message.
+
+        //            Attachment data = new Attachment(stream, ct);
+
+        //            System.Net.Mime.ContentDisposition disposition = data.ContentDisposition;
+        //            // Suggest a file name for the attachment.
+        //            disposition.FileName = AttachmentFileName;
+
+        //            //msg.Attachments.Add(new Attachment(att.ToString()));
+        //            msg.Attachments.Add(data);
+
+
+
+        //        }
+
+        //        //client.Send(msg);
+
+
+
+        //        client.Send(msg);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        string error = ex.Message.ToString();
+
+        //        error = "SendMail failed with exception: " + ex.Message.ToString();
+        //        string errorDetail;
+        //        errorDetail = "Input Param:" + " recipient:" + recipient + ",header:" + subject + ",content:" + body;
+        //        LogErrorToDB("SendMail", "Exception", error, errorDetail);
+
+        //        //throw ex;
+        //    }
+
+        //}
 
         [WebMethod]
         public void SendMail(string recipient, string subject, string body, string attachment, string AttachmentFileName)
         {
+            // 20220322- start save to log
+
+            // DataSet ds = null;
+            //  DataTable dt = null;
+            //  SqlConnection conn = null;
+            // SqlDataAdapter sqlDA = null;
+
+            string strDataSource = clsGlobal.MG_SQL_DATA_SOURCE;
+            string strDBName = clsGlobal.MG_SQL_DB_NAME;
+            string strID = clsGlobal.MG_SQL_ID;
+            string strPassword = clsGlobal.MG_SQL_PASSWORD;
+            bool blnIsWinAuth = clsGlobal.MG_SQL_IS_WIN_AUTH;
+
+            string connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Persist Security Info=True;User ID=" + strID + ";Password=" + strPassword;
+            if (blnIsWinAuth)
+            {
+                connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Integrated Security=True;";
+            }
+
+            SqlConnection connAlpha = null;
+            SqlDataAdapter sqlDAlpha = null;
+
+            connAlpha = new SqlConnection(connstr);
+
+            sqlDAlpha = new SqlDataAdapter();
+            sqlDAlpha.SelectCommand = new SqlCommand("dbo.emailLog_add @receiver, @header , @content  ", connAlpha);
+            sqlDAlpha.SelectCommand.Parameters.AddWithValue("@receiver", recipient);
+            sqlDAlpha.SelectCommand.Parameters.AddWithValue("@header", subject);
+            sqlDAlpha.SelectCommand.Parameters.AddWithValue("@content", body);
+
+            DataSet dsAlpha = new DataSet("ds");
+            sqlDAlpha.Fill(dsAlpha);
+            // 20220322- end save to log 
             /*
             SmtpClient smtpClient = new SmtpClient();
             NetworkCredential basicCredential = new NetworkCredential(MailConst.Username, MailConst.Password, MailConst.SmtpServer);
@@ -11996,9 +13123,10 @@ namespace HLBBWS
 
             smtpClient.Send(message);
              * */
-            
-            
-            MailMessage msg = new MailMessage();
+
+            try
+            {
+                MailMessage msg = new MailMessage();
             
             //msg.From = new MailAddress("HLBBEIWS-SIT@hlbb.hongleong.com.my");
             msg.From = new MailAddress(MailConst.From);
@@ -12107,14 +13235,19 @@ namespace HLBBWS
             //client.Send(msg);
 
             
-            try {
+            
                 client.Send(msg);
             }
             catch (Exception ex)
             {
                 string error = ex.Message.ToString();
+               
+                error = "SendMail failed with exception: " + ex.Message.ToString();
+                string errorDetail;
+                errorDetail = "Input Param:" + " recipient:" + recipient + ",header:" + subject + ",content:" + body;
+                LogErrorToDB("SendMail", "Exception", error, errorDetail);
 
-            //   throw ex;
+                //throw ex;
             }
             
 
@@ -12922,8 +14055,12 @@ namespace HLBBWS
                     string emailbody = sqlDAGAMA.SelectCommand.Parameters["@emailbody"].Value.ToString();
                     //end call usp_Maintenance_SQLSolicitor_PasswordReset_GenerateEmail
 
-                    SendMail(ReceiverEmail, emailheader, emailbody, null,null);
-                }               
+                    //SendMail(ReceiverEmail, emailheader, emailbody, null,null);
+
+                    //Infobip enhancement 
+                    SendMailV2("SendToSolicitor-ResetPassword", "SolicitorCode", SolCode, emailheader, emailbody, ReceiverEmail, 0, 1, "", "");
+
+                }
             }
             catch (Exception ex)
             {
@@ -13098,7 +14235,10 @@ namespace HLBBWS
                     string emailbody = sqlDAGAMA.SelectCommand.Parameters["@emailbody"].Value.ToString();
                     //end call usp_Maintenance_SQLSolicitor_PasswordReset_GenerateEmail
 
-                    SendMail(ReceiverEmail, emailheader, emailbody, null,null);
+                    //SendMail(ReceiverEmail, emailheader, emailbody, null,null);
+
+                    //Infobip enhancement 
+                    SendMailV2("SendToValuer-ResetPassword", "ValuerCode", ValCode, emailheader, emailbody, ReceiverEmail, 0, 1, "", "");
                 }
             }
             catch (Exception ex)
@@ -13214,9 +14354,7 @@ namespace HLBBWS
                     sqlDADELTA.SelectCommand = new SqlCommand("dbo.ddMaintenance_SQLDeveloper_PasswordReset_updatePassword_Final @ID, @EncryptedNewPassword ", connDELTA);
                     sqlDADELTA.SelectCommand.Parameters.AddWithValue("@ID", ID);
                     sqlDADELTA.SelectCommand.Parameters.AddWithValue("@EncryptedNewPassword", defaultPasswordEncrypted);
-                    
-                    
-
+                                        
                     //sqlDADELTA.SelectCommand.Parameters.Add("@error", SqlDbType.NVarChar, 4000);
                     //sqlDADELTA.SelectCommand.Parameters["@error"].Direction = ParameterDirection.Output;
 
@@ -13257,7 +14395,10 @@ namespace HLBBWS
                     string emailbody = sqlDAGAMA.SelectCommand.Parameters["@emailbody"].Value.ToString();
                     //end call usp_Maintenance_SQLSolicitor_PasswordReset_GenerateEmail
 
-                    SendMail(ReceiverEmail, emailheader, emailbody, null, null);
+                    //SendMail(ReceiverEmail, emailheader, emailbody, null, null);
+
+                    //Infobip enhancement 
+                    SendMailV2("SendToDeveloper-ResetPassword", "DeveloperLoginID", ID, emailheader, emailbody, ReceiverEmail, 0, 1, "", "");
                 }
             }
             catch (Exception ex)
@@ -15248,7 +16389,10 @@ namespace HLBBWS
 
                 Document doc = new Document(stream);
 
-                doc.Encrypt(PDFPassword, masterpw, 0, CryptoAlgorithm.AESx256);
+                //doc.Encrypt(PDFPassword, masterpw, 0, CryptoAlgorithm.AESx256);
+
+                doc.Encrypt(masterpw,PDFPassword, 0, CryptoAlgorithm.AESx256);
+
                 doc.Save(outputstream);
                 outputbyteFileContent = outputstream.ToArray();
                 string protectedfilecontent = Convert.ToBase64String(outputbyteFileContent, 0, outputbyteFileContent.Length);
@@ -15287,6 +16431,31 @@ namespace HLBBWS
             }
             return output_xml;
         }
+
+        [WebMethod]
+        public void DP_Doc_SendEmailV2_ByXML(string WF, string UniqueKey, string UniqueKeyValue, string header, string body, string receiver, int attachmentcount, int InfobipFlag, string input_xml)
+        {
+            string error = "";
+            string output_xml = input_xml;
+
+            string xml2 = DP_SetDULetterPassword(UniqueKeyValue, input_xml);
+
+            List<k2filestructure> list = new List<k2filestructure>();
+           list = DP_GetK2FileNameAndContent(xml2);
+
+            string filename = "";
+            string filecontent = "";
+
+            foreach (var file in list)
+            {
+                filename = file.filename;
+                filecontent = file.filecontent;
+            }
+
+            SendMailV2(WF, UniqueKey, UniqueKeyValue, header, body, receiver, attachmentcount, InfobipFlag, filename, filecontent);
+           // SendMailV2()
+        }
+
 
         [WebMethod]
         public string DP_SetDeveloperPortalNotificationOfPaymentPassword(string DevCode, string DevName, string ProjectCode, string PhaseCode, string filecontent)
@@ -15386,7 +16555,10 @@ namespace HLBBWS
 
                 Document doc = new Document(stream);
 
-                doc.Encrypt(PDFPassword, masterpw, 0, CryptoAlgorithm.AESx256);
+               // doc.Encrypt(PDFPassword, masterpw, 0, CryptoAlgorithm.AESx256);
+
+                doc.Encrypt(masterpw, PDFPassword, 0, CryptoAlgorithm.AESx256);
+
                 doc.Save(outputstream);
                 outputbyteFileContent = outputstream.ToArray();
                 protectedfilecontent = Convert.ToBase64String(outputbyteFileContent, 0, outputbyteFileContent.Length);
@@ -15521,7 +16693,8 @@ namespace HLBBWS
 
                 Document doc = new Document(stream);
 
-                doc.Encrypt(PDFPassword, masterpw, 0, CryptoAlgorithm.AESx256);
+               // doc.Encrypt(PDFPassword, masterpw, 0, CryptoAlgorithm.AESx256);
+                doc.Encrypt(masterpw, PDFPassword, 0, CryptoAlgorithm.AESx256);
                 doc.Save(outputstream);
                 outputbyteFileContent = outputstream.ToArray();
                 protectedfilecontent = Convert.ToBase64String(outputbyteFileContent, 0, outputbyteFileContent.Length);
@@ -15656,7 +16829,8 @@ namespace HLBBWS
 
                 Document doc = new Document(stream);
 
-                doc.Encrypt(PDFPassword, masterpw, 0, CryptoAlgorithm.AESx256);
+               // doc.Encrypt(PDFPassword, masterpw, 0, CryptoAlgorithm.AESx256);
+                doc.Encrypt(masterpw, PDFPassword, 0, CryptoAlgorithm.AESx256);
                 doc.Save(outputstream);
                 outputbyteFileContent = outputstream.ToArray();
                 protectedfilecontent = Convert.ToBase64String(outputbyteFileContent, 0, outputbyteFileContent.Length);
@@ -15698,379 +16872,8 @@ namespace HLBBWS
             return protectedfilecontent;
         }
 
-        [WebMethod]
-        public int k2_getworkflowid(string workflowname)
-        {
-            /*
-            //shows how to retrieve the list of workflows that the authenticated user has rights to 
-            //you should be familiar with web request authentication and JSON to use this API
 
-            //define the URI and URL for the workflows endpoint
-            //URL for the K2 server 
-            //string K2ServerURL = "https://dps-jasonang";
-           // string worklistTasksEndpointURI = @"/Api/Workflow/V1/tasks/";
-            string K2ServerURL = clsGlobal.K2_WEBSERVER_URL;
-            //string workflowsEndpointURI = @"/Api/Workflow/V1/tasks/";
-            string workflowsEndpointURI = @"/Api/Workflow/V1/workflows";
-            string workflowsURL = K2ServerURL + workflowsEndpointURI;
-
-            //set up client and credentials 
-            //we use static windows credentials here for brevity, see authentication samples for other auth mechanisms 
-            //string userID = "administrator@denallix.com";
-            //string pwd = "K2pass!";
-            string userID = clsGlobal.K2_ADMIN_USER;
-            string pwd = clsGlobal.K2_ADMIN_PWD;
-            
-            System.Net.WebClient webclient = new System.Net.WebClient();
-            webclient.Credentials = new System.Net.NetworkCredential(userID, pwd);
-            
-            NetworkCredential k2credentials = new NetworkCredential(userID, pwd);
-            System.Net.Http.HttpClientHandler loginHandler = new System.Net.Http.HttpClientHandler();
-            {
-                loginHandler.Credentials = k2credentials;
-            };
-            
-            //System.Net.Http.HttpClient httpClient = new System.Net.Http.HttpClient(loginHandler, true);
-
-            //retrieve the authenticated user's available workflows as JSON      
-            //ServicePointManager.ServerCertificateValidationCallback = delegate { return true; };
-            string response = webclient.DownloadString(workflowsURL);
-
-            //process the JSON response using a JSON deserializer. 
-            //In this case the built-in .NET DataContractSerializer class (you may want to use JSON.NET instead) 
-            //instantiate the DataContract used to parse the returned JSON worklist
-            Workflows workflows = new Workflows();
-
-            //Deserialize the response into the tasklist object, using the K2TaskList data contract.
-            //see below this code snippet for example of the data contract 
-            using (System.IO.MemoryStream memstream = new MemoryStream(Encoding.UTF8.GetBytes(response)))
-            {
-                System.Runtime.Serialization.Json.DataContractJsonSerializer serializer = new DataContractJsonSerializer(workflows.GetType());
-                memstream.Position = 0;
-                workflows = (Workflows)serializer.ReadObject(memstream);
-            }
-            int workflowid = 0;
-
-            //do something with the collection of tasks in the retrieved task list
-            foreach (Workflow workflow in workflows.K2Workflows)
-            {
-                
-                Console.WriteLine("Workflow ID: " + workflow.Id.ToString());
-                Console.WriteLine("Workflow Name: " + workflow.Name);
-                Console.WriteLine("Folder: " + workflow.Folder);
-                Console.WriteLine("System Name: " + workflow.SystemName);
-                Console.WriteLine("**************");
-                
-                if (workflow.Name == workflowname)
-                {
-                    workflowid = System.Convert.ToInt32(workflow.Id.ToString());
-                }
-            }
-            */
-            int workflowid = 0;
-            return workflowid;
-        }
-
-        [WebMethod]
-        public void k2_startworkflowbyID(int workflowid, string folio)
-        {            
-            
-            string K2ServerURL = clsGlobal.K2_WEBSERVER_URL;
-            string workflowsEndpointURI = @"/Api/Workflow/V1/workflows";
-            
-            string workflowsURL = K2ServerURL + workflowsEndpointURI + "/" + workflowid.ToString();
-            
-            string userID = clsGlobal.K2_ADMIN_USER;
-            string pwd = clsGlobal.K2_ADMIN_PWD;
-            System.Net.WebClient webclient = new System.Net.WebClient();
-            NetworkCredential k2credentials = new NetworkCredential(userID, pwd);
-            //webclient.Credentials = new System.Net.NetworkCredential(userID, pwd);
-                        
-            string datafieldsToUpdateJSON = "{\"folio\": \""+ folio + "\"}";
-            System.Net.Http.StringContent startWFkHttpContent = new System.Net.Http.StringContent(datafieldsToUpdateJSON, Encoding.UTF8, "application/json");
-
-            System.Net.Http.HttpClientHandler loginHandler = new System.Net.Http.HttpClientHandler();
-            {
-                loginHandler.Credentials = k2credentials;
-            };
-
-            System.Net.Http.HttpClient httpClient = new System.Net.Http.HttpClient(loginHandler, true);
-            var completeResult = httpClient.PostAsync(workflowsURL, startWFkHttpContent).Result;
-            //do something with the result, if needed
-            string completeResultStatus = completeResult.StatusCode.ToString();
-            
-        }
-
-        [WebMethod]
-        public void k2_startworkflowbyID_WithVariable(int workflowid, string folio, ArrayList VariableName, ArrayList VariableValue)
-        {
-
-            string K2ServerURL = clsGlobal.K2_WEBSERVER_URL;
-            string workflowsEndpointURI = @"/Api/Workflow/V1/workflows";
-
-            string workflowsURL = K2ServerURL + workflowsEndpointURI + "/" + workflowid.ToString();
-
-            string userID = clsGlobal.K2_ADMIN_USER;
-            string pwd = clsGlobal.K2_ADMIN_PWD;
-            System.Net.WebClient webclient = new System.Net.WebClient();
-            NetworkCredential k2credentials = new NetworkCredential(userID, pwd);
-            //webclient.Credentials = new System.Net.NetworkCredential(userID, pwd);
-
-            string datafieldsToUpdateJSON = "{\"folio\": \"" + folio + "\"";
-
-            if (VariableName.Count> 0)
-            {
-                datafieldsToUpdateJSON = datafieldsToUpdateJSON + ",\"dataFields\": {";
-            }
-            
-            for (int i = 0;i< VariableName.Count;i++)
-            {
-                datafieldsToUpdateJSON = datafieldsToUpdateJSON + "\"" + VariableName[i] + "\":\"" + VariableValue[i] + "\"";
-
-                if (i!= VariableName.Count -1)
-                {
-                    datafieldsToUpdateJSON = datafieldsToUpdateJSON + ",";
-                }
-                else
-                {
-                    datafieldsToUpdateJSON = datafieldsToUpdateJSON + "}";
-                }
-            }
-
-            datafieldsToUpdateJSON = datafieldsToUpdateJSON + "}";
-
-            System.Net.Http.StringContent startWFkHttpContent = new System.Net.Http.StringContent(datafieldsToUpdateJSON, Encoding.UTF8, "application/json");
-
-            System.Net.Http.HttpClientHandler loginHandler = new System.Net.Http.HttpClientHandler();
-            {
-                loginHandler.Credentials = k2credentials;
-            };
-
-            System.Net.Http.HttpClient httpClient = new System.Net.Http.HttpClient(loginHandler, true);
-            var completeResult = httpClient.PostAsync(workflowsURL, startWFkHttpContent).Result;
-            //do something with the result, if needed
-            string completeResultStatus = completeResult.StatusCode.ToString();
-
-        }
-        [WebMethod]
-        public string k2_getserialnumberfromfolio(string folio)
-        {
-            string serialnumber = "";
-            
-            string K2ServerURL = clsGlobal.K2_WEBSERVER_URL;
-            //string workflowsEndpointURI = @"/Api/Workflow/V1/workflows";
-            string workflowsEndpointURI = @"/Api/Workflow/V1/tasks/";
-            string workflowsURL = K2ServerURL + workflowsEndpointURI;
-
-            string userID = clsGlobal.K2_ADMIN_USER;
-            string pwd = clsGlobal.K2_ADMIN_PWD;
-            System.Net.WebClient webclient = new System.Net.WebClient();
-            NetworkCredential k2credentials = new NetworkCredential(userID, pwd);
-            //webclient.Credentials = new System.Net.NetworkCredential(userID, pwd);
-
-            //string datafieldsToUpdateJSON = "{\"folio\": \"testing123\"}";
-            //System.Net.Http.StringContent startWFkHttpContent = new System.Net.Http.StringContent(datafieldsToUpdateJSON, Encoding.UTF8, "application/json");
-
-            System.Net.Http.HttpClientHandler loginHandler = new System.Net.Http.HttpClientHandler();
-            {
-                loginHandler.Credentials = k2credentials;
-            };
-
-            System.Net.Http.HttpClient httpClient = new System.Net.Http.HttpClient(loginHandler, true);
-
-            string responseBody = httpClient.GetStringAsync(workflowsURL).Result;
-
-            Tasks tasks = new Tasks();
-
-            using (System.IO.MemoryStream memstream = new MemoryStream(Encoding.UTF8.GetBytes(responseBody)))
-            {
-                System.Runtime.Serialization.Json.DataContractJsonSerializer serializer = new DataContractJsonSerializer(tasks.GetType());
-                memstream.Position = 0;
-                tasks = (Tasks)serializer.ReadObject(memstream);
-            }
-            
-            foreach (K2Task task in tasks.K2Tasks)
-            {
-                if (task.WorkflowInstanceFolio == folio)
-                {
-                    serialnumber = task.SerialNumber;                    
-                }
-                                
-            }
-            
-            return serialnumber;
-        }
-
-
-        [WebMethod]
-        public void startworkflow(string workflowname, string folio, ref string serialnumber)
-        {
-            
-            serialnumber = "";
-            string error = "";
-            try
-            {
-                int wfid = k2_getworkflowid(workflowname);
-                k2_startworkflowbyID(wfid, folio);
-                serialnumber = k2_getserialnumberfromfolio(folio);
-            }
-            catch (Exception ex)
-            {
-                error = "startworkflow failed with exception: " + ex.Message.ToString();
-                string errorDetail;
-                errorDetail = "Input Param: " + workflowname + "," + folio;
-                LogErrorToDB("startworkflow", "Exception", error, errorDetail);
-            }
-           // return serialnumber;
-           
-        }
-
-        [WebMethod]
-        public void redirecttask(string workflowname, string folio, string newuser)
-        {
-            string serialnumber = "";
-            string error = "";
-
-            
-            if (newuser.ToLower().Contains("k2:"))
-            {
-                newuser = newuser.Replace("K2:", "");
-            }
-
-            
-            if (newuser.ToLower().Contains("\\"))
-            {
-                newuser = newuser.Replace("\\", @"\");
-            }
-            
-
-            String[] strlist = newuser.Split(new string[] { "\\" }, StringSplitOptions.None);
-
-            newuser = strlist[1];
-            
-            try
-            {
-                int wfid = k2_getworkflowid(workflowname);
-               // k2_startworkflowbyID(wfid, folio);
-                serialnumber = k2_getserialnumberfromfolio(folio);
-                k2_task_redirect(serialnumber, newuser);
-            }
-            catch (Exception ex)
-            {
-                error = "redirecttask failed with exception: " + ex.Message.ToString();
-                string errorDetail;
-                errorDetail = "Input Param: " + workflowname + "," + folio + "," + newuser;
-                LogErrorToDB("redirecttask", "Exception", error, errorDetail);
-            }
-            // return serialnumber;
-
-        }
-
-        [WebMethod]
-        public void DisbursementSubmission_RedirectTasktoPreviousDUMakerIfFound(string arn)
-        {
-            string error = "";
-            try
-            {
-                DataSet ds = null;
-                DataTable dt = null;
-                SqlConnection conn = null;
-                SqlDataAdapter sqlDA = null;
-
-                string strDataSource = clsGlobal.MG_SQL_DATA_SOURCE;
-                string strDBName = clsGlobal.MG_SQL_DB_NAME;
-                string strID = clsGlobal.MG_SQL_ID;
-                string strPassword = clsGlobal.MG_SQL_PASSWORD;
-                bool blnIsWinAuth = clsGlobal.MG_SQL_IS_WIN_AUTH;
-
-                string connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Persist Security Info=True;User ID=" + strID + ";Password=" + strPassword;
-                if (blnIsWinAuth)
-                {
-                    connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Integrated Security=True;";
-                }
-                conn = new SqlConnection(connstr);
-                conn.Open();
-
-                sqlDA = new SqlDataAdapter();
-                sqlDA.SelectCommand = new SqlCommand("aa_ws_SolDisbursementSubmission_GetPreviousDUMaker @arn, @error output", conn);
-                sqlDA.SelectCommand.Parameters.AddWithValue("@arn", arn);
-                sqlDA.SelectCommand.Parameters.AddWithValue("@error", "");
-
-                ds = new DataSet("ds");
-                sqlDA.Fill(ds);
-
-                if (ds.Tables.Count > 0)
-                {
-                    dt = ds.Tables[0];
-
-                    if (dt.Rows.Count > 0)
-                    {
-                        for (int i = 0; i < dt.Rows.Count; i++)
-                        {
-                            string newuseremail = dt.Rows[0]["DisbursementMakerEmailAddress"].ToString();
-
-                            string workflowname = "DisMaker_Approval";
-                            string folio = "DisMakerDisbursementApproval_" + arn;
-
-                            int wfid = k2_getworkflowid(workflowname);
-                            k2_startworkflowbyID(wfid, folio);
-                            string serialnumber = k2_getserialnumberfromfolio(folio);
-                            redirecttask(workflowname, folio, newuseremail);
-
-                            SqlDataAdapter sqlDA2 = null;
-                            sqlDA2 = new SqlDataAdapter();
-                            sqlDA2.SelectCommand = new SqlCommand("usp_ws_K2Instance_insert  @K2SerialNumber, @K2Folio, @arn,@Workflow", conn);                            
-                            sqlDA2.SelectCommand.Parameters.AddWithValue("@K2SerialNumber", serialnumber);
-                            sqlDA2.SelectCommand.Parameters.AddWithValue("@K2Folio", folio);
-                            sqlDA2.SelectCommand.Parameters.AddWithValue("@arn", arn);
-                            sqlDA2.SelectCommand.Parameters.AddWithValue("@Workflow", workflowname);
-
-                            ds = new DataSet("ds");
-                            sqlDA2.Fill(ds);
-                        }
-                    }
-                }
-                conn.Close();
-            }
-            catch (Exception ex)
-            {
-                error = "DisbursementSubmission_RedirectTasktoPreviousDUMakerIfFound failed with exception: " + ex.Message.ToString();
-                string errorDetail;
-                errorDetail = "Input Param: " + arn;
-                LogErrorToDB("DisbursementSubmission_RedirectTasktoPreviousDUMakerIfFound", "Exception", error, errorDetail);
-            }            
-        }
-
-        [WebMethod]
-        public void k2_task_redirect(string serialnumber, string newuser)
-        {
-            /*
-            string K2ServerURL = clsGlobal.K2_WEBSERVER_URL;
-            string workflowsEndpointURI = @"/Api/Workflow/V1/tasks";
-
-            string workflowsURL = K2ServerURL + workflowsEndpointURI + "/" + serialnumber + "/actions/redirect" ;
-
-            string userID = clsGlobal.K2_ADMIN_USER;
-            string pwd = clsGlobal.K2_ADMIN_PWD;
-            System.Net.WebClient webclient = new System.Net.WebClient();
-            NetworkCredential k2credentials = new NetworkCredential(userID, pwd);
-            //webclient.Credentials = new System.Net.NetworkCredential(userID, pwd);
-
-            string datafieldsToUpdateJSON = "{\"RedirectTo\": \"" + newuser + "\"}";
-            System.Net.Http.StringContent startWFkHttpContent = new System.Net.Http.StringContent(datafieldsToUpdateJSON, Encoding.UTF8, "application/json");
-
-            System.Net.Http.HttpClientHandler loginHandler = new System.Net.Http.HttpClientHandler();
-            {
-                loginHandler.Credentials = k2credentials;
-            };
-
-            System.Net.Http.HttpClient httpClient = new System.Net.Http.HttpClient(loginHandler, true);
-            var completeResult = httpClient.PostAsync(workflowsURL, startWFkHttpContent).Result;
-            //do something with the result, if needed
-            string completeResultStatus = completeResult.StatusCode.ToString();
-            */
-        }
-
+       
         [WebMethod]
         public string InternalUserLoginTrial(string UserName, string callback)
         {            
@@ -16155,10 +16958,306 @@ namespace HLBBWS
             return sp_output;
         }
         
+        [WebMethod]
+        public void BK_Infobip_SendEmail_Main(string WF, string UniqueKey, string UniqueKeyValue, string header, string body, string receiver, int attachmentcount, int InfobipFlag, string CommaDelimeteredAttFileName, string CommaDelimeteredAttFileContent, ref string error)
+        {
+
+            //receiver = FormatEmailAddressDelimiter(receiver);
+            //// start saving email log 
+
+            //string strDataSource = clsGlobal.MG_SQL_DATA_SOURCE;
+            //string strDBName = clsGlobal.MG_SQL_DB_NAME;
+            //string strID = clsGlobal.MG_SQL_ID;
+            //string strPassword = clsGlobal.MG_SQL_PASSWORD;
+            //bool blnIsWinAuth = clsGlobal.MG_SQL_IS_WIN_AUTH;
+
+            //string connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Persist Security Info=True;User ID=" + strID + ";Password=" + strPassword;
+            //if (blnIsWinAuth)
+            //{
+            //    connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Integrated Security=True;";
+            //}
+
+            ////ArrayList arr_att = new ArrayList();
+            ////ArrayList arr_name = new ArrayList();
+
+            ///*
+            // create or alter procedure dbo.usp_EmailLogV2_SaveLog
+            //   @WF nvarchar(max) = null, 
+            //    @UniqueKey nvarchar(max) = null, 
+            //    @UniqueKeyValue nvarchar(max) = null, 
+            //    @header nvarchar(max) = null, 
+            //    @body nvarchar(max) = null, 
+            //    @receiver nvarchar(max) = null, 
+            //    @attachmentcount int = null, 
+            //    @InfobipFlag int = null, 
+            //    @runningid bigint = null output
+            //*/
+
+            //SqlConnection conn = new SqlConnection(connstr);
+
+            //SqlDataAdapter sqlDA;
+            //sqlDA = new SqlDataAdapter();
+            //sqlDA.SelectCommand = new SqlCommand("dbo.usp_EmailLogV2_SaveLog @WF,@UniqueKey, @UniqueKeyValue, @header, @body, @receiver, @attachmentcount,@InfobipFlag, @runningid output ", conn);
+            //sqlDA.SelectCommand.Parameters.AddWithValue("@WF", WF);
+            //sqlDA.SelectCommand.Parameters.AddWithValue("@UniqueKey", UniqueKey);
+            //sqlDA.SelectCommand.Parameters.AddWithValue("@UniqueKeyValue", UniqueKeyValue);
+            //sqlDA.SelectCommand.Parameters.AddWithValue("@header", header);
+            //sqlDA.SelectCommand.Parameters.AddWithValue("@body", body);
+            //sqlDA.SelectCommand.Parameters.AddWithValue("@receiver", receiver);
+            //sqlDA.SelectCommand.Parameters.AddWithValue("@attachmentcount", attachmentcount);
+            //sqlDA.SelectCommand.Parameters.AddWithValue("@InfobipFlag", InfobipFlag);
+
+            //sqlDA.SelectCommand.Parameters.Add("@runningid", SqlDbType.BigInt);
+            //sqlDA.SelectCommand.Parameters["@runningid"].Direction = ParameterDirection.Output;
+
+            //DataSet ds = new DataSet();
+
+            //sqlDA.Fill(ds);
+
+            //Int64 runningid = System.Convert.ToInt64(sqlDA.SelectCommand.Parameters["@runningid"].Value.ToString());
+
+
+            //// end saving email log 
+
+            //// start save attachment if applicable 
+
+            //if (attachmentcount> 0)
+            //{
+               
+            //    string[] arrfilename = CommaDelimeteredAttFileName.Split(',');
+            //    string[] arrfilecontent = CommaDelimeteredAttFileContent.Split(',');
+
+            //    for (int i = 0; i< arrfilename.Length;i++)
+            //    {
+            //        /*
+            //         create or alter procedure dbo.usp_EmailLogV2_AttachmentMapping_SaveLog
+            //        @runningid bigint = null ,
+            //        @filename nvarchar(max) = null, 
+            //        @Base64FileContent nvarchar(max) = null 
+            //         */
+            //        sqlDA = new SqlDataAdapter();
+            //        sqlDA.SelectCommand = new SqlCommand("dbo.usp_EmailLogV2_AttachmentMapping_SaveLog  @runningid , @filename, @Base64FileContent ", conn);
+            //        sqlDA.SelectCommand.Parameters.AddWithValue("@runningid", runningid);
+            //        sqlDA.SelectCommand.Parameters.AddWithValue("@filename", arrfilename[i]);
+            //        sqlDA.SelectCommand.Parameters.AddWithValue("@Base64FileContent", arrfilecontent[i]);
+                    
+            //         ds = new DataSet();
+
+            //        sqlDA.Fill(ds);
+            //    }
+            //    //string subfilename = arrstr[0];
+            //    //string subfiletype = arrstr[1];
+
+                
+
+            //}
+
+
+            //// end save attachment if applicable 
+
+            //// start call send mail function 
+            //if (InfobipFlag == 1)
+            //{
+            //    this.Infobip_SendEmail(runningid, ref error);
+            //}
+            
+            //// end call send mail function
+
+        }
+
+        public void BK_Infobip_SendEmail(Int64 runningid, ref string error)
+
+        {
+
+            //// start get email detail 
+
+            //string strDataSource = clsGlobal.MG_SQL_DATA_SOURCE;
+            //string strDBName = clsGlobal.MG_SQL_DB_NAME;
+            //string strID = clsGlobal.MG_SQL_ID;
+            //string strPassword = clsGlobal.MG_SQL_PASSWORD;
+            //bool blnIsWinAuth = clsGlobal.MG_SQL_IS_WIN_AUTH;
+
+            //string connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Persist Security Info=True;User ID=" + strID + ";Password=" + strPassword;
+            //if (blnIsWinAuth)
+            //{
+            //    connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Integrated Security=True;";
+            //}
+
+            ////ArrayList arr_att = new ArrayList();
+            ////ArrayList arr_name = new ArrayList();
+
+            //SqlConnection conn = new SqlConnection(connstr);
+
+
+            //SqlDataAdapter sqlDA;
+            //sqlDA = new SqlDataAdapter();
+            //sqlDA.SelectCommand = new SqlCommand("dbo.usp_EmailLogV2_GetRecord @runningid", conn);
+            //sqlDA.SelectCommand.Parameters.AddWithValue("@runningid", runningid);
+
+            //DataSet ds = new DataSet();
+
+            //sqlDA.Fill(ds);
+
+            //string Header = ds.Tables[0].Rows[0]["Header"].ToString();
+            //string Body = ds.Tables[0].Rows[0]["Body"].ToString();
+            //string Receiver = ds.Tables[0].Rows[0]["Receiver"].ToString();
+            //int AttachmentCount = System.Convert.ToInt32(ds.Tables[0].Rows[0]["AttachmentCount"].ToString());
+            //string InfobipFlag = ds.Tables[0].Rows[0]["InfobipFlag"].ToString();
+            //string Status = ds.Tables[0].Rows[0]["Status"].ToString();
+
+            //ArrayList arrfilepath = new ArrayList();
+            //ArrayList arrfilename = new ArrayList();
+            //ArrayList arrfiletype = new ArrayList();
+
+            //// end get email detail
+
+            //// start get attachment detail if exists 
+            //if ((int)AttachmentCount > 0)
+            //{
+            //    sqlDA = new SqlDataAdapter();
+            //    sqlDA.SelectCommand = new SqlCommand("dbo.EmailLogV2_AttachmentMapping_GetRecord @runningid", conn);
+            //    sqlDA.SelectCommand.Parameters.AddWithValue("@runningid", runningid);
+
+            //    ds = new DataSet();
+
+            //    sqlDA.Fill(ds);
+
+            //    //ArrayList arrfilename = new ArrayList();
+            //    //ArrayList arrcontent = new ArrayList();
+
+
+            //    for (int i = 0; i < ds.Tables[0].Rows.Count; i++)
+            //    {
+            //        string FileName = ds.Tables[0].Rows[0]["FileName"].ToString();
+            //        string Base64FileContent = ds.Tables[0].Rows[0]["Base64FileContent"].ToString();
+
+            //        string[] arrstr = FileName.Split('.');
+
+            //        string subfilename = arrstr[0];
+            //        string subfiletype = arrstr[1];
+            //        // arrfilename.Add(FileName);
+            //        // arrcontent.Add(Base64FileContent);
+
+            //        // start generate attachment file if applicable 
+
+            //        long long_datetime = long.Parse(System.DateTime.Now.ToString("yyyyMMddHHmmssff"));
+
+            //        string savefilepath = HttpContext.Current.Server.MapPath("~/");
+            //        savefilepath += "files\\";
+
+            //        string newfilename = long_datetime.ToString() + "." + subfiletype;
+
+            //        byte[] byteFileContent = Convert.FromBase64String(Base64FileContent);
+
+            //        File.WriteAllBytes(savefilepath + newfilename, byteFileContent);
+
+            //        arrfilepath.Add(savefilepath + newfilename);
+            //        arrfilename.Add(newfilename);
+            //        arrfiletype.Add(subfiletype);
+            //        // end generate attachment file if applicable 
+            //    }
+
+
+
+
+            //}
+
+            //// end get attachment detail if exists 
+
+
+
+            //// start call infobip api
+            ////ConfigurationManager.AppSettings["MG_SQL_Server"].ToString();
+            //ServicePointManager.Expect100Continue = true;
+            //ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
+
+            //string infobip_base64credentials = ConfigurationManager.AppSettings["infobip_base64credentials"].ToString();
+            //string infobip_url = ConfigurationManager.AppSettings["infobip_url"].ToString();
+            //string infobip_user = ConfigurationManager.AppSettings["infobip_user"].ToString();
+
+            ////var client = new RestClient("https://yrk1kg.api.infobip.com/email/1/send");
+            //var client = new RestClient(infobip_url);
+            //client.Timeout = -1;
+            //var request = new RestRequest(Method.POST);
+            ////request.AddHeader("Authorization", "Basic dG9zaGliYXRlY2phc29uYW5nOnRvc2hpYmF0ZWNAamFzb25BTkcx");
+            //request.AddHeader("Authorization", "Basic " + infobip_base64credentials);
+            //request.AlwaysMultipartFormData = true;
+            //request.AddParameter("from", infobip_user);
+            //request.AddParameter("subject", Header);
+            //request.AddParameter("to", Receiver);
+            //request.AddParameter("HTML", Body);
+
+            //if (AttachmentCount > 0)
+            //{
+            //    for (int i = 0; i < arrfilepath.Count; i++)
+            //    {
+            //        request.AddFile("attachment", File.ReadAllBytes(arrfilepath[i].ToString()), arrfilename[i].ToString() + "." + arrfiletype[i].ToString());
+            //    }
+            //}
+
+            //IRestResponse response = client.Execute(request);
+            //string status = response.Content.ToString();
+
+            ////Console.WriteLine(response.Content);
+            //// end call infobip api
+
+            //// start update email status 
+            //sqlDA = new SqlDataAdapter();
+            //sqlDA.SelectCommand = new SqlCommand("dbo.usp_EmailLogV2_UpdateStatus @runningid, @status", conn);
+            //sqlDA.SelectCommand.Parameters.AddWithValue("@runningid", runningid);
+            //sqlDA.SelectCommand.Parameters.AddWithValue("@status", status);
+
+            //ds = new DataSet();
+
+            //sqlDA.Fill(ds);
+            //// end update email status 
+
+            //// start gelete physical file 
+            //if (AttachmentCount > 0)
+            //{
+            //    for (int i = 0; i < arrfilepath.Count; i++)
+            //    {
+            //        File.Delete(arrfilepath[i].ToString());
+            //    }
+            //}
+
+            // end delete physical file 
+
+
+        }
+
+        /*
+        [WebMethod]
+        
+        // [ScriptMethod(ResponseFormat = ResponseFormat.Json)]
+        
+        @PostMapping("/delivery-reports")
+        public void receiveDr(HttpServletRequest request) //This method is called from Amazon Simple Notification Service when we receive a bounce.
+        {
+            string notification = "";
+            using (var stream = new MemoryStream())
+            {
+                var request = HttpContext.Current.Request;
+                request.InputStream.Seek(0, SeekOrigin.Begin);
+                request.InputStream.CopyTo(stream);
+                notification = Encoding.UTF8.GetString(stream.ToArray());//All of your data will be here in JSON format.
+                                                                         //Simply parse it and access the data.
+            }
+        }
+        */
+        /*
+        @PostMapping("/delivery-reports")
+        public void receiveDr(HttpServletRequest request) throws IOException
+        {
+            SmsDeliveryResult reports = new JSON().getGson().fromJson(request.getReader(), SmsDeliveryResult.class);
+            for (SmsReport report : reports.getResults()) {
+                System.out.println(report.getMessageId() + " - "+ report.getStatus().getName());
+            }
+        }
+        */
         public void SendMail_MultipleAttachment(string recipient, string subject, string body, ArrayList attachment, ArrayList AttachmentFileName)
         {
            
-
 
             MailMessage msg = new MailMessage();
 
@@ -16289,6 +17388,200 @@ namespace HLBBWS
 
         }
 
+        public class Infobip_SendEmail_Main_Param
+        {
+            public string WF;
+            public string UniqueKey;
+            public string UniqueKeyValue;
+            public string header;
+            public string body;
+            public string receiver;
+            public int attachmentcount;
+            public int InfobipFlag;
+            public string CommaDelimeteredAttFileName;
+            public string CommaDelimeteredAttFileContent;
+        }
+
+        public class TemplateStruct
+        {
+            public string param1;
+            public string param2;
+        }
+
+        [WebMethod]
+        public void Test_Infobip_SendMail_MultipleAttachment_Call()
+        {
+
+
+            string strDataSource = clsGlobal.MG_SQL_DATA_SOURCE;
+            string strDBName = clsGlobal.MG_SQL_DB_NAME;
+            string strID = clsGlobal.MG_SQL_ID;
+            string strPassword = clsGlobal.MG_SQL_PASSWORD;
+            bool blnIsWinAuth = clsGlobal.MG_SQL_IS_WIN_AUTH;
+
+            string strDataSource2 = clsGlobal.MG_SQL_DATA_SOURCE2;
+            string strDBName2 = clsGlobal.MG_SQL_DB_NAME2;
+            string strID2 = clsGlobal.MG_SQL_ID2;
+            string strPassword2 = clsGlobal.MG_SQL_PASSWORD2;
+            bool blnIsWinAuth2 = clsGlobal.MG_SQL_IS_WIN_AUTH2;
+
+            string connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Persist Security Info=True;User ID=" + strID + ";Password=" + strPassword;
+            if (blnIsWinAuth)
+            {
+                connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Integrated Security=True;";
+            }
+
+            string connstr2 = @"Data Source=" + strDataSource2 + ";Initial Catalog=" + strDBName2 + ";Persist Security Info=True;User ID=" + strID2 + ";Password=" + strPassword2;
+            if (blnIsWinAuth2)
+            {
+                connstr2 = @"Data Source=" + strDataSource2 + ";Initial Catalog=" + strDBName2 + ";Integrated Security=True;";
+            }
+
+            ArrayList arr_att = new ArrayList();
+            ArrayList arr_name = new ArrayList();
+            string att;
+            string name;
+
+            SqlConnection connEDMS_EMAIL = new SqlConnection(connstr);
+
+            SqlConnection connEDMS_EMAIL_2 = new SqlConnection(connstr);
+            SqlDataAdapter sqlDEDMS_EMAIL_2;
+
+            int pdfid = 1300;
+
+            sqlDEDMS_EMAIL_2 = new SqlDataAdapter();
+            sqlDEDMS_EMAIL_2.SelectCommand = new SqlCommand("dbo.usp_getK2PDFFileContent @id", connEDMS_EMAIL_2);
+            sqlDEDMS_EMAIL_2.SelectCommand.Parameters.AddWithValue("id", pdfid);
+
+            DataSet dsAlpha = new DataSet();
+
+            sqlDEDMS_EMAIL_2.Fill(dsAlpha);
+
+
+            string filename = dsAlpha.Tables[0].Rows[0]["PDFFileName"].ToString();
+            string file = dsAlpha.Tables[0].Rows[0]["PDF"].ToString();
+
+            att = file;
+            name = filename;
+
+            arr_att.Add(file);
+            arr_name.Add(filename);
+
+            //// file 2
+            //pdfid = 1301;
+
+            //sqlDEDMS_EMAIL_2 = new SqlDataAdapter();
+            //sqlDEDMS_EMAIL_2.SelectCommand = new SqlCommand("dbo.usp_getK2PDFFileContent @id", connEDMS_EMAIL_2);
+            //sqlDEDMS_EMAIL_2.SelectCommand.Parameters.AddWithValue("id", pdfid);
+
+            //// DataSet dsAlpha = new DataSet();
+
+            //sqlDEDMS_EMAIL_2.Fill(dsAlpha);
+
+
+            //filename = dsAlpha.Tables[0].Rows[0]["PDFFileName"].ToString();
+            //file = dsAlpha.Tables[0].Rows[0]["PDF"].ToString();
+
+
+            //arr_att.Add(file);
+            //arr_name.Add(filename);
+            //att = att + "," + file;
+            //name = name + "," + filename;
+
+            //SendMail_MultipleAttachment("jasonangot@toshibatec.com.my", "test attachment", "test body", arr_att, arr_name);
+            string error = "";
+            // Infobip_SendEmail_Main("WF Test","Test Key","Test Key Value","test", "test", "jasonangot@toshibatec.com.my", 2, 1,name, att, ref error );
+
+            //ServicePointManager.Expect100Continue = true;
+            //ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
+
+            // string infobip_base64credentials = ConfigurationManager.AppSettings["infobip_base64credentials"].ToString();
+            // string infobip_url = ConfigurationManager.AppSettings["infobip_url"].ToString();
+            // string infobip_user = ConfigurationManager.AppSettings["infobip_user"].ToString();
+
+            /*
+            //string WF, string UniqueKey, string UniqueKeyValue, string header, string body, string receiver, int attachmentcount, int InfobipFlag, string CommaDelimeteredAttFileName, string CommaDelimeteredAttFileContent, ref string error
+            //var client = new RestClient("https://yrk1kg.api.infobip.com/email/1/send");
+            //var client = new RestClient("https://localhost:444/HLBBBWS_WEBAP/api/HLBBWS/Infobip_SendEmail_Main");
+            var client = new RestClient("https://localhost:444/HLBBBWS_WEBAPI/api/HLBBWS/Infobip_SendEmail_Main");
+            
+            client.Timeout = -1;
+            var request = new RestRequest(Method.POST);
+            //request.AddHeader("Authorization", "Basic dG9zaGliYXRlY2phc29uYW5nOnRvc2hpYmF0ZWNAamFzb25BTkcx");
+            //request.AddHeader("Authorization", "Basic " + infobip_base64credentials);
+            request.AlwaysMultipartFormData = true;
+            request.AddParameter("WF", "WF test");
+            request.AddParameter("UniqueKey", "UniqueKey");
+            request.AddParameter("UniqueKeyValue", "UniqueKeyValue");
+            request.AddParameter("header", "header");
+            request.AddParameter("body", "body");
+            request.AddParameter("receiver", "jasonangot@toshibatec.com.my");
+            request.AddParameter("attachmentcount", 0);
+            
+            request.AddParameter("InfobipFlag", 1);
+            request.AddParameter("CommaDelimeteredAttFileName", "");
+            request.AddParameter("CommaDelimeteredAttFileContent", "");
+            request.AddParameter("error", "");
+
+            IRestResponse response = client.Execute(request);
+            string status = response.Content.ToString();
+            */
+            //var client = new RestClient("https://localhost:444/HLBBBWS_WEBAPI/api/HLBBWS/Template");
+
+            //client.Timeout = -1;
+            //var request = new RestRequest(Method.POST);
+
+
+            //IRestResponse response = client.Execute(request);
+            //string status = response.Content.ToString();
+
+            Infobip_SendEmail_Main_Param param = new Infobip_SendEmail_Main_Param() ;
+            param.WF = "WF Test";
+            param.UniqueKey = "UniqueKey";
+            param.UniqueKeyValue = "UniqueKeyValue";
+            param.header = "header";
+            param.body = "body";
+            param.receiver = "jasonangot@toshibatec.com.my";
+            param.attachmentcount = 1;
+            param.InfobipFlag = 1;
+            param.CommaDelimeteredAttFileName = name;
+            param.CommaDelimeteredAttFileContent = att;
+
+            string WF =  "WF Test";
+            string UniqueKey  = "UniqueKey";
+            string UniqueKeyValue  = "UniqueKeyValue";
+            string header  = "header";
+            string body =  "body";
+            string receiver  = "jasonangot@toshibatec.com.my";
+             int attachmentcount = 0;
+            int InfobipFlag = 1;
+            string CommaDelimeteredAttFileName = "";
+            string CommaDelimeteredAttFileContent = "";
+
+            // // start init scanning process 
+            // System.Net.ServicePointManager.ServerCertificateValidationCallback = delegate { return true; };
+            // System.Net.ServicePointManager.Expect100Continue = true;
+            // System.Net.ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
+
+
+            // //  var client = new RestClient("https://localhost:444");
+            // string InfobipAPIServer = ConfigurationManager.AppSettings["InfobipAPIServer"].ToString();
+            // var client = new RestClient(InfobipAPIServer);
+
+            // string InfobipAPIEndPoint = ConfigurationManager.AppSettings["InfobipAPIEndPoint"].ToString();
+            // var request = new RestRequest(InfobipAPIEndPoint, Method.POST);
+            //// var request = new RestRequest("HLBBBWS_WEBAPI/api/HLBBWS/Template3", Method.POST);
+
+            // request.RequestFormat = DataFormat.Json;
+
+            // request.AddJsonBody(param);
+
+            // IRestResponse response = client.Execute(request);
+
+            SendMailV2(WF, UniqueKey, UniqueKeyValue, header, body, receiver, attachmentcount, InfobipFlag, CommaDelimeteredAttFileName, CommaDelimeteredAttFileContent);
+        }
+
+       
 
         [WebMethod]
         public void Test_SendMail_MultipleAttachment_Call()
@@ -16509,5 +17802,946 @@ namespace HLBBWS
             Test_SendMail_MultipleAttachment("jasonangot@toshibatec.com.my", "test attachment", "test body", arr_att, arr_name);
             */
         }
+
+        /*
+          param.WF = "WF Test";
+            param.UniqueKey = "UniqueKey";
+            param.UniqueKeyValue = "UniqueKeyValue";
+            param.header = "header";
+            param.body = "body";
+            param.receiver = "jasonangot@toshibatec.com.my";
+            param.attachmentcount = 2;
+            param.InfobipFlag = 0;
+            param.CommaDelimeteredAttFileName = name;
+            param.CommaDelimeteredAttFileContent = att;
+          */
+        [WebMethod]
+        public void SendMailV2_BK(string WF, string UniqueKey, string UniqueKeyValue, string header, string body, string receiver, int attachmentcount, int InfobipFlag, string CommaDelimeteredAttFileName, string CommaDelimeteredAttFileContent)
+        {
+
+            string error = "";
+           
+            Infobip_SendEmail_Main_Param param = new Infobip_SendEmail_Main_Param();
+            param.WF = WF;
+            param.UniqueKey = UniqueKey;
+            param.UniqueKeyValue = UniqueKeyValue;
+            param.header = header;
+            param.body = body;
+            param.receiver = receiver;
+            param.attachmentcount = attachmentcount;
+            param.InfobipFlag = InfobipFlag;
+            if (String.IsNullOrEmpty(CommaDelimeteredAttFileName))
+            {
+                param.CommaDelimeteredAttFileName = "";
+            }
+            else
+            {
+                param.CommaDelimeteredAttFileName = CommaDelimeteredAttFileName;
+            }
+
+            if (String.IsNullOrEmpty(CommaDelimeteredAttFileContent))
+            {
+                param.CommaDelimeteredAttFileContent = "";
+            }
+            else
+            {
+                param.CommaDelimeteredAttFileContent = CommaDelimeteredAttFileContent;
+            }
+
+            
+
+
+            // start init scanning process 
+            System.Net.ServicePointManager.ServerCertificateValidationCallback = delegate { return true; };
+            System.Net.ServicePointManager.Expect100Continue = true;
+            //System.Net.ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
+            
+
+            //  var client = new RestClient("https://localhost:444");
+            string InfobipAPIServer = ConfigurationManager.AppSettings["InfobipAPIServer"].ToString();
+            var client = new RestClient(InfobipAPIServer);
+
+            string InfobipAPIEndPoint = ConfigurationManager.AppSettings["InfobipAPIEndPoint"].ToString();
+            var request = new RestRequest(InfobipAPIEndPoint, Method.POST);
+            // var request = new RestRequest("HLBBBWS_WEBAPI/api/HLBBWS/Template3", Method.POST);
+
+            request.RequestFormat = DataFormat.Json;
+
+            request.AddJsonBody(param);
+
+            IRestResponse response = client.Execute(request);
+        }
+
+        [WebMethod]
+        public void SendMailV2(string WF, string UniqueKey, string UniqueKeyValue, string header, string body, string receiver, int attachmentcount, int InfobipFlag, string CommaDelimeteredAttFileName, string CommaDelimeteredAttFileContent)
+        {
+
+            string error = "";
+
+            Infobip_SendEmail_Main_Param param = new Infobip_SendEmail_Main_Param();
+            param.WF = WF;
+            param.UniqueKey = UniqueKey;
+            param.UniqueKeyValue = UniqueKeyValue;
+            param.header = header;
+            param.body = body;
+            param.receiver = receiver;
+            param.attachmentcount = attachmentcount;
+            param.InfobipFlag = InfobipFlag;
+            if (String.IsNullOrEmpty(CommaDelimeteredAttFileName))
+            {
+                param.CommaDelimeteredAttFileName = "";
+            }
+            else
+            {
+                param.CommaDelimeteredAttFileName = CommaDelimeteredAttFileName;
+            }
+
+            if (String.IsNullOrEmpty(CommaDelimeteredAttFileContent))
+            {
+                param.CommaDelimeteredAttFileContent = "";
+            }
+            else
+            {
+                param.CommaDelimeteredAttFileContent = CommaDelimeteredAttFileContent;
+            }
+
+
+
+            InfobipAPI api = new InfobipAPI();
+
+            api.Infobip_SendEmail_Main(param);
+        }
+
+
+        [WebMethod]
+        public void SendMailV2_GetResult_BK()
+        {
+
+            string error = "";
+
+
+
+
+            // start init scanning process 
+            System.Net.ServicePointManager.ServerCertificateValidationCallback = delegate { return true; };
+            System.Net.ServicePointManager.Expect100Continue = true;
+            //System.Net.ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
+
+
+            //  var client = new RestClient("https://localhost:444");
+            string InfobipAPIServer = ConfigurationManager.AppSettings["InfobipAPIServer"].ToString();
+            var client = new RestClient(InfobipAPIServer);
+
+            string InfobipAPIEndPoint = ConfigurationManager.AppSettings["InfobipAPIEndPoint_GetResult"].ToString();
+            var request = new RestRequest(InfobipAPIEndPoint, Method.POST);
+            // var request = new RestRequest("HLBBBWS_WEBAPI/api/HLBBWS/Template3", Method.POST);
+
+            request.RequestFormat = DataFormat.Json;
+
+            //request.AddJsonBody(param);
+
+            IRestResponse response = client.Execute(request);
+        }
+
+        [WebMethod]
+        public void SendMailV2_GetResult()
+        {
+
+            string error = "";
+
+            InfobipAPI api = new InfobipAPI();
+
+            api.Scheduller_Infobip_GetDeliveryReportData();
+
+
+
+        }
+
+        [WebMethod]
+        public void A1Reminder()
+        {
+
+
+            string strDataSource = clsGlobal.MG_SQL_DATA_SOURCE;
+            string strDBName = clsGlobal.MG_SQL_DB_NAME;
+            string strID = clsGlobal.MG_SQL_ID;
+            string strPassword = clsGlobal.MG_SQL_PASSWORD;
+            bool blnIsWinAuth = clsGlobal.MG_SQL_IS_WIN_AUTH;
+
+            //string strDataSource2 = clsGlobal.MG_SQL_DATA_SOURCE2;
+            //string strDBName2 = clsGlobal.MG_SQL_DB_NAME2;
+            //string strID2 = clsGlobal.MG_SQL_ID2;
+            //string strPassword2 = clsGlobal.MG_SQL_PASSWORD2;
+            //bool blnIsWinAuth2 = clsGlobal.MG_SQL_IS_WIN_AUTH2;
+
+            string connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Persist Security Info=True;User ID=" + strID + ";Password=" + strPassword;
+            if (blnIsWinAuth)
+            {
+                connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Integrated Security=True;";
+            }
+
+            //string connstr2 = @"Data Source=" + strDataSource2 + ";Initial Catalog=" + strDBName2 + ";Persist Security Info=True;User ID=" + strID2 + ";Password=" + strPassword2;
+            //if (blnIsWinAuth2)
+            //{
+            //    connstr2 = @"Data Source=" + strDataSource2 + ";Initial Catalog=" + strDBName2 + ";Integrated Security=True;";
+            //}
+
+            // ArrayList arr_att = new ArrayList();
+            // ArrayList arr_name = new ArrayList();
+
+            // try {
+
+            SqlConnection conn;
+            SqlDataAdapter sqlDA;
+            DataSet ds;
+            DataTable dt;
+
+            conn = new SqlConnection(connstr);            
+
+            sqlDA = new SqlDataAdapter();
+            sqlDA.SelectCommand = new SqlCommand("dbo.usp_DUMaker_Letter_A1_generate_list8", conn);
+            //sqlDEDMS_EMAIL_2.SelectCommand.Parameters.AddWithValue("id", pdfid);
+
+            ds = new DataSet();
+
+            sqlDA.Fill(ds);
+            
+            dt = new DataTable();
+
+            dt = ds.Tables[0];
+
+            string arn = "";
+            string DateOfLOAcceptance = "";
+            string EmailReceiver = "";
+            string EmailHeader = "";
+            string EmailBody = "";
+
+            if (ds.Tables.Count > 0)
+            {
+                if (dt.Rows.Count > 0)
+                {
+                    for (int j = 0; j < dt.Rows.Count; j++)
+                    {
+                        arn = dt.Rows[j]["arn"].ToString();
+                        DateOfLOAcceptance = dt.Rows[j]["DateOfLOAcceptance"].ToString();
+                        EmailReceiver = dt.Rows[j]["receiveremail"].ToString();
+                        EmailHeader = dt.Rows[j]["email_header"].ToString();
+                        EmailBody = dt.Rows[j]["email_body"].ToString();
+
+                        SendMailV2("SendToSolicitor-Documentation", "CRA", arn, EmailHeader, EmailBody, EmailReceiver, 0, 1, "", "");
+                        
+                        }
+                    }
+                }
+            }
+
+        [WebMethod]
+        public void A2Reminder()
+        {
+
+
+            string strDataSource = clsGlobal.MG_SQL_DATA_SOURCE;
+            string strDBName = clsGlobal.MG_SQL_DB_NAME;
+            string strID = clsGlobal.MG_SQL_ID;
+            string strPassword = clsGlobal.MG_SQL_PASSWORD;
+            bool blnIsWinAuth = clsGlobal.MG_SQL_IS_WIN_AUTH;
+
+            //string strDataSource2 = clsGlobal.MG_SQL_DATA_SOURCE2;
+            //string strDBName2 = clsGlobal.MG_SQL_DB_NAME2;
+            //string strID2 = clsGlobal.MG_SQL_ID2;
+            //string strPassword2 = clsGlobal.MG_SQL_PASSWORD2;
+            //bool blnIsWinAuth2 = clsGlobal.MG_SQL_IS_WIN_AUTH2;
+
+            string connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Persist Security Info=True;User ID=" + strID + ";Password=" + strPassword;
+            if (blnIsWinAuth)
+            {
+                connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Integrated Security=True;";
+            }
+
+            //string connstr2 = @"Data Source=" + strDataSource2 + ";Initial Catalog=" + strDBName2 + ";Persist Security Info=True;User ID=" + strID2 + ";Password=" + strPassword2;
+            //if (blnIsWinAuth2)
+            //{
+            //    connstr2 = @"Data Source=" + strDataSource2 + ";Initial Catalog=" + strDBName2 + ";Integrated Security=True;";
+            //}
+
+            // ArrayList arr_att = new ArrayList();
+            // ArrayList arr_name = new ArrayList();
+
+            // try {
+
+            SqlConnection conn;
+            SqlDataAdapter sqlDA;
+            DataSet ds;
+            DataTable dt;
+
+            conn = new SqlConnection(connstr);
+
+            sqlDA = new SqlDataAdapter();
+            sqlDA.SelectCommand = new SqlCommand("dbo.usp_DUMaker_Letter_A2_generate_list", conn);
+            //sqlDEDMS_EMAIL_2.SelectCommand.Parameters.AddWithValue("id", pdfid);
+
+            ds = new DataSet();
+
+            sqlDA.Fill(ds);
+
+            dt = new DataTable();
+
+            dt = ds.Tables[0];
+
+            string arn = "";
+            string DateOfLOAcceptance = "";
+            string EmailReceiver = "";
+            string EmailHeader = "";
+            string EmailBody = "";
+
+            if (ds.Tables.Count > 0)
+            {
+                if (dt.Rows.Count > 0)
+                {
+                    for (int j = 0; j < dt.Rows.Count; j++)
+                    {
+                        arn = dt.Rows[j]["arn"].ToString();
+                        DateOfLOAcceptance = dt.Rows[j]["DateOfLOAcceptance"].ToString();
+                        EmailReceiver = dt.Rows[j]["receiveremail"].ToString();
+                        EmailHeader = dt.Rows[j]["email_header"].ToString();
+                        EmailBody = dt.Rows[j]["email_body"].ToString();
+
+                        SendMailV2("SendToSolicitor-Documentation", "CRA", arn, EmailHeader, EmailBody, EmailReceiver, 0, 1, "", "");
+
+                    }
+                }
+            }
+        }
+
+        [WebMethod]
+        public void A3Reminder()
+        {
+
+
+            string strDataSource = clsGlobal.MG_SQL_DATA_SOURCE;
+            string strDBName = clsGlobal.MG_SQL_DB_NAME;
+            string strID = clsGlobal.MG_SQL_ID;
+            string strPassword = clsGlobal.MG_SQL_PASSWORD;
+            bool blnIsWinAuth = clsGlobal.MG_SQL_IS_WIN_AUTH;
+
+            //string strDataSource2 = clsGlobal.MG_SQL_DATA_SOURCE2;
+            //string strDBName2 = clsGlobal.MG_SQL_DB_NAME2;
+            //string strID2 = clsGlobal.MG_SQL_ID2;
+            //string strPassword2 = clsGlobal.MG_SQL_PASSWORD2;
+            //bool blnIsWinAuth2 = clsGlobal.MG_SQL_IS_WIN_AUTH2;
+
+            string connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Persist Security Info=True;User ID=" + strID + ";Password=" + strPassword;
+            if (blnIsWinAuth)
+            {
+                connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Integrated Security=True;";
+            }
+
+            //string connstr2 = @"Data Source=" + strDataSource2 + ";Initial Catalog=" + strDBName2 + ";Persist Security Info=True;User ID=" + strID2 + ";Password=" + strPassword2;
+            //if (blnIsWinAuth2)
+            //{
+            //    connstr2 = @"Data Source=" + strDataSource2 + ";Initial Catalog=" + strDBName2 + ";Integrated Security=True;";
+            //}
+
+            // ArrayList arr_att = new ArrayList();
+            // ArrayList arr_name = new ArrayList();
+
+            // try {
+
+            SqlConnection conn;
+            SqlDataAdapter sqlDA;
+            DataSet ds;
+            DataTable dt;
+
+            conn = new SqlConnection(connstr);
+
+            sqlDA = new SqlDataAdapter();
+            sqlDA.SelectCommand = new SqlCommand("dbo.usp_DUMaker_Letter_A3_generate_list", conn);
+            //sqlDEDMS_EMAIL_2.SelectCommand.Parameters.AddWithValue("id", pdfid);
+
+            ds = new DataSet();
+
+            sqlDA.Fill(ds);
+
+            dt = new DataTable();
+
+            dt = ds.Tables[0];
+
+            string arn = "";
+            string DateOfLOAcceptance = "";
+            string EmailReceiver = "";
+            string EmailHeader = "";
+            string EmailBody = "";
+
+            if (ds.Tables.Count > 0)
+            {
+                if (dt.Rows.Count > 0)
+                {
+                    for (int j = 0; j < dt.Rows.Count; j++)
+                    {
+                        arn = dt.Rows[j]["arn"].ToString();
+                        DateOfLOAcceptance = dt.Rows[j]["DateOfLOAcceptance"].ToString();
+                        EmailReceiver = dt.Rows[j]["receiveremail"].ToString();
+                        EmailHeader = dt.Rows[j]["email_header"].ToString();
+                        EmailBody = dt.Rows[j]["email_body"].ToString();
+
+                        SendMailV2("SendToSolicitor-Documentation", "CRA", arn, EmailHeader, EmailBody, EmailReceiver, 0, 1, "", "");
+
+                    }
+                }
+            }
+        }
+
+        [WebMethod]
+        public void A8Reminder()
+        {
+
+
+            string strDataSource = clsGlobal.MG_SQL_DATA_SOURCE;
+            string strDBName = clsGlobal.MG_SQL_DB_NAME;
+            string strID = clsGlobal.MG_SQL_ID;
+            string strPassword = clsGlobal.MG_SQL_PASSWORD;
+            bool blnIsWinAuth = clsGlobal.MG_SQL_IS_WIN_AUTH;
+
+            //string strDataSource2 = clsGlobal.MG_SQL_DATA_SOURCE2;
+            //string strDBName2 = clsGlobal.MG_SQL_DB_NAME2;
+            //string strID2 = clsGlobal.MG_SQL_ID2;
+            //string strPassword2 = clsGlobal.MG_SQL_PASSWORD2;
+            //bool blnIsWinAuth2 = clsGlobal.MG_SQL_IS_WIN_AUTH2;
+
+            string connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Persist Security Info=True;User ID=" + strID + ";Password=" + strPassword;
+            if (blnIsWinAuth)
+            {
+                connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Integrated Security=True;";
+            }
+
+            //string connstr2 = @"Data Source=" + strDataSource2 + ";Initial Catalog=" + strDBName2 + ";Persist Security Info=True;User ID=" + strID2 + ";Password=" + strPassword2;
+            //if (blnIsWinAuth2)
+            //{
+            //    connstr2 = @"Data Source=" + strDataSource2 + ";Initial Catalog=" + strDBName2 + ";Integrated Security=True;";
+            //}
+
+            // ArrayList arr_att = new ArrayList();
+            // ArrayList arr_name = new ArrayList();
+
+            // try {
+
+            SqlConnection conn;
+            SqlDataAdapter sqlDA;
+            DataSet ds;
+            DataTable dt;
+
+            conn = new SqlConnection(connstr);
+
+            sqlDA = new SqlDataAdapter();
+            sqlDA.SelectCommand = new SqlCommand("dbo.usp_DUMaker_Letter_A8_generate_list", conn);
+            //sqlDEDMS_EMAIL_2.SelectCommand.Parameters.AddWithValue("id", pdfid);
+
+            ds = new DataSet();
+
+            sqlDA.Fill(ds);
+
+            dt = new DataTable();
+
+            dt = ds.Tables[0];
+
+            string arn = "";
+            string DateOfLOAcceptance = "";
+            string EmailReceiver = "";
+            string EmailHeader = "";
+            string EmailBody = "";
+
+            if (ds.Tables.Count > 0)
+            {
+                if (dt.Rows.Count > 0)
+                {
+                    for (int j = 0; j < dt.Rows.Count; j++)
+                    {
+                        arn = dt.Rows[j]["arn"].ToString();
+                        DateOfLOAcceptance = dt.Rows[j]["DateOfLOAcceptance"].ToString();
+                        EmailReceiver = dt.Rows[j]["receiveremail"].ToString();
+                        EmailHeader = dt.Rows[j]["email_header"].ToString();
+                        EmailBody = dt.Rows[j]["email_body"].ToString();
+
+                        SendMailV2("SendToSolicitor-Documentation", "CRA", arn, EmailHeader, EmailBody, EmailReceiver, 0, 1, "", "");
+
+                    }
+                }
+            }
+        }
+
+        [WebMethod]
+        public void A9Reminder()
+        {
+
+
+            string strDataSource = clsGlobal.MG_SQL_DATA_SOURCE;
+            string strDBName = clsGlobal.MG_SQL_DB_NAME;
+            string strID = clsGlobal.MG_SQL_ID;
+            string strPassword = clsGlobal.MG_SQL_PASSWORD;
+            bool blnIsWinAuth = clsGlobal.MG_SQL_IS_WIN_AUTH;
+
+            //string strDataSource2 = clsGlobal.MG_SQL_DATA_SOURCE2;
+            //string strDBName2 = clsGlobal.MG_SQL_DB_NAME2;
+            //string strID2 = clsGlobal.MG_SQL_ID2;
+            //string strPassword2 = clsGlobal.MG_SQL_PASSWORD2;
+            //bool blnIsWinAuth2 = clsGlobal.MG_SQL_IS_WIN_AUTH2;
+
+            string connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Persist Security Info=True;User ID=" + strID + ";Password=" + strPassword;
+            if (blnIsWinAuth)
+            {
+                connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Integrated Security=True;";
+            }
+
+            //string connstr2 = @"Data Source=" + strDataSource2 + ";Initial Catalog=" + strDBName2 + ";Persist Security Info=True;User ID=" + strID2 + ";Password=" + strPassword2;
+            //if (blnIsWinAuth2)
+            //{
+            //    connstr2 = @"Data Source=" + strDataSource2 + ";Initial Catalog=" + strDBName2 + ";Integrated Security=True;";
+            //}
+
+            // ArrayList arr_att = new ArrayList();
+            // ArrayList arr_name = new ArrayList();
+
+            // try {
+
+            SqlConnection conn;
+            SqlDataAdapter sqlDA;
+            DataSet ds;
+            DataTable dt;
+
+            conn = new SqlConnection(connstr);
+
+            sqlDA = new SqlDataAdapter();
+            sqlDA.SelectCommand = new SqlCommand("dbo.usp_DUMaker_Letter_A9_generate_list", conn);
+            //sqlDEDMS_EMAIL_2.SelectCommand.Parameters.AddWithValue("id", pdfid);
+
+            ds = new DataSet();
+
+            sqlDA.Fill(ds);
+
+            dt = new DataTable();
+
+            dt = ds.Tables[0];
+
+            string arn = "";
+            string DateOfLOAcceptance = "";
+            string EmailReceiver = "";
+            string EmailHeader = "";
+            string EmailBody = "";
+
+            if (ds.Tables.Count > 0)
+            {
+                if (dt.Rows.Count > 0)
+                {
+                    for (int j = 0; j < dt.Rows.Count; j++)
+                    {
+                        arn = dt.Rows[j]["arn"].ToString();
+                        DateOfLOAcceptance = dt.Rows[j]["DateOfLOAcceptance"].ToString();
+                        EmailReceiver = dt.Rows[j]["receiveremail"].ToString();
+                        EmailHeader = dt.Rows[j]["email_header"].ToString();
+                        EmailBody = dt.Rows[j]["email_body"].ToString();
+
+                        SendMailV2("SendToSolicitor-Documentation", "CRA", arn, EmailHeader, EmailBody, EmailReceiver, 0, 1, "", "");
+
+                    }
+                }
+            }
+        }
+
+        [WebMethod]
+        public void A10DocumentationResubmitAVScanReminder()
+        {
+
+
+            string strDataSource = clsGlobal.MG_SQL_DATA_SOURCE;
+            string strDBName = clsGlobal.MG_SQL_DB_NAME;
+            string strID = clsGlobal.MG_SQL_ID;
+            string strPassword = clsGlobal.MG_SQL_PASSWORD;
+            bool blnIsWinAuth = clsGlobal.MG_SQL_IS_WIN_AUTH;
+
+            //string strDataSource2 = clsGlobal.MG_SQL_DATA_SOURCE2;
+            //string strDBName2 = clsGlobal.MG_SQL_DB_NAME2;
+            //string strID2 = clsGlobal.MG_SQL_ID2;
+            //string strPassword2 = clsGlobal.MG_SQL_PASSWORD2;
+            //bool blnIsWinAuth2 = clsGlobal.MG_SQL_IS_WIN_AUTH2;
+
+            string connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Persist Security Info=True;User ID=" + strID + ";Password=" + strPassword;
+            if (blnIsWinAuth)
+            {
+                connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Integrated Security=True;";
+            }
+
+            //string connstr2 = @"Data Source=" + strDataSource2 + ";Initial Catalog=" + strDBName2 + ";Persist Security Info=True;User ID=" + strID2 + ";Password=" + strPassword2;
+            //if (blnIsWinAuth2)
+            //{
+            //    connstr2 = @"Data Source=" + strDataSource2 + ";Initial Catalog=" + strDBName2 + ";Integrated Security=True;";
+            //}
+
+            // ArrayList arr_att = new ArrayList();
+            // ArrayList arr_name = new ArrayList();
+
+            // try {
+
+            SqlConnection conn;
+            SqlDataAdapter sqlDA;
+            DataSet ds;
+            DataTable dt;
+
+            conn = new SqlConnection(connstr);
+
+            sqlDA = new SqlDataAdapter();
+            sqlDA.SelectCommand = new SqlCommand("dbo.usp_DUMaker_Letter_AV_generate_list", conn);
+            //sqlDEDMS_EMAIL_2.SelectCommand.Parameters.AddWithValue("id", pdfid);
+
+            ds = new DataSet();
+
+            sqlDA.Fill(ds);
+
+            dt = new DataTable();
+
+            dt = ds.Tables[0];
+
+            string arn = "";
+            string DateOfLOAcceptance = "";
+            string EmailReceiver = "";
+            string EmailHeader = "";
+            string EmailBody = "";
+
+            if (ds.Tables.Count > 0)
+            {
+                if (dt.Rows.Count > 0)
+                {
+                    for (int j = 0; j < dt.Rows.Count; j++)
+                    {
+                        arn = dt.Rows[j]["arn"].ToString();
+                        DateOfLOAcceptance = dt.Rows[j]["DateOfLOAcceptance"].ToString();
+                        EmailReceiver = dt.Rows[j]["receiveremail"].ToString();
+                        EmailHeader = dt.Rows[j]["email_header"].ToString();
+                        EmailBody = dt.Rows[j]["email_body"].ToString();
+
+                        SendMailV2("SendToSolicitor-Documentation", "CRA", arn, EmailHeader, EmailBody, EmailReceiver, 0, 1, "", "");
+
+                    }
+                }
+            }
+        }
+
+        [WebMethod]
+        public void B10VRResubmitAVScanReminder()
+        {
+
+
+            string strDataSource = clsGlobal.MG_SQL_DATA_SOURCE;
+            string strDBName = clsGlobal.MG_SQL_DB_NAME;
+            string strID = clsGlobal.MG_SQL_ID;
+            string strPassword = clsGlobal.MG_SQL_PASSWORD;
+            bool blnIsWinAuth = clsGlobal.MG_SQL_IS_WIN_AUTH;
+
+            //string strDataSource2 = clsGlobal.MG_SQL_DATA_SOURCE2;
+            //string strDBName2 = clsGlobal.MG_SQL_DB_NAME2;
+            //string strID2 = clsGlobal.MG_SQL_ID2;
+            //string strPassword2 = clsGlobal.MG_SQL_PASSWORD2;
+            //bool blnIsWinAuth2 = clsGlobal.MG_SQL_IS_WIN_AUTH2;
+
+            string connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Persist Security Info=True;User ID=" + strID + ";Password=" + strPassword;
+            if (blnIsWinAuth)
+            {
+                connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Integrated Security=True;";
+            }
+
+            //string connstr2 = @"Data Source=" + strDataSource2 + ";Initial Catalog=" + strDBName2 + ";Persist Security Info=True;User ID=" + strID2 + ";Password=" + strPassword2;
+            //if (blnIsWinAuth2)
+            //{
+            //    connstr2 = @"Data Source=" + strDataSource2 + ";Initial Catalog=" + strDBName2 + ";Integrated Security=True;";
+            //}
+
+            // ArrayList arr_att = new ArrayList();
+            // ArrayList arr_name = new ArrayList();
+
+            // try {
+
+            SqlConnection conn;
+            SqlDataAdapter sqlDA;
+            DataSet ds;
+            DataTable dt;
+
+            conn = new SqlConnection(connstr);
+
+            sqlDA = new SqlDataAdapter();
+            sqlDA.SelectCommand = new SqlCommand("dbo.usp_DUMaker_Letter_AV_Valuer_generate_list", conn);
+            //sqlDEDMS_EMAIL_2.SelectCommand.Parameters.AddWithValue("id", pdfid);
+
+            ds = new DataSet();
+
+            sqlDA.Fill(ds);
+
+            dt = new DataTable();
+
+            dt = ds.Tables[0];
+
+            string arn = "";
+            string DateOfLOAcceptance = "";
+            string EmailReceiver = "";
+            string EmailHeader = "";
+            string EmailBody = "";
+
+            if (ds.Tables.Count > 0)
+            {
+                if (dt.Rows.Count > 0)
+                {
+                    for (int j = 0; j < dt.Rows.Count; j++)
+                    {
+                        arn = dt.Rows[j]["arn"].ToString();
+                        DateOfLOAcceptance = dt.Rows[j]["DateOfLOAcceptance"].ToString();
+                        EmailReceiver = dt.Rows[j]["receiveremail"].ToString();
+                        EmailHeader = dt.Rows[j]["email_header"].ToString();
+                        EmailBody = dt.Rows[j]["email_body"].ToString();
+
+                        SendMailV2("SendToValuer-VR", "CRA", arn, EmailHeader, EmailBody, EmailReceiver, 0, 1, "", "");
+
+                    }
+                }
+            }
+        }
+
+        [WebMethod]
+        public void B1Reminder()
+        {
+
+
+            string strDataSource = clsGlobal.MG_SQL_DATA_SOURCE;
+            string strDBName = clsGlobal.MG_SQL_DB_NAME;
+            string strID = clsGlobal.MG_SQL_ID;
+            string strPassword = clsGlobal.MG_SQL_PASSWORD;
+            bool blnIsWinAuth = clsGlobal.MG_SQL_IS_WIN_AUTH;
+
+            //string strDataSource2 = clsGlobal.MG_SQL_DATA_SOURCE2;
+            //string strDBName2 = clsGlobal.MG_SQL_DB_NAME2;
+            //string strID2 = clsGlobal.MG_SQL_ID2;
+            //string strPassword2 = clsGlobal.MG_SQL_PASSWORD2;
+            //bool blnIsWinAuth2 = clsGlobal.MG_SQL_IS_WIN_AUTH2;
+
+            string connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Persist Security Info=True;User ID=" + strID + ";Password=" + strPassword;
+            if (blnIsWinAuth)
+            {
+                connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Integrated Security=True;";
+            }
+
+            //string connstr2 = @"Data Source=" + strDataSource2 + ";Initial Catalog=" + strDBName2 + ";Persist Security Info=True;User ID=" + strID2 + ";Password=" + strPassword2;
+            //if (blnIsWinAuth2)
+            //{
+            //    connstr2 = @"Data Source=" + strDataSource2 + ";Initial Catalog=" + strDBName2 + ";Integrated Security=True;";
+            //}
+
+            // ArrayList arr_att = new ArrayList();
+            // ArrayList arr_name = new ArrayList();
+
+            // try {
+
+            SqlConnection conn;
+            SqlDataAdapter sqlDA;
+            DataSet ds;
+            DataTable dt;
+
+            conn = new SqlConnection(connstr);
+
+            sqlDA = new SqlDataAdapter();
+            sqlDA.SelectCommand = new SqlCommand("dbo.usp_DUMaker_Letter_B1_generate_list", conn);
+            //sqlDEDMS_EMAIL_2.SelectCommand.Parameters.AddWithValue("id", pdfid);
+
+            ds = new DataSet();
+
+            sqlDA.Fill(ds);
+
+            dt = new DataTable();
+
+            dt = ds.Tables[0];
+
+            string arn = "";
+            string DateOfLOAcceptance = "";
+            string EmailReceiver = "";
+            string EmailHeader = "";
+            string EmailBody = "";
+
+            if (ds.Tables.Count > 0)
+            {
+                if (dt.Rows.Count > 0)
+                {
+                    for (int j = 0; j < dt.Rows.Count; j++)
+                    {
+                        arn = dt.Rows[j]["arn"].ToString();
+                        DateOfLOAcceptance = dt.Rows[j]["DateOfLOAcceptance"].ToString();
+                        EmailReceiver = dt.Rows[j]["receiveremail"].ToString();
+                        EmailHeader = dt.Rows[j]["email_header"].ToString();
+                        EmailBody = dt.Rows[j]["email_body"].ToString();
+
+                        SendMailV2("SendToValuer-VR", "CRA", arn, EmailHeader, EmailBody, EmailReceiver, 0, 1, "", "");
+
+                    }
+                }
+            }
+        }
+
+        [WebMethod]
+        public void B2Reminder()
+        {
+
+
+            string strDataSource = clsGlobal.MG_SQL_DATA_SOURCE;
+            string strDBName = clsGlobal.MG_SQL_DB_NAME;
+            string strID = clsGlobal.MG_SQL_ID;
+            string strPassword = clsGlobal.MG_SQL_PASSWORD;
+            bool blnIsWinAuth = clsGlobal.MG_SQL_IS_WIN_AUTH;
+
+            //string strDataSource2 = clsGlobal.MG_SQL_DATA_SOURCE2;
+            //string strDBName2 = clsGlobal.MG_SQL_DB_NAME2;
+            //string strID2 = clsGlobal.MG_SQL_ID2;
+            //string strPassword2 = clsGlobal.MG_SQL_PASSWORD2;
+            //bool blnIsWinAuth2 = clsGlobal.MG_SQL_IS_WIN_AUTH2;
+
+            string connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Persist Security Info=True;User ID=" + strID + ";Password=" + strPassword;
+            if (blnIsWinAuth)
+            {
+                connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Integrated Security=True;";
+            }
+
+            //string connstr2 = @"Data Source=" + strDataSource2 + ";Initial Catalog=" + strDBName2 + ";Persist Security Info=True;User ID=" + strID2 + ";Password=" + strPassword2;
+            //if (blnIsWinAuth2)
+            //{
+            //    connstr2 = @"Data Source=" + strDataSource2 + ";Initial Catalog=" + strDBName2 + ";Integrated Security=True;";
+            //}
+
+            // ArrayList arr_att = new ArrayList();
+            // ArrayList arr_name = new ArrayList();
+
+            // try {
+
+            SqlConnection conn;
+            SqlDataAdapter sqlDA;
+            DataSet ds;
+            DataTable dt;
+
+            conn = new SqlConnection(connstr);
+
+            sqlDA = new SqlDataAdapter();
+            sqlDA.SelectCommand = new SqlCommand("dbo.usp_DUMaker_Letter_B2_generate_list", conn);
+            //sqlDEDMS_EMAIL_2.SelectCommand.Parameters.AddWithValue("id", pdfid);
+
+            ds = new DataSet();
+
+            sqlDA.Fill(ds);
+
+            dt = new DataTable();
+
+            dt = ds.Tables[0];
+
+            string arn = "";
+            string DateOfLOAcceptance = "";
+            string EmailReceiver = "";
+            string EmailHeader = "";
+            string EmailBody = "";
+
+            if (ds.Tables.Count > 0)
+            {
+                if (dt.Rows.Count > 0)
+                {
+                    for (int j = 0; j < dt.Rows.Count; j++)
+                    {
+                        arn = dt.Rows[j]["arn"].ToString();
+                        DateOfLOAcceptance = dt.Rows[j]["DateOfLOAcceptance"].ToString();
+                        EmailReceiver = dt.Rows[j]["receiveremail"].ToString();
+                        EmailHeader = dt.Rows[j]["email_header"].ToString();
+                        EmailBody = dt.Rows[j]["email_body"].ToString();
+
+                        SendMailV2("SendToValuer-VR", "CRA", arn, EmailHeader, EmailBody, EmailReceiver, 0, 1, "", "");
+
+                    }
+                }
+            }
+        }
+
+        //[WebMethod]
+        //public void NewPhaseCodeEmail()
+        //{
+
+
+        //    string strDataSource = clsGlobal.MG_SQL_DATA_SOURCE;
+        //    string strDBName = clsGlobal.MG_SQL_DB_NAME;
+        //    string strID = clsGlobal.MG_SQL_ID;
+        //    string strPassword = clsGlobal.MG_SQL_PASSWORD;
+        //    bool blnIsWinAuth = clsGlobal.MG_SQL_IS_WIN_AUTH;
+
+        //    //string strDataSource2 = clsGlobal.MG_SQL_DATA_SOURCE2;
+        //    //string strDBName2 = clsGlobal.MG_SQL_DB_NAME2;
+        //    //string strID2 = clsGlobal.MG_SQL_ID2;
+        //    //string strPassword2 = clsGlobal.MG_SQL_PASSWORD2;
+        //    //bool blnIsWinAuth2 = clsGlobal.MG_SQL_IS_WIN_AUTH2;
+
+        //    string connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Persist Security Info=True;User ID=" + strID + ";Password=" + strPassword;
+        //    if (blnIsWinAuth)
+        //    {
+        //        connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Integrated Security=True;";
+        //    }
+
+        //    //string connstr2 = @"Data Source=" + strDataSource2 + ";Initial Catalog=" + strDBName2 + ";Persist Security Info=True;User ID=" + strID2 + ";Password=" + strPassword2;
+        //    //if (blnIsWinAuth2)
+        //    //{
+        //    //    connstr2 = @"Data Source=" + strDataSource2 + ";Initial Catalog=" + strDBName2 + ";Integrated Security=True;";
+        //    //}
+
+        //    // ArrayList arr_att = new ArrayList();
+        //    // ArrayList arr_name = new ArrayList();
+
+        //    // try {
+
+        //    SqlConnection conn;
+        //    SqlDataAdapter sqlDA;
+        //    DataSet ds;
+        //    DataTable dt;
+
+        //    conn = new SqlConnection(connstr);
+
+        //    sqlDA = new SqlDataAdapter();
+        //    sqlDA.SelectCommand = new SqlCommand("dbo.ddProject_NewPhaseCodeEmail_CaseCount @CaseCount output", conn);
+        //    //sqlDEDMS_EMAIL_2.SelectCommand.Parameters.AddWithValue("id", pdfid);
+        //    sqlDA.SelectCommand.Parameters.Add("@CaseCount", SqlDbType.NVarChar, -1);
+        //    sqlDA.SelectCommand.Parameters["@CaseCount"].Direction = ParameterDirection.Output;
+
+        //    ds = new DataSet();
+
+        //    sqlDA.Fill(ds);
+
+
+        //    dt = new DataTable();
+
+        //    dt = ds.Tables[0];
+
+        //    string arn = "";
+        //    string DateOfLOAcceptance = "";
+        //    string EmailReceiver = "";
+        //    string EmailHeader = "";
+        //    string EmailBody = "";
+
+        //    if (ds.Tables.Count > 0)
+        //    {
+        //        if (dt.Rows.Count > 0)
+        //        {
+        //            for (int j = 0; j < dt.Rows.Count; j++)
+        //            {
+        //                arn = dt.Rows[j]["arn"].ToString();
+        //                DateOfLOAcceptance = dt.Rows[j]["DateOfLOAcceptance"].ToString();
+        //                EmailReceiver = dt.Rows[j]["receiveremail"].ToString();
+        //                EmailHeader = dt.Rows[j]["email_header"].ToString();
+        //                EmailBody = dt.Rows[j]["email_body"].ToString();
+
+        //                SendMailV2("SendToValuer-VR", "CRA", arn, EmailHeader, EmailBody, EmailReceiver, 0, 1, "", "");
+
+        //            }
+        //        }
+        //    }
+        //}
+
+        
     }
+
+
 }

@@ -3,7 +3,7 @@
   <Profiles />
   <Settings>
     <Setting Name="HLBBWS_LOADS_API_WsEIWSLosaAppBocImpService" Type="(Web Service URL)" Scope="Application">
-      <Value Profile="(Default)">http://10.100.11.59:9081/mg/ws/WsEIWSLosaAppBocImp</Value>
+      <Value Profile="(Default)">https://loadsuat.hlbank.my/mg/ws/WsEIWSLosaAppBocImp</Value>
     </Setting>
   </Settings>
 </SettingsFile>

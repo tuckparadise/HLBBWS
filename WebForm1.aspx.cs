@@ -110,12 +110,16 @@ namespace HLBBWS
 
             
             string error = "";
-            HLBBWS.AppWS ws = new AppWS();
+           //HLBBWS.AppWS ws = new AppWS();
+            HLBBWS.InfobipAPI ws = new InfobipAPI();
+
+            ws.Infobip_SendEmail(75,ref error);
 
             //ws.DP_GetDataFromLOADS("BCV/MG/2016/L0005160");
-            //ws.DP_NewLI(ref error);
-            ws.DP_CompletedProjectDisbursement_Attachment(ref error);
-
+            // ws.DP_NewLI(ref error);
+            // ws.DP_CompletedProjectDisbursement_Attachment(ref error);
+            //ws.Test_Infobip_SendMail_MultipleAttachment_Call();
+            // ws.SendMailV2_GetResult();
             /*
             //ws.Test_SendMail_MultipleAttachment_Call();
             ArrayList arr = new ArrayList();

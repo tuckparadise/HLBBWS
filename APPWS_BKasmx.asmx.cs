@@ -494,7 +494,8 @@ namespace HLBBWS
 
                                 Document doc = new Document(stream);
 
-                                doc.Encrypt(PDFPassword, masterpw, 0, CryptoAlgorithm.AESx256);
+                               // doc.Encrypt(PDFPassword, masterpw, 0, CryptoAlgorithm.AESx256);
+                                doc.Encrypt(masterpw, PDFPassword, 0, CryptoAlgorithm.AESx256);
                                 doc.Save(outputstream);
                                 outputbyteFileContent = outputstream.ToArray();
                                 string protectedfilecontent = Convert.ToBase64String(outputbyteFileContent, 0, outputbyteFileContent.Length);

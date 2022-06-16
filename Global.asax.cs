@@ -65,7 +65,11 @@ namespace HLBBWS
             clsGlobal.MailServer = ConfigurationManager.AppSettings["MailServer"].ToString();
             string encryptedMailPassword = ConfigurationManager.AppSettings["MailPassword"].ToString();
             string result1 = DecryptTextFromTTMSWindowsEncryptionTool(encryptedMailPassword);
-            clsGlobal.MailPassword = result1.Trim();            
+            clsGlobal.MailPassword = result1.Trim();
+
+            //clsGlobal.infobip_base64credentials = ConfigurationManager.AppSettings["infobip_base64credentials"].ToString();
+            //clsGlobal.infobip_url = ConfigurationManager.AppSettings["infobip_url"].ToString();
+            //clsGlobal.infobip_user = ConfigurationManager.AppSettings["infobip_user"].ToString();
 
         }
         

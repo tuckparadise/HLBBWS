@@ -23,17 +23,17 @@ namespace HLBBWS.LOADS_API {
     
     
     /// <remarks/>
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Web.Services", "4.6.1055.0")]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Web.Services", "4.8.3752.0")]
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.ComponentModel.DesignerCategoryAttribute("code")]
     [System.Web.Services.WebServiceBindingAttribute(Name="WsEIWSLosaAppBocImpServiceSoapBinding", Namespace="http://imp.boc.ws.thetasp.com/")]
     public partial class WsEIWSLosaAppBocImpService : System.Web.Services.Protocols.SoapHttpClientProtocol {
         
-        private System.Threading.SendOrPostCallback LoanApplicantNameAndIDOperationCompleted;
+        private System.Threading.SendOrPostCallback LoanApplicationInfoOperationCompleted;
         
         private System.Threading.SendOrPostCallback PFDetailsInfoOperationCompleted;
         
-        private System.Threading.SendOrPostCallback LoanApplicationInfoOperationCompleted;
+        private System.Threading.SendOrPostCallback LoanApplicantNameAndIDOperationCompleted;
         
         private bool useDefaultCredentialsSetExplicitly;
         
@@ -74,41 +74,41 @@ namespace HLBBWS.LOADS_API {
         }
         
         /// <remarks/>
-        public event LoanApplicantNameAndIDCompletedEventHandler LoanApplicantNameAndIDCompleted;
+        public event LoanApplicationInfoCompletedEventHandler LoanApplicationInfoCompleted;
         
         /// <remarks/>
         public event PFDetailsInfoCompletedEventHandler PFDetailsInfoCompleted;
         
         /// <remarks/>
-        public event LoanApplicationInfoCompletedEventHandler LoanApplicationInfoCompleted;
+        public event LoanApplicantNameAndIDCompletedEventHandler LoanApplicantNameAndIDCompleted;
         
         /// <remarks/>
         [System.Web.Services.Protocols.SoapDocumentMethodAttribute("", RequestNamespace="http://boc.ws.thetasp.com/", ResponseNamespace="http://boc.ws.thetasp.com/", Use=System.Web.Services.Description.SoapBindingUse.Literal, ParameterStyle=System.Web.Services.Protocols.SoapParameterStyle.Wrapped)]
-        [return: System.Xml.Serialization.XmlElementAttribute("WsEIWSLosaLoanApplicantInfo", Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
-        public WsEIWSLosaLoanApplicantInfo LoanApplicantNameAndID([System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)] AppHeader AppHeader) {
-            object[] results = this.Invoke("LoanApplicantNameAndID", new object[] {
+        [return: System.Xml.Serialization.XmlElementAttribute("WsEIWSLosaAppLoanInfo", Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
+        public WsEIWSLosaAppLoanInfo LoanApplicationInfo([System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)] AppHeader AppHeader) {
+            object[] results = this.Invoke("LoanApplicationInfo", new object[] {
                         AppHeader});
-            return ((WsEIWSLosaLoanApplicantInfo)(results[0]));
+            return ((WsEIWSLosaAppLoanInfo)(results[0]));
         }
         
         /// <remarks/>
-        public void LoanApplicantNameAndIDAsync(AppHeader AppHeader) {
-            this.LoanApplicantNameAndIDAsync(AppHeader, null);
+        public void LoanApplicationInfoAsync(AppHeader AppHeader) {
+            this.LoanApplicationInfoAsync(AppHeader, null);
         }
         
         /// <remarks/>
-        public void LoanApplicantNameAndIDAsync(AppHeader AppHeader, object userState) {
-            if ((this.LoanApplicantNameAndIDOperationCompleted == null)) {
-                this.LoanApplicantNameAndIDOperationCompleted = new System.Threading.SendOrPostCallback(this.OnLoanApplicantNameAndIDOperationCompleted);
+        public void LoanApplicationInfoAsync(AppHeader AppHeader, object userState) {
+            if ((this.LoanApplicationInfoOperationCompleted == null)) {
+                this.LoanApplicationInfoOperationCompleted = new System.Threading.SendOrPostCallback(this.OnLoanApplicationInfoOperationCompleted);
             }
-            this.InvokeAsync("LoanApplicantNameAndID", new object[] {
-                        AppHeader}, this.LoanApplicantNameAndIDOperationCompleted, userState);
+            this.InvokeAsync("LoanApplicationInfo", new object[] {
+                        AppHeader}, this.LoanApplicationInfoOperationCompleted, userState);
         }
         
-        private void OnLoanApplicantNameAndIDOperationCompleted(object arg) {
-            if ((this.LoanApplicantNameAndIDCompleted != null)) {
+        private void OnLoanApplicationInfoOperationCompleted(object arg) {
+            if ((this.LoanApplicationInfoCompleted != null)) {
                 System.Web.Services.Protocols.InvokeCompletedEventArgs invokeArgs = ((System.Web.Services.Protocols.InvokeCompletedEventArgs)(arg));
-                this.LoanApplicantNameAndIDCompleted(this, new LoanApplicantNameAndIDCompletedEventArgs(invokeArgs.Results, invokeArgs.Error, invokeArgs.Cancelled, invokeArgs.UserState));
+                this.LoanApplicationInfoCompleted(this, new LoanApplicationInfoCompletedEventArgs(invokeArgs.Results, invokeArgs.Error, invokeArgs.Cancelled, invokeArgs.UserState));
             }
         }
         
@@ -144,31 +144,31 @@ namespace HLBBWS.LOADS_API {
         
         /// <remarks/>
         [System.Web.Services.Protocols.SoapDocumentMethodAttribute("", RequestNamespace="http://boc.ws.thetasp.com/", ResponseNamespace="http://boc.ws.thetasp.com/", Use=System.Web.Services.Description.SoapBindingUse.Literal, ParameterStyle=System.Web.Services.Protocols.SoapParameterStyle.Wrapped)]
-        [return: System.Xml.Serialization.XmlElementAttribute("WsEIWSLosaAppLoanInfo", Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
-        public WsEIWSLosaAppLoanInfo LoanApplicationInfo([System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)] WsEIWSLosaAppHeader AppHeader) {
-            object[] results = this.Invoke("LoanApplicationInfo", new object[] {
+        [return: System.Xml.Serialization.XmlElementAttribute("WsEIWSLosaLoanApplicantInfo", Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
+        public WsEIWSLosaLoanApplicantInfo LoanApplicantNameAndID([System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)] WsEIWSLosaAppHeader AppHeader) {
+            object[] results = this.Invoke("LoanApplicantNameAndID", new object[] {
                         AppHeader});
-            return ((WsEIWSLosaAppLoanInfo)(results[0]));
+            return ((WsEIWSLosaLoanApplicantInfo)(results[0]));
         }
         
         /// <remarks/>
-        public void LoanApplicationInfoAsync(WsEIWSLosaAppHeader AppHeader) {
-            this.LoanApplicationInfoAsync(AppHeader, null);
+        public void LoanApplicantNameAndIDAsync(WsEIWSLosaAppHeader AppHeader) {
+            this.LoanApplicantNameAndIDAsync(AppHeader, null);
         }
         
         /// <remarks/>
-        public void LoanApplicationInfoAsync(WsEIWSLosaAppHeader AppHeader, object userState) {
-            if ((this.LoanApplicationInfoOperationCompleted == null)) {
-                this.LoanApplicationInfoOperationCompleted = new System.Threading.SendOrPostCallback(this.OnLoanApplicationInfoOperationCompleted);
+        public void LoanApplicantNameAndIDAsync(WsEIWSLosaAppHeader AppHeader, object userState) {
+            if ((this.LoanApplicantNameAndIDOperationCompleted == null)) {
+                this.LoanApplicantNameAndIDOperationCompleted = new System.Threading.SendOrPostCallback(this.OnLoanApplicantNameAndIDOperationCompleted);
             }
-            this.InvokeAsync("LoanApplicationInfo", new object[] {
-                        AppHeader}, this.LoanApplicationInfoOperationCompleted, userState);
+            this.InvokeAsync("LoanApplicantNameAndID", new object[] {
+                        AppHeader}, this.LoanApplicantNameAndIDOperationCompleted, userState);
         }
         
-        private void OnLoanApplicationInfoOperationCompleted(object arg) {
-            if ((this.LoanApplicationInfoCompleted != null)) {
+        private void OnLoanApplicantNameAndIDOperationCompleted(object arg) {
+            if ((this.LoanApplicantNameAndIDCompleted != null)) {
                 System.Web.Services.Protocols.InvokeCompletedEventArgs invokeArgs = ((System.Web.Services.Protocols.InvokeCompletedEventArgs)(arg));
-                this.LoanApplicationInfoCompleted(this, new LoanApplicationInfoCompletedEventArgs(invokeArgs.Results, invokeArgs.Error, invokeArgs.Cancelled, invokeArgs.UserState));
+                this.LoanApplicantNameAndIDCompleted(this, new LoanApplicantNameAndIDCompletedEventArgs(invokeArgs.Results, invokeArgs.Error, invokeArgs.Cancelled, invokeArgs.UserState));
             }
         }
         
@@ -192,7 +192,7 @@ namespace HLBBWS.LOADS_API {
     }
     
     /// <remarks/>
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Xml", "4.7.2612.0")]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Xml", "4.8.3752.0")]
     [System.SerializableAttribute()]
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.ComponentModel.DesignerCategoryAttribute("code")]
@@ -279,7 +279,312 @@ namespace HLBBWS.LOADS_API {
     }
     
     /// <remarks/>
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Xml", "4.7.2612.0")]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Xml", "4.8.3752.0")]
+    [System.SerializableAttribute()]
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.ComponentModel.DesignerCategoryAttribute("code")]
+    [System.Xml.Serialization.XmlTypeAttribute(Namespace="http://data.ws.thetasp.com")]
+    public partial class WsEIWSLosaLoanApplicant {
+        
+        private string appCustNameIDNoField;
+        
+        /// <remarks/>
+        [System.Xml.Serialization.XmlElementAttribute(IsNullable=true)]
+        public string appCustNameIDNo {
+            get {
+                return this.appCustNameIDNoField;
+            }
+            set {
+                this.appCustNameIDNoField = value;
+            }
+        }
+    }
+    
+    /// <remarks/>
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Xml", "4.8.3752.0")]
+    [System.SerializableAttribute()]
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.ComponentModel.DesignerCategoryAttribute("code")]
+    [System.Xml.Serialization.XmlTypeAttribute(Namespace="http://data.ws.thetasp.com")]
+    public partial class WsEIWSLosaLoanApplicantInfo {
+        
+        private WsEIWSLosaAppHeader appHeaderField;
+        
+        private WsEIWSLosaLoanApplicant[] loanApplicantsField;
+        
+        private string loanApptFullListField;
+        
+        private WsEIWSLosaResponseInfo respInfoField;
+        
+        /// <remarks/>
+        [System.Xml.Serialization.XmlElementAttribute(IsNullable=true)]
+        public WsEIWSLosaAppHeader appHeader {
+            get {
+                return this.appHeaderField;
+            }
+            set {
+                this.appHeaderField = value;
+            }
+        }
+        
+        /// <remarks/>
+        [System.Xml.Serialization.XmlArrayAttribute(IsNullable=true)]
+        public WsEIWSLosaLoanApplicant[] loanApplicants {
+            get {
+                return this.loanApplicantsField;
+            }
+            set {
+                this.loanApplicantsField = value;
+            }
+        }
+        
+        /// <remarks/>
+        [System.Xml.Serialization.XmlElementAttribute(IsNullable=true)]
+        public string loanApptFullList {
+            get {
+                return this.loanApptFullListField;
+            }
+            set {
+                this.loanApptFullListField = value;
+            }
+        }
+        
+        /// <remarks/>
+        [System.Xml.Serialization.XmlElementAttribute(IsNullable=true)]
+        public WsEIWSLosaResponseInfo respInfo {
+            get {
+                return this.respInfoField;
+            }
+            set {
+                this.respInfoField = value;
+            }
+        }
+    }
+    
+    /// <remarks/>
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Xml", "4.8.3752.0")]
+    [System.SerializableAttribute()]
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.ComponentModel.DesignerCategoryAttribute("code")]
+    [System.Xml.Serialization.XmlTypeAttribute(Namespace="http://data.ws.thetasp.com")]
+    public partial class WsEIWSLosaAppHeader {
+        
+        private string agencyIdField;
+        
+        private string bizRefNoField;
+        
+        private string businessAreaField;
+        
+        private string dateField;
+        
+        private string processIdField;
+        
+        private string tranxIdField;
+        
+        /// <remarks/>
+        [System.Xml.Serialization.XmlElementAttribute(IsNullable=true)]
+        public string agencyId {
+            get {
+                return this.agencyIdField;
+            }
+            set {
+                this.agencyIdField = value;
+            }
+        }
+        
+        /// <remarks/>
+        [System.Xml.Serialization.XmlElementAttribute(IsNullable=true)]
+        public string bizRefNo {
+            get {
+                return this.bizRefNoField;
+            }
+            set {
+                this.bizRefNoField = value;
+            }
+        }
+        
+        /// <remarks/>
+        [System.Xml.Serialization.XmlElementAttribute(IsNullable=true)]
+        public string businessArea {
+            get {
+                return this.businessAreaField;
+            }
+            set {
+                this.businessAreaField = value;
+            }
+        }
+        
+        /// <remarks/>
+        [System.Xml.Serialization.XmlElementAttribute(IsNullable=true)]
+        public string date {
+            get {
+                return this.dateField;
+            }
+            set {
+                this.dateField = value;
+            }
+        }
+        
+        /// <remarks/>
+        [System.Xml.Serialization.XmlElementAttribute(IsNullable=true)]
+        public string processId {
+            get {
+                return this.processIdField;
+            }
+            set {
+                this.processIdField = value;
+            }
+        }
+        
+        /// <remarks/>
+        [System.Xml.Serialization.XmlElementAttribute(IsNullable=true)]
+        public string tranxId {
+            get {
+                return this.tranxIdField;
+            }
+            set {
+                this.tranxIdField = value;
+            }
+        }
+    }
+    
+    /// <remarks/>
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Xml", "4.8.3752.0")]
+    [System.SerializableAttribute()]
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.ComponentModel.DesignerCategoryAttribute("code")]
+    [System.Xml.Serialization.XmlTypeAttribute(Namespace="http://data.ws.thetasp.com")]
+    public partial class WsEIWSLosaResponseInfo {
+        
+        private string respCodeField;
+        
+        private string respDescField;
+        
+        /// <remarks/>
+        [System.Xml.Serialization.XmlElementAttribute(IsNullable=true)]
+        public string respCode {
+            get {
+                return this.respCodeField;
+            }
+            set {
+                this.respCodeField = value;
+            }
+        }
+        
+        /// <remarks/>
+        [System.Xml.Serialization.XmlElementAttribute(IsNullable=true)]
+        public string respDesc {
+            get {
+                return this.respDescField;
+            }
+            set {
+                this.respDescField = value;
+            }
+        }
+    }
+    
+    /// <remarks/>
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Xml", "4.8.3752.0")]
+    [System.SerializableAttribute()]
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.ComponentModel.DesignerCategoryAttribute("code")]
+    [System.Xml.Serialization.XmlTypeAttribute(Namespace="http://data.ws.thetasp.com")]
+    public partial class WsEIWSPfmDetailsInfo {
+        
+        private WsEIWSLosaAppHeader appHeaderField;
+        
+        private string developerNameField;
+        
+        private string phaseCodeField;
+        
+        private string phaseNameField;
+        
+        private string projectNameField;
+        
+        private WsEIWSLosaResponseInfo respInfoField;
+        
+        private string stateField;
+        
+        /// <remarks/>
+        [System.Xml.Serialization.XmlElementAttribute(IsNullable=true)]
+        public WsEIWSLosaAppHeader appHeader {
+            get {
+                return this.appHeaderField;
+            }
+            set {
+                this.appHeaderField = value;
+            }
+        }
+        
+        /// <remarks/>
+        [System.Xml.Serialization.XmlElementAttribute(IsNullable=true)]
+        public string developerName {
+            get {
+                return this.developerNameField;
+            }
+            set {
+                this.developerNameField = value;
+            }
+        }
+        
+        /// <remarks/>
+        [System.Xml.Serialization.XmlElementAttribute(IsNullable=true)]
+        public string phaseCode {
+            get {
+                return this.phaseCodeField;
+            }
+            set {
+                this.phaseCodeField = value;
+            }
+        }
+        
+        /// <remarks/>
+        [System.Xml.Serialization.XmlElementAttribute(IsNullable=true)]
+        public string phaseName {
+            get {
+                return this.phaseNameField;
+            }
+            set {
+                this.phaseNameField = value;
+            }
+        }
+        
+        /// <remarks/>
+        [System.Xml.Serialization.XmlElementAttribute(IsNullable=true)]
+        public string projectName {
+            get {
+                return this.projectNameField;
+            }
+            set {
+                this.projectNameField = value;
+            }
+        }
+        
+        /// <remarks/>
+        [System.Xml.Serialization.XmlElementAttribute(IsNullable=true)]
+        public WsEIWSLosaResponseInfo respInfo {
+            get {
+                return this.respInfoField;
+            }
+            set {
+                this.respInfoField = value;
+            }
+        }
+        
+        /// <remarks/>
+        [System.Xml.Serialization.XmlElementAttribute(IsNullable=true)]
+        public string state {
+            get {
+                return this.stateField;
+            }
+            set {
+                this.stateField = value;
+            }
+        }
+    }
+    
+    /// <remarks/>
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Xml", "4.8.3752.0")]
     [System.SerializableAttribute()]
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.ComponentModel.DesignerCategoryAttribute("code")]
@@ -509,7 +814,7 @@ namespace HLBBWS.LOADS_API {
     }
     
     /// <remarks/>
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Xml", "4.7.2612.0")]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Xml", "4.8.3752.0")]
     [System.SerializableAttribute()]
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.ComponentModel.DesignerCategoryAttribute("code")]
@@ -1025,7 +1330,7 @@ namespace HLBBWS.LOADS_API {
     }
     
     /// <remarks/>
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Xml", "4.7.2612.0")]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Xml", "4.8.3752.0")]
     [System.SerializableAttribute()]
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.ComponentModel.DesignerCategoryAttribute("code")]
@@ -1372,7 +1677,7 @@ namespace HLBBWS.LOADS_API {
     }
     
     /// <remarks/>
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Xml", "4.7.2612.0")]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Xml", "4.8.3752.0")]
     [System.SerializableAttribute()]
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.ComponentModel.DesignerCategoryAttribute("code")]
@@ -1758,7 +2063,7 @@ namespace HLBBWS.LOADS_API {
     }
     
     /// <remarks/>
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Xml", "4.7.2612.0")]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Xml", "4.8.3752.0")]
     [System.SerializableAttribute()]
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.ComponentModel.DesignerCategoryAttribute("code")]
@@ -1845,342 +2150,37 @@ namespace HLBBWS.LOADS_API {
     }
     
     /// <remarks/>
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Xml", "4.7.2612.0")]
-    [System.SerializableAttribute()]
-    [System.Diagnostics.DebuggerStepThroughAttribute()]
-    [System.ComponentModel.DesignerCategoryAttribute("code")]
-    [System.Xml.Serialization.XmlTypeAttribute(Namespace="http://data.ws.thetasp.com")]
-    public partial class WsEIWSLosaAppHeader {
-        
-        private string agencyIdField;
-        
-        private string bizRefNoField;
-        
-        private string businessAreaField;
-        
-        private string dateField;
-        
-        private string processIdField;
-        
-        private string tranxIdField;
-        
-        /// <remarks/>
-        [System.Xml.Serialization.XmlElementAttribute(IsNullable=true)]
-        public string agencyId {
-            get {
-                return this.agencyIdField;
-            }
-            set {
-                this.agencyIdField = value;
-            }
-        }
-        
-        /// <remarks/>
-        [System.Xml.Serialization.XmlElementAttribute(IsNullable=true)]
-        public string bizRefNo {
-            get {
-                return this.bizRefNoField;
-            }
-            set {
-                this.bizRefNoField = value;
-            }
-        }
-        
-        /// <remarks/>
-        [System.Xml.Serialization.XmlElementAttribute(IsNullable=true)]
-        public string businessArea {
-            get {
-                return this.businessAreaField;
-            }
-            set {
-                this.businessAreaField = value;
-            }
-        }
-        
-        /// <remarks/>
-        [System.Xml.Serialization.XmlElementAttribute(IsNullable=true)]
-        public string date {
-            get {
-                return this.dateField;
-            }
-            set {
-                this.dateField = value;
-            }
-        }
-        
-        /// <remarks/>
-        [System.Xml.Serialization.XmlElementAttribute(IsNullable=true)]
-        public string processId {
-            get {
-                return this.processIdField;
-            }
-            set {
-                this.processIdField = value;
-            }
-        }
-        
-        /// <remarks/>
-        [System.Xml.Serialization.XmlElementAttribute(IsNullable=true)]
-        public string tranxId {
-            get {
-                return this.tranxIdField;
-            }
-            set {
-                this.tranxIdField = value;
-            }
-        }
-    }
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Web.Services", "4.8.3752.0")]
+    public delegate void LoanApplicationInfoCompletedEventHandler(object sender, LoanApplicationInfoCompletedEventArgs e);
     
     /// <remarks/>
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Xml", "4.7.2612.0")]
-    [System.SerializableAttribute()]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Web.Services", "4.8.3752.0")]
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.ComponentModel.DesignerCategoryAttribute("code")]
-    [System.Xml.Serialization.XmlTypeAttribute(Namespace="http://data.ws.thetasp.com")]
-    public partial class WsEIWSLosaResponseInfo {
-        
-        private string respCodeField;
-        
-        private string respDescField;
-        
-        /// <remarks/>
-        [System.Xml.Serialization.XmlElementAttribute(IsNullable=true)]
-        public string respCode {
-            get {
-                return this.respCodeField;
-            }
-            set {
-                this.respCodeField = value;
-            }
-        }
-        
-        /// <remarks/>
-        [System.Xml.Serialization.XmlElementAttribute(IsNullable=true)]
-        public string respDesc {
-            get {
-                return this.respDescField;
-            }
-            set {
-                this.respDescField = value;
-            }
-        }
-    }
-    
-    /// <remarks/>
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Xml", "4.7.2612.0")]
-    [System.SerializableAttribute()]
-    [System.Diagnostics.DebuggerStepThroughAttribute()]
-    [System.ComponentModel.DesignerCategoryAttribute("code")]
-    [System.Xml.Serialization.XmlTypeAttribute(Namespace="http://data.ws.thetasp.com")]
-    public partial class WsEIWSPfmDetailsInfo {
-        
-        private WsEIWSLosaAppHeader appHeaderField;
-        
-        private string developerNameField;
-        
-        private string phaseCodeField;
-        
-        private string phaseNameField;
-        
-        private string projectNameField;
-        
-        private WsEIWSLosaResponseInfo respInfoField;
-        
-        private string stateField;
-        
-        /// <remarks/>
-        [System.Xml.Serialization.XmlElementAttribute(IsNullable=true)]
-        public WsEIWSLosaAppHeader appHeader {
-            get {
-                return this.appHeaderField;
-            }
-            set {
-                this.appHeaderField = value;
-            }
-        }
-        
-        /// <remarks/>
-        [System.Xml.Serialization.XmlElementAttribute(IsNullable=true)]
-        public string developerName {
-            get {
-                return this.developerNameField;
-            }
-            set {
-                this.developerNameField = value;
-            }
-        }
-        
-        /// <remarks/>
-        [System.Xml.Serialization.XmlElementAttribute(IsNullable=true)]
-        public string phaseCode {
-            get {
-                return this.phaseCodeField;
-            }
-            set {
-                this.phaseCodeField = value;
-            }
-        }
-        
-        /// <remarks/>
-        [System.Xml.Serialization.XmlElementAttribute(IsNullable=true)]
-        public string phaseName {
-            get {
-                return this.phaseNameField;
-            }
-            set {
-                this.phaseNameField = value;
-            }
-        }
-        
-        /// <remarks/>
-        [System.Xml.Serialization.XmlElementAttribute(IsNullable=true)]
-        public string projectName {
-            get {
-                return this.projectNameField;
-            }
-            set {
-                this.projectNameField = value;
-            }
-        }
-        
-        /// <remarks/>
-        [System.Xml.Serialization.XmlElementAttribute(IsNullable=true)]
-        public WsEIWSLosaResponseInfo respInfo {
-            get {
-                return this.respInfoField;
-            }
-            set {
-                this.respInfoField = value;
-            }
-        }
-        
-        /// <remarks/>
-        [System.Xml.Serialization.XmlElementAttribute(IsNullable=true)]
-        public string state {
-            get {
-                return this.stateField;
-            }
-            set {
-                this.stateField = value;
-            }
-        }
-    }
-    
-    /// <remarks/>
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Xml", "4.7.2612.0")]
-    [System.SerializableAttribute()]
-    [System.Diagnostics.DebuggerStepThroughAttribute()]
-    [System.ComponentModel.DesignerCategoryAttribute("code")]
-    [System.Xml.Serialization.XmlTypeAttribute(Namespace="http://data.ws.thetasp.com")]
-    public partial class WsEIWSLosaLoanApplicant {
-        
-        private string appCustNameIDNoField;
-        
-        /// <remarks/>
-        [System.Xml.Serialization.XmlElementAttribute(IsNullable=true)]
-        public string appCustNameIDNo {
-            get {
-                return this.appCustNameIDNoField;
-            }
-            set {
-                this.appCustNameIDNoField = value;
-            }
-        }
-    }
-    
-    /// <remarks/>
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Xml", "4.7.2612.0")]
-    [System.SerializableAttribute()]
-    [System.Diagnostics.DebuggerStepThroughAttribute()]
-    [System.ComponentModel.DesignerCategoryAttribute("code")]
-    [System.Xml.Serialization.XmlTypeAttribute(Namespace="http://data.ws.thetasp.com")]
-    public partial class WsEIWSLosaLoanApplicantInfo {
-        
-        private WsEIWSLosaAppHeader appHeaderField;
-        
-        private WsEIWSLosaLoanApplicant[] loanApplicantsField;
-        
-        private string loanApptFullListField;
-        
-        private WsEIWSLosaResponseInfo respInfoField;
-        
-        /// <remarks/>
-        [System.Xml.Serialization.XmlElementAttribute(IsNullable=true)]
-        public WsEIWSLosaAppHeader appHeader {
-            get {
-                return this.appHeaderField;
-            }
-            set {
-                this.appHeaderField = value;
-            }
-        }
-        
-        /// <remarks/>
-        [System.Xml.Serialization.XmlArrayAttribute(IsNullable=true)]
-        public WsEIWSLosaLoanApplicant[] loanApplicants {
-            get {
-                return this.loanApplicantsField;
-            }
-            set {
-                this.loanApplicantsField = value;
-            }
-        }
-        
-        /// <remarks/>
-        [System.Xml.Serialization.XmlElementAttribute(IsNullable=true)]
-        public string loanApptFullList {
-            get {
-                return this.loanApptFullListField;
-            }
-            set {
-                this.loanApptFullListField = value;
-            }
-        }
-        
-        /// <remarks/>
-        [System.Xml.Serialization.XmlElementAttribute(IsNullable=true)]
-        public WsEIWSLosaResponseInfo respInfo {
-            get {
-                return this.respInfoField;
-            }
-            set {
-                this.respInfoField = value;
-            }
-        }
-    }
-    
-    /// <remarks/>
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Web.Services", "4.6.1055.0")]
-    public delegate void LoanApplicantNameAndIDCompletedEventHandler(object sender, LoanApplicantNameAndIDCompletedEventArgs e);
-    
-    /// <remarks/>
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Web.Services", "4.6.1055.0")]
-    [System.Diagnostics.DebuggerStepThroughAttribute()]
-    [System.ComponentModel.DesignerCategoryAttribute("code")]
-    public partial class LoanApplicantNameAndIDCompletedEventArgs : System.ComponentModel.AsyncCompletedEventArgs {
+    public partial class LoanApplicationInfoCompletedEventArgs : System.ComponentModel.AsyncCompletedEventArgs {
         
         private object[] results;
         
-        internal LoanApplicantNameAndIDCompletedEventArgs(object[] results, System.Exception exception, bool cancelled, object userState) : 
+        internal LoanApplicationInfoCompletedEventArgs(object[] results, System.Exception exception, bool cancelled, object userState) : 
                 base(exception, cancelled, userState) {
             this.results = results;
         }
         
         /// <remarks/>
-        public WsEIWSLosaLoanApplicantInfo Result {
+        public WsEIWSLosaAppLoanInfo Result {
             get {
                 this.RaiseExceptionIfNecessary();
-                return ((WsEIWSLosaLoanApplicantInfo)(this.results[0]));
+                return ((WsEIWSLosaAppLoanInfo)(this.results[0]));
             }
         }
     }
     
     /// <remarks/>
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Web.Services", "4.6.1055.0")]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Web.Services", "4.8.3752.0")]
     public delegate void PFDetailsInfoCompletedEventHandler(object sender, PFDetailsInfoCompletedEventArgs e);
     
     /// <remarks/>
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Web.Services", "4.6.1055.0")]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Web.Services", "4.8.3752.0")]
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.ComponentModel.DesignerCategoryAttribute("code")]
     public partial class PFDetailsInfoCompletedEventArgs : System.ComponentModel.AsyncCompletedEventArgs {
@@ -2202,27 +2202,27 @@ namespace HLBBWS.LOADS_API {
     }
     
     /// <remarks/>
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Web.Services", "4.6.1055.0")]
-    public delegate void LoanApplicationInfoCompletedEventHandler(object sender, LoanApplicationInfoCompletedEventArgs e);
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Web.Services", "4.8.3752.0")]
+    public delegate void LoanApplicantNameAndIDCompletedEventHandler(object sender, LoanApplicantNameAndIDCompletedEventArgs e);
     
     /// <remarks/>
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Web.Services", "4.6.1055.0")]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Web.Services", "4.8.3752.0")]
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.ComponentModel.DesignerCategoryAttribute("code")]
-    public partial class LoanApplicationInfoCompletedEventArgs : System.ComponentModel.AsyncCompletedEventArgs {
+    public partial class LoanApplicantNameAndIDCompletedEventArgs : System.ComponentModel.AsyncCompletedEventArgs {
         
         private object[] results;
         
-        internal LoanApplicationInfoCompletedEventArgs(object[] results, System.Exception exception, bool cancelled, object userState) : 
+        internal LoanApplicantNameAndIDCompletedEventArgs(object[] results, System.Exception exception, bool cancelled, object userState) : 
                 base(exception, cancelled, userState) {
             this.results = results;
         }
         
         /// <remarks/>
-        public WsEIWSLosaAppLoanInfo Result {
+        public WsEIWSLosaLoanApplicantInfo Result {
             get {
                 this.RaiseExceptionIfNecessary();
-                return ((WsEIWSLosaAppLoanInfo)(this.results[0]));
+                return ((WsEIWSLosaLoanApplicantInfo)(this.results[0]));
             }
         }
     }
