@@ -246,6 +246,354 @@ namespace HLBBWS
             output = Session["testsession"].ToString();
 
         }
+        
+        [WebMethod]
+        public void Sol2_ResetSubUserPassword(string id, string admin, ref string receiver, ref string error)
+        {
+            error = "";
+            //ForcePasswordChange = "";
+            //PasswordExpiryWarning = "";
+            //encryptedusername = "";
+            //encryptedpassword = "";
+
+            try
+            {
+
+                DataSet ds = null;
+                DataTable dt = null;
+                SqlConnection conn = null;
+                SqlDataAdapter sqlDA = null;
+
+                string strDataSource = clsGlobal.MG_SQL_DATA_SOURCE;
+                string strDBName = clsGlobal.MG_SQL_DB_NAME;
+                string strID = clsGlobal.MG_SQL_ID;
+                string strPassword = clsGlobal.MG_SQL_PASSWORD;
+                bool blnIsWinAuth = clsGlobal.MG_SQL_IS_WIN_AUTH;
+
+                string connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Persist Security Info=True;User ID=" + strID + ";Password=" + strPassword;
+                if (blnIsWinAuth)
+                {
+                    connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Integrated Security=True;";
+                }
+
+                // start get encrypted key
+                SqlConnection connBeta = null;
+                SqlDataAdapter sqlDABeta = null;
+                DataTable dtBeta = null;
+
+                connBeta = new SqlConnection(connstr);
+
+                sqlDABeta = new SqlDataAdapter();
+                sqlDABeta.SelectCommand = new SqlCommand("dbo.usp_get_encryptionkey ", connBeta);
+
+                DataSet dsBETA = new DataSet("ds");
+                sqlDABeta.Fill(dsBETA);
+
+                DataTable dtBETA = dsBETA.Tables[0];
+                string EncryptionKey = dtBETA.Rows[0]["EncryptionKey"].ToString();
+
+                // end get encrypted key
+
+                // start call ddProjectDeveloperSubUser_PasswordReset               
+
+                //ALTER procedure[dbo].[ddProjectDeveloperSubUser_PasswordReset]
+                //@ID nvarchar(max),
+                //@LoginUserEmail nvarchar(max) = null, 	
+                // @DecryptedDefaultPassword nvarchar(max) = null output
+
+                SqlConnection connAlpha = null;
+                SqlDataAdapter sqlDAlpha = null;
+
+                connAlpha = new SqlConnection(connstr);
+                
+                sqlDAlpha = new SqlDataAdapter();
+                sqlDAlpha.SelectCommand = new SqlCommand("dbo.Sol2_SubUser_PasswordReset @ID, @LoginUserEmail, @DecryptedDefaultPassword output", connAlpha);
+                sqlDAlpha.SelectCommand.Parameters.AddWithValue("@ID", id);
+                sqlDAlpha.SelectCommand.Parameters.AddWithValue("@LoginUserEmail", admin);
+
+                sqlDAlpha.SelectCommand.Parameters.Add("@DecryptedDefaultPassword", SqlDbType.NVarChar, -1);
+                sqlDAlpha.SelectCommand.Parameters["@DecryptedDefaultPassword"].Direction = ParameterDirection.Output;
+
+                DataSet dsAlpha = new DataSet("ds");
+                sqlDAlpha.Fill(dsAlpha);
+
+                string DecryptedDefaultPassword = sqlDAlpha.SelectCommand.Parameters["@DecryptedDefaultPassword"].Value.ToString();
+                // end call ddProjectDeveloperSubUser_PasswordReset
+
+                // start gen password 
+                string encrypteddefaultpw = EncryptText(DecryptedDefaultPassword, EncryptionKey);
+                // end gen password 
+
+                // start call ddProjectDeveloperSubUser_PasswordReset_Final               
+
+                //ALTER procedure[dbo].[ddProjectDeveloperSubUser_PasswordReset_Final]
+                //@ID nvarchar(max) = null,
+                //@LoginUserEmail nvarchar(max) = null, 	
+                //@EncryptedDefaultPassword nvarchar(max) = null
+
+                connAlpha = new SqlConnection(connstr);
+
+                sqlDAlpha = new SqlDataAdapter();
+                sqlDAlpha.SelectCommand = new SqlCommand("dbo.Sol2_SubUser_PasswordReset_Final @ID, @LoginUserEmail, @EncryptedDefaultPassword", connAlpha);
+                sqlDAlpha.SelectCommand.Parameters.AddWithValue("@ID", id);
+                sqlDAlpha.SelectCommand.Parameters.AddWithValue("@LoginUserEmail", admin);
+                sqlDAlpha.SelectCommand.Parameters.AddWithValue("@EncryptedDefaultPassword", encrypteddefaultpw);
+
+                dsAlpha = new DataSet("ds");
+                sqlDAlpha.Fill(dsAlpha);
+                // end call ddProjectDeveloperSubUser_PasswordReset_Final
+
+                // start call save log sp
+                // ALTER procedure[dbo].[ddProject_Admin_PasswordReset_SaveLog]
+                // @ID nvarchar(max) = null ,
+                // @LoginUserEmail nvarchar(max) = null
+
+                sqlDAlpha = new SqlDataAdapter();
+                sqlDAlpha.SelectCommand = new SqlCommand("dbo.Sol2_SubUser_PasswordReset_SaveLog @ID, @LoginUserEmail", connAlpha);
+                sqlDAlpha.SelectCommand.Parameters.AddWithValue("@ID", id);
+                sqlDAlpha.SelectCommand.Parameters.AddWithValue("@LoginUserEmail", admin);
+
+
+                dsAlpha = new DataSet("ds");
+                sqlDAlpha.Fill(dsAlpha);
+
+                // end call save log sp
+
+
+
+
+                // start gen email content 
+
+                //@ID nvarchar(max) = null,
+                //@password nvarchar(max) = null, 	
+                //@senderemail nvarchar(max)  = null output,
+                //@receiveremail nvarchar(max)  = null output,
+                //@emailheader nvarchar(max)  = null output,
+                //@emailbody nvarchar(max)  = null output
+
+                SqlConnection conn_GenEmail = null;
+                SqlDataAdapter sqlDA_GenEmail = null;
+
+                conn_GenEmail = new SqlConnection(connstr);
+
+                sqlDA_GenEmail = new SqlDataAdapter();
+                sqlDA_GenEmail.SelectCommand = new SqlCommand("dbo.Sol2_SubUser_PasswordReset_GenerateEmail @ID , @password ,@senderemail output,@receiveremail output,@emailheader output,@emailbody output ", conn_GenEmail);
+                sqlDA_GenEmail.SelectCommand.Parameters.AddWithValue("@ID", id);
+                sqlDA_GenEmail.SelectCommand.Parameters.AddWithValue("@password", DecryptedDefaultPassword);
+
+
+                sqlDA_GenEmail.SelectCommand.Parameters.Add("@senderemail", SqlDbType.NVarChar, -1);
+                sqlDA_GenEmail.SelectCommand.Parameters["@senderemail"].Direction = ParameterDirection.Output;
+
+                sqlDA_GenEmail.SelectCommand.Parameters.Add("@receiveremail", SqlDbType.NVarChar, -1);
+                sqlDA_GenEmail.SelectCommand.Parameters["@receiveremail"].Direction = ParameterDirection.Output;
+
+                sqlDA_GenEmail.SelectCommand.Parameters.Add("@emailheader", SqlDbType.NVarChar, -1);
+                sqlDA_GenEmail.SelectCommand.Parameters["@emailheader"].Direction = ParameterDirection.Output;
+
+                sqlDA_GenEmail.SelectCommand.Parameters.Add("@emailbody", SqlDbType.NVarChar, -1);
+                sqlDA_GenEmail.SelectCommand.Parameters["@emailbody"].Direction = ParameterDirection.Output;
+
+                DataSet ds_GenEmail = new DataSet("ds");
+                sqlDA_GenEmail.Fill(ds_GenEmail);
+
+                string emailbody = sqlDA_GenEmail.SelectCommand.Parameters["@emailbody"].Value.ToString();
+                receiver = sqlDA_GenEmail.SelectCommand.Parameters["@receiveremail"].Value.ToString();
+                string emailheader = sqlDA_GenEmail.SelectCommand.Parameters["@emailheader"].Value.ToString();
+
+                //SendMailWFParser_NoAttachment(receiver, emailheader, emailbody);
+                //SendMail(receiver, emailheader, emailbody, null, null);
+                //Infobip enhancement 
+                SendMailV2("SendToSolicitor-ResetPassword", "SolicitorLoginID", id, emailheader, emailbody, receiver, 0, 1, "", "");
+
+
+                // end gen email content 
+
+
+                // end save record 
+            }
+            catch (Exception ex)
+            {
+                error = "Sol2_ResetSubUserPassword failed with exception: " + ex.Message.ToString();
+                string errorDetail;
+                errorDetail = "Input Param:" + " ID:" + id;
+                LogErrorToDB("Sol2_ResetSubUserPassword", "Exception", error, errorDetail);
+            }
+        }
+
+        [WebMethod]
+        public void Val2_ResetSubUserPassword(string id, string admin, ref string receiver, ref string error)
+        {
+            error = "";
+            //ForcePasswordChange = "";
+            //PasswordExpiryWarning = "";
+            //encryptedusername = "";
+            //encryptedpassword = "";
+
+            try
+            {
+
+                DataSet ds = null;
+                DataTable dt = null;
+                SqlConnection conn = null;
+                SqlDataAdapter sqlDA = null;
+
+                string strDataSource = clsGlobal.MG_SQL_DATA_SOURCE;
+                string strDBName = clsGlobal.MG_SQL_DB_NAME;
+                string strID = clsGlobal.MG_SQL_ID;
+                string strPassword = clsGlobal.MG_SQL_PASSWORD;
+                bool blnIsWinAuth = clsGlobal.MG_SQL_IS_WIN_AUTH;
+
+                string connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Persist Security Info=True;User ID=" + strID + ";Password=" + strPassword;
+                if (blnIsWinAuth)
+                {
+                    connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Integrated Security=True;";
+                }
+
+                // start get encrypted key
+                SqlConnection connBeta = null;
+                SqlDataAdapter sqlDABeta = null;
+                DataTable dtBeta = null;
+
+                connBeta = new SqlConnection(connstr);
+
+                sqlDABeta = new SqlDataAdapter();
+                sqlDABeta.SelectCommand = new SqlCommand("dbo.usp_get_encryptionkey ", connBeta);
+
+                DataSet dsBETA = new DataSet("ds");
+                sqlDABeta.Fill(dsBETA);
+
+                DataTable dtBETA = dsBETA.Tables[0];
+                string EncryptionKey = dtBETA.Rows[0]["EncryptionKey"].ToString();
+
+                // end get encrypted key
+
+                // start call ddProjectDeveloperSubUser_PasswordReset               
+
+                //ALTER procedure[dbo].[ddProjectDeveloperSubUser_PasswordReset]
+                //@ID nvarchar(max),
+                //@LoginUserEmail nvarchar(max) = null, 	
+                // @DecryptedDefaultPassword nvarchar(max) = null output
+
+                SqlConnection connAlpha = null;
+                SqlDataAdapter sqlDAlpha = null;
+
+                connAlpha = new SqlConnection(connstr);
+
+                sqlDAlpha = new SqlDataAdapter();
+                sqlDAlpha.SelectCommand = new SqlCommand("dbo.Val2_SubUser_PasswordReset @ID, @LoginUserEmail, @DecryptedDefaultPassword output", connAlpha);
+                sqlDAlpha.SelectCommand.Parameters.AddWithValue("@ID", id);
+                sqlDAlpha.SelectCommand.Parameters.AddWithValue("@LoginUserEmail", admin);
+
+                sqlDAlpha.SelectCommand.Parameters.Add("@DecryptedDefaultPassword", SqlDbType.NVarChar, -1);
+                sqlDAlpha.SelectCommand.Parameters["@DecryptedDefaultPassword"].Direction = ParameterDirection.Output;
+
+                DataSet dsAlpha = new DataSet("ds");
+                sqlDAlpha.Fill(dsAlpha);
+
+                string DecryptedDefaultPassword = sqlDAlpha.SelectCommand.Parameters["@DecryptedDefaultPassword"].Value.ToString();
+                // end call ddProjectDeveloperSubUser_PasswordReset
+
+                // start gen password 
+                string encrypteddefaultpw = EncryptText(DecryptedDefaultPassword, EncryptionKey);
+                // end gen password 
+
+                // start call ddProjectDeveloperSubUser_PasswordReset_Final               
+
+                //ALTER procedure[dbo].[ddProjectDeveloperSubUser_PasswordReset_Final]
+                //@ID nvarchar(max) = null,
+                //@LoginUserEmail nvarchar(max) = null, 	
+                //@EncryptedDefaultPassword nvarchar(max) = null
+
+                connAlpha = new SqlConnection(connstr);
+
+                sqlDAlpha = new SqlDataAdapter();
+                sqlDAlpha.SelectCommand = new SqlCommand("dbo.Val2_SubUser_PasswordReset_Final @ID, @LoginUserEmail, @EncryptedDefaultPassword", connAlpha);
+                sqlDAlpha.SelectCommand.Parameters.AddWithValue("@ID", id);
+                sqlDAlpha.SelectCommand.Parameters.AddWithValue("@LoginUserEmail", admin);
+                sqlDAlpha.SelectCommand.Parameters.AddWithValue("@EncryptedDefaultPassword", encrypteddefaultpw);
+
+                dsAlpha = new DataSet("ds");
+                sqlDAlpha.Fill(dsAlpha);
+                // end call ddProjectDeveloperSubUser_PasswordReset_Final
+
+                // start call save log sp
+                // ALTER procedure[dbo].[ddProject_Admin_PasswordReset_SaveLog]
+                // @ID nvarchar(max) = null ,
+                // @LoginUserEmail nvarchar(max) = null
+
+                sqlDAlpha = new SqlDataAdapter();
+                sqlDAlpha.SelectCommand = new SqlCommand("dbo.Val2_SubUser_PasswordReset_SaveLog @ID, @LoginUserEmail", connAlpha);
+                sqlDAlpha.SelectCommand.Parameters.AddWithValue("@ID", id);
+                sqlDAlpha.SelectCommand.Parameters.AddWithValue("@LoginUserEmail", admin);
+
+
+                dsAlpha = new DataSet("ds");
+                sqlDAlpha.Fill(dsAlpha);
+
+                // end call save log sp
+
+
+
+
+                // start gen email content 
+
+                //@ID nvarchar(max) = null,
+                //@password nvarchar(max) = null, 	
+                //@senderemail nvarchar(max)  = null output,
+                //@receiveremail nvarchar(max)  = null output,
+                //@emailheader nvarchar(max)  = null output,
+                //@emailbody nvarchar(max)  = null output
+
+                SqlConnection conn_GenEmail = null;
+                SqlDataAdapter sqlDA_GenEmail = null;
+
+                conn_GenEmail = new SqlConnection(connstr);
+
+                sqlDA_GenEmail = new SqlDataAdapter();
+                sqlDA_GenEmail.SelectCommand = new SqlCommand("dbo.Val2_SubUser_PasswordReset_GenerateEmail @ID , @password ,@senderemail output,@receiveremail output,@emailheader output,@emailbody output ", conn_GenEmail);
+                sqlDA_GenEmail.SelectCommand.Parameters.AddWithValue("@ID", id);
+                sqlDA_GenEmail.SelectCommand.Parameters.AddWithValue("@password", DecryptedDefaultPassword);
+
+
+                sqlDA_GenEmail.SelectCommand.Parameters.Add("@senderemail", SqlDbType.NVarChar, -1);
+                sqlDA_GenEmail.SelectCommand.Parameters["@senderemail"].Direction = ParameterDirection.Output;
+
+                sqlDA_GenEmail.SelectCommand.Parameters.Add("@receiveremail", SqlDbType.NVarChar, -1);
+                sqlDA_GenEmail.SelectCommand.Parameters["@receiveremail"].Direction = ParameterDirection.Output;
+
+                sqlDA_GenEmail.SelectCommand.Parameters.Add("@emailheader", SqlDbType.NVarChar, -1);
+                sqlDA_GenEmail.SelectCommand.Parameters["@emailheader"].Direction = ParameterDirection.Output;
+
+                sqlDA_GenEmail.SelectCommand.Parameters.Add("@emailbody", SqlDbType.NVarChar, -1);
+                sqlDA_GenEmail.SelectCommand.Parameters["@emailbody"].Direction = ParameterDirection.Output;
+
+                DataSet ds_GenEmail = new DataSet("ds");
+                sqlDA_GenEmail.Fill(ds_GenEmail);
+
+                string emailbody = sqlDA_GenEmail.SelectCommand.Parameters["@emailbody"].Value.ToString();
+                receiver = sqlDA_GenEmail.SelectCommand.Parameters["@receiveremail"].Value.ToString();
+                string emailheader = sqlDA_GenEmail.SelectCommand.Parameters["@emailheader"].Value.ToString();
+
+                //SendMailWFParser_NoAttachment(receiver, emailheader, emailbody);
+                //SendMail(receiver, emailheader, emailbody, null, null);
+                //Infobip enhancement 
+                SendMailV2("SendToValuer-ResetPassword", "ValuerLoginID", id, emailheader, emailbody, receiver, 0, 1, "", "");
+
+
+                // end gen email content 
+
+
+                // end save record 
+            }
+            catch (Exception ex)
+            {
+                error = "Val2_ResetSubUserPassword failed with exception: " + ex.Message.ToString();
+                string errorDetail;
+                errorDetail = "Input Param:" + " ID:" + id;
+                LogErrorToDB("Val2_ResetSubUserPassword", "Exception", error, errorDetail);
+            }
+        }
 
 
         [WebMethod]
@@ -731,6 +1079,485 @@ namespace HLBBWS
             }
         }
 
+        [WebMethod]
+        public void Val2_UpdateSubUserPassword(string id, string password, string passwordconfirmation, string admin, ref string error)
+        {
+            error = "";
+            //ForcePasswordChange = "";
+            //PasswordExpiryWarning = "";
+            //encryptedusername = "";
+            //encryptedpassword = "";
+
+            try
+            {
+
+                DataSet ds = null;
+                DataTable dt = null;
+                SqlConnection conn = null;
+                SqlDataAdapter sqlDA = null;
+
+                string strDataSource = clsGlobal.MG_SQL_DATA_SOURCE;
+                string strDBName = clsGlobal.MG_SQL_DB_NAME;
+                string strID = clsGlobal.MG_SQL_ID;
+                string strPassword = clsGlobal.MG_SQL_PASSWORD;
+                bool blnIsWinAuth = clsGlobal.MG_SQL_IS_WIN_AUTH;
+
+                string connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Persist Security Info=True;User ID=" + strID + ";Password=" + strPassword;
+                if (blnIsWinAuth)
+                {
+                    connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Integrated Security=True;";
+                }
+
+                // start get encrypted key
+                SqlConnection connBeta = null;
+                SqlDataAdapter sqlDABeta = null;
+                DataTable dtBeta = null;
+
+                connBeta = new SqlConnection(connstr);
+
+                sqlDABeta = new SqlDataAdapter();
+                sqlDABeta.SelectCommand = new SqlCommand("dbo.usp_get_encryptionkey ", connBeta);
+
+                DataSet dsBETA = new DataSet("ds");
+                sqlDABeta.Fill(dsBETA);
+
+                DataTable dtBETA = dsBETA.Tables[0];
+                string EncryptionKey = dtBETA.Rows[0]["EncryptionKey"].ToString();
+
+                // end get encrypted key
+
+
+
+                if (error == "")
+                {
+                    // start call ddProjectDeveloperSubUser_Update_Password sp
+
+                    // ALTER procedure[dbo].[ddProjectDeveloperSubUser_Update_Password]
+                    //@ID nvarchar(max) = null,
+                    // @Password nvarchar(max) = null,
+                    // @PasswordConfirmation nvarchar(max) = null,
+                    // @LoginUserEmail nvarchar(max) = null, 	
+                    // @Error nvarchar(max) = null output
+
+                    SqlDataAdapter sqlDAlpha_PwReset;
+                    sqlDAlpha_PwReset = new SqlDataAdapter();
+                    sqlDAlpha_PwReset.SelectCommand = new SqlCommand("dbo.Val2_SubUser_Update_Password @ID, @Password, @PasswordConfirmation,@LoginUserEmail, @error output ", connBeta);
+                    sqlDAlpha_PwReset.SelectCommand.Parameters.AddWithValue("@ID", id);
+                    sqlDAlpha_PwReset.SelectCommand.Parameters.AddWithValue("@Password", password);
+                    sqlDAlpha_PwReset.SelectCommand.Parameters.AddWithValue("@PasswordConfirmation", passwordconfirmation);
+                    sqlDAlpha_PwReset.SelectCommand.Parameters.AddWithValue("@LoginUserEmail", admin);
+
+                    sqlDAlpha_PwReset.SelectCommand.Parameters.Add("@Error", SqlDbType.NVarChar, -1);
+                    sqlDAlpha_PwReset.SelectCommand.Parameters["@Error"].Direction = ParameterDirection.Output;
+
+                    DataSet dsAlpha_PwReset = new DataSet("ds");
+                    sqlDAlpha_PwReset.Fill(dsAlpha_PwReset);
+
+                    error = sqlDAlpha_PwReset.SelectCommand.Parameters["@Error"].Value.ToString();
+                    // end call ddProjectDeveloperSubUser_Update_Password sp
+
+                    if (error == "")
+                    {
+                        // encrypt pw
+                        string encryptedpw = EncryptText(password, EncryptionKey);
+
+                        // start call final sp
+
+                        //ALTER procedure[dbo].[ddProjectDeveloperSubUser_Update_Password_Final]
+                        //@ID nvarchar(max) = null,
+                        //@EncryptedPassword nvarchar(max) = null,
+                        //@LoginUserEmail nvarchar(max) = null
+
+                        SqlDataAdapter sqlDAlphaFinal;
+
+                        sqlDAlphaFinal = new SqlDataAdapter();
+                        sqlDAlphaFinal.SelectCommand = new SqlCommand("dbo.Val2_SubUser_Update_Password_Final @ID, @EncryptedPassword,  @LoginUserEmail", connBeta);
+                        sqlDAlphaFinal.SelectCommand.Parameters.AddWithValue("@ID", id);
+                        sqlDAlphaFinal.SelectCommand.Parameters.AddWithValue("@EncryptedPassword", encryptedpw);
+                        sqlDAlphaFinal.SelectCommand.Parameters.AddWithValue("@LoginUserEmail", admin);
+
+
+                        //sqlDAlphaFinal.SelectCommand.Parameters.Add("@NewSubUserID", SqlDbType.NVarChar, -1);
+                        //sqlDAlphaFinal.SelectCommand.Parameters["@NewSubUserID"].Direction = ParameterDirection.Output;
+
+                        DataSet dsAlphaFinal = new DataSet("ds");
+                        sqlDAlphaFinal.Fill(dsAlphaFinal);
+
+                        //NewSubUserID = sqlDAlphaFinal.SelectCommand.Parameters["@NewSubUserID"].Value.ToString();
+                        // start call final sp
+                    }
+
+                }
+
+            }
+            catch (Exception ex)
+            {
+                error = "Val2_UpdateSubUserPassword failed with exception: " + ex.Message.ToString();
+                string errorDetail;
+                errorDetail = "Input Param:N/A";
+                LogErrorToDB("Val2_UpdateSubUserPassword", "Exception", error, errorDetail);
+            }
+        }
+
+
+        [WebMethod]
+        public void Sol2_UpdateSubUserPassword(string id, string password, string passwordconfirmation, string admin, ref string error)
+        {
+            error = "";
+            //ForcePasswordChange = "";
+            //PasswordExpiryWarning = "";
+            //encryptedusername = "";
+            //encryptedpassword = "";
+
+            try
+            {
+
+                DataSet ds = null;
+                DataTable dt = null;
+                SqlConnection conn = null;
+                SqlDataAdapter sqlDA = null;
+
+                string strDataSource = clsGlobal.MG_SQL_DATA_SOURCE;
+                string strDBName = clsGlobal.MG_SQL_DB_NAME;
+                string strID = clsGlobal.MG_SQL_ID;
+                string strPassword = clsGlobal.MG_SQL_PASSWORD;
+                bool blnIsWinAuth = clsGlobal.MG_SQL_IS_WIN_AUTH;
+
+                string connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Persist Security Info=True;User ID=" + strID + ";Password=" + strPassword;
+                if (blnIsWinAuth)
+                {
+                    connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Integrated Security=True;";
+                }
+
+                // start get encrypted key
+                SqlConnection connBeta = null;
+                SqlDataAdapter sqlDABeta = null;
+                DataTable dtBeta = null;
+
+                connBeta = new SqlConnection(connstr);
+
+                sqlDABeta = new SqlDataAdapter();
+                sqlDABeta.SelectCommand = new SqlCommand("dbo.usp_get_encryptionkey ", connBeta);
+
+                DataSet dsBETA = new DataSet("ds");
+                sqlDABeta.Fill(dsBETA);
+
+                DataTable dtBETA = dsBETA.Tables[0];
+                string EncryptionKey = dtBETA.Rows[0]["EncryptionKey"].ToString();
+
+                // end get encrypted key
+
+
+
+                if (error == "")
+                {
+                    // start call ddProjectDeveloperSubUser_Update_Password sp
+
+                    // ALTER procedure[dbo].[ddProjectDeveloperSubUser_Update_Password]
+                    //@ID nvarchar(max) = null,
+                    // @Password nvarchar(max) = null,
+                    // @PasswordConfirmation nvarchar(max) = null,
+                    // @LoginUserEmail nvarchar(max) = null, 	
+                    // @Error nvarchar(max) = null output
+
+                    SqlDataAdapter sqlDAlpha_PwReset;
+                    sqlDAlpha_PwReset = new SqlDataAdapter();
+                    sqlDAlpha_PwReset.SelectCommand = new SqlCommand("dbo.Sol2_SubUser_Update_Password @ID, @Password, @PasswordConfirmation,@LoginUserEmail, @error output ", connBeta);
+                    sqlDAlpha_PwReset.SelectCommand.Parameters.AddWithValue("@ID", id);
+                    sqlDAlpha_PwReset.SelectCommand.Parameters.AddWithValue("@Password", password);
+                    sqlDAlpha_PwReset.SelectCommand.Parameters.AddWithValue("@PasswordConfirmation", passwordconfirmation);
+                    sqlDAlpha_PwReset.SelectCommand.Parameters.AddWithValue("@LoginUserEmail", admin);
+
+                    sqlDAlpha_PwReset.SelectCommand.Parameters.Add("@Error", SqlDbType.NVarChar, -1);
+                    sqlDAlpha_PwReset.SelectCommand.Parameters["@Error"].Direction = ParameterDirection.Output;
+
+                    DataSet dsAlpha_PwReset = new DataSet("ds");
+                    sqlDAlpha_PwReset.Fill(dsAlpha_PwReset);
+
+                    error = sqlDAlpha_PwReset.SelectCommand.Parameters["@Error"].Value.ToString();
+                    // end call ddProjectDeveloperSubUser_Update_Password sp
+
+                    if (error == "")
+                    {
+                        // encrypt pw
+                        string encryptedpw = EncryptText(password, EncryptionKey);
+
+                        // start call final sp
+
+                        //ALTER procedure[dbo].[ddProjectDeveloperSubUser_Update_Password_Final]
+                        //@ID nvarchar(max) = null,
+                        //@EncryptedPassword nvarchar(max) = null,
+                        //@LoginUserEmail nvarchar(max) = null
+
+                        SqlDataAdapter sqlDAlphaFinal;
+                        
+                        sqlDAlphaFinal = new SqlDataAdapter();
+                        sqlDAlphaFinal.SelectCommand = new SqlCommand("dbo.Sol2_SubUser_Update_Password_Final @ID, @EncryptedPassword,  @LoginUserEmail", connBeta);
+                        sqlDAlphaFinal.SelectCommand.Parameters.AddWithValue("@ID", id);
+                        sqlDAlphaFinal.SelectCommand.Parameters.AddWithValue("@EncryptedPassword", encryptedpw);
+                        sqlDAlphaFinal.SelectCommand.Parameters.AddWithValue("@LoginUserEmail", admin);
+
+
+                        //sqlDAlphaFinal.SelectCommand.Parameters.Add("@NewSubUserID", SqlDbType.NVarChar, -1);
+                        //sqlDAlphaFinal.SelectCommand.Parameters["@NewSubUserID"].Direction = ParameterDirection.Output;
+
+                        DataSet dsAlphaFinal = new DataSet("ds");
+                        sqlDAlphaFinal.Fill(dsAlphaFinal);
+
+                        //NewSubUserID = sqlDAlphaFinal.SelectCommand.Parameters["@NewSubUserID"].Value.ToString();
+                        // start call final sp
+                    }
+
+                }
+
+            }
+            catch (Exception ex)
+            {
+                error = "Sol2_UpdateSubUserPassword failed with exception: " + ex.Message.ToString();
+                string errorDetail;
+                errorDetail = "Input Param:N/A";
+                LogErrorToDB("Sol2_UpdateSubUserPassword", "Exception", error, errorDetail);
+            }
+        }
+
+        [WebMethod]
+        public void Val2_CreateSubUser(string name, string status, string devcode, string admin, ref string NewSubUserID)
+        {
+
+            try
+            {
+
+                DataSet ds = null;
+                DataTable dt = null;
+                SqlConnection conn = null;
+                SqlDataAdapter sqlDA = null;
+
+                string strDataSource = clsGlobal.MG_SQL_DATA_SOURCE;
+                string strDBName = clsGlobal.MG_SQL_DB_NAME;
+                string strID = clsGlobal.MG_SQL_ID;
+                string strPassword = clsGlobal.MG_SQL_PASSWORD;
+                bool blnIsWinAuth = clsGlobal.MG_SQL_IS_WIN_AUTH;
+
+                string connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Persist Security Info=True;User ID=" + strID + ";Password=" + strPassword;
+                if (blnIsWinAuth)
+                {
+                    connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Integrated Security=True;";
+                }
+
+                // start get encrypted key
+                SqlConnection connBeta = null;
+                SqlDataAdapter sqlDABeta = null;
+                DataTable dtBeta = null;
+
+                connBeta = new SqlConnection(connstr);
+
+                sqlDABeta = new SqlDataAdapter();
+                sqlDABeta.SelectCommand = new SqlCommand("dbo.usp_get_encryptionkey ", connBeta);
+
+                DataSet dsBETA = new DataSet("ds");
+                sqlDABeta.Fill(dsBETA);
+
+                DataTable dtBETA = dsBETA.Tables[0];
+                string EncryptionKey = dtBETA.Rows[0]["EncryptionKey"].ToString();
+
+                // end get encrypted key
+
+                // start call ddProjectDeveloperSubUser_Create
+
+                SqlConnection connAlpha = null;
+                SqlDataAdapter sqlDAlpha = null;
+
+                connAlpha = new SqlConnection(connstr);
+
+                string error = "";
+
+                if (error == "")
+                {
+                    // start call reseet sp
+
+                    SqlDataAdapter sqlDAlpha_PwReset;
+                    sqlDAlpha_PwReset = new SqlDataAdapter();
+                    sqlDAlpha_PwReset.SelectCommand = new SqlCommand("dbo.Val2_SubUser_Admin_PasswordReset @Code, @LoginUserEmail, @DecryptedDefaultPassword output ", connAlpha);
+                    sqlDAlpha_PwReset.SelectCommand.Parameters.AddWithValue("@Code", devcode);
+                    sqlDAlpha_PwReset.SelectCommand.Parameters.AddWithValue("@LoginUserEmail", admin);
+
+
+                    sqlDAlpha_PwReset.SelectCommand.Parameters.Add("@DecryptedDefaultPassword", SqlDbType.NVarChar, -1);
+                    sqlDAlpha_PwReset.SelectCommand.Parameters["@DecryptedDefaultPassword"].Direction = ParameterDirection.Output;
+
+                    DataSet dsAlpha_PwReset = new DataSet("ds");
+                    sqlDAlpha_PwReset.Fill(dsAlpha_PwReset);
+
+                    string decrypteddefaultpw = sqlDAlpha_PwReset.SelectCommand.Parameters["@DecryptedDefaultPassword"].Value.ToString();
+                    // end call reset sp
+
+                    // encrypt pw
+                    string encryptedpw = EncryptText(decrypteddefaultpw, EncryptionKey);
+
+                    // start call final sp
+
+                    //@ID nvarchar(max) = null,
+                    //@EncryptedPassword nvarchar(max) = null,
+                    //@Status nvarchar(max) = null,
+                    //@Name nvarchar(max) = null, 	
+                    //@Email nvarchar(max) = null, 	
+                    //@SADA bit = null,
+                    //@LoginUserEmail nvarchar(max) = null,
+                    //@DeveloperCode nvarchar(max) = null,
+                    //@NewSubUserID nvarchar(max) = null output
+
+                    SqlDataAdapter sqlDAlphaFinal;
+
+                    sqlDAlphaFinal = new SqlDataAdapter();
+                    sqlDAlphaFinal.SelectCommand = new SqlCommand("dbo.Val2_SubUser_Create_Final @ID, @EncryptedPassword, @Status, @Name, @Email, @LoginUserEmail, @Code, @NewSubUserID output", connAlpha);
+                    sqlDAlphaFinal.SelectCommand.Parameters.AddWithValue("@ID", "");
+                    sqlDAlphaFinal.SelectCommand.Parameters.AddWithValue("@EncryptedPassword", encryptedpw);
+                    sqlDAlphaFinal.SelectCommand.Parameters.AddWithValue("@Status", status);
+                    sqlDAlphaFinal.SelectCommand.Parameters.AddWithValue("@Name", name);
+                    sqlDAlphaFinal.SelectCommand.Parameters.AddWithValue("@Email", "");
+                    //sqlDAlphaFinal.SelectCommand.Parameters.AddWithValue("@SADA", "");
+                    sqlDAlphaFinal.SelectCommand.Parameters.AddWithValue("@LoginUserEmail", admin);
+                    sqlDAlphaFinal.SelectCommand.Parameters.AddWithValue("@Code", devcode);
+
+                    sqlDAlphaFinal.SelectCommand.Parameters.Add("@NewSubUserID", SqlDbType.NVarChar, -1);
+                    sqlDAlphaFinal.SelectCommand.Parameters["@NewSubUserID"].Direction = ParameterDirection.Output;
+
+                    DataSet dsAlphaFinal = new DataSet("ds");
+                    sqlDAlphaFinal.Fill(dsAlphaFinal);
+
+                    NewSubUserID = sqlDAlphaFinal.SelectCommand.Parameters["@NewSubUserID"].Value.ToString();
+                    // start call final sp
+                }
+
+            }
+            catch (Exception ex)
+            {
+                string error = "Val2_CreateSubUser failed with exception: " + ex.Message.ToString();
+                string errorDetail;
+                errorDetail = "Input Param:N/A";
+                LogErrorToDB("Val2_CreateSubUser", "Exception", error, errorDetail);
+            }
+        }
+
+        [WebMethod]
+        public void Sol2_CreateSubUser(string name, string status, string devcode, string admin, ref string NewSubUserID)
+        {
+            
+            try
+            {
+
+                DataSet ds = null;
+                DataTable dt = null;
+                SqlConnection conn = null;
+                SqlDataAdapter sqlDA = null;
+
+                string strDataSource = clsGlobal.MG_SQL_DATA_SOURCE;
+                string strDBName = clsGlobal.MG_SQL_DB_NAME;
+                string strID = clsGlobal.MG_SQL_ID;
+                string strPassword = clsGlobal.MG_SQL_PASSWORD;
+                bool blnIsWinAuth = clsGlobal.MG_SQL_IS_WIN_AUTH;
+
+                string connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Persist Security Info=True;User ID=" + strID + ";Password=" + strPassword;
+                if (blnIsWinAuth)
+                {
+                    connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Integrated Security=True;";
+                }
+
+                // start get encrypted key
+                SqlConnection connBeta = null;
+                SqlDataAdapter sqlDABeta = null;
+                DataTable dtBeta = null;
+
+                connBeta = new SqlConnection(connstr);
+
+                sqlDABeta = new SqlDataAdapter();
+                sqlDABeta.SelectCommand = new SqlCommand("dbo.usp_get_encryptionkey ", connBeta);
+
+                DataSet dsBETA = new DataSet("ds");
+                sqlDABeta.Fill(dsBETA);
+
+                DataTable dtBETA = dsBETA.Tables[0];
+                string EncryptionKey = dtBETA.Rows[0]["EncryptionKey"].ToString();
+
+                // end get encrypted key
+
+                // start call ddProjectDeveloperSubUser_Create
+
+                SqlConnection connAlpha = null;
+                SqlDataAdapter sqlDAlpha = null;
+
+                connAlpha = new SqlConnection(connstr);
+               
+                string error = "";
+
+                if (error == "")
+                {
+                    // start call reseet sp
+
+                    SqlDataAdapter sqlDAlpha_PwReset;
+                    sqlDAlpha_PwReset = new SqlDataAdapter();
+                    sqlDAlpha_PwReset.SelectCommand = new SqlCommand("dbo.Sol2_SubUser_Admin_PasswordReset @Code, @LoginUserEmail, @DecryptedDefaultPassword output ", connAlpha);
+                    sqlDAlpha_PwReset.SelectCommand.Parameters.AddWithValue("@Code", devcode);
+                    sqlDAlpha_PwReset.SelectCommand.Parameters.AddWithValue("@LoginUserEmail", admin);
+
+
+                    sqlDAlpha_PwReset.SelectCommand.Parameters.Add("@DecryptedDefaultPassword", SqlDbType.NVarChar, -1);
+                    sqlDAlpha_PwReset.SelectCommand.Parameters["@DecryptedDefaultPassword"].Direction = ParameterDirection.Output;
+
+                    DataSet dsAlpha_PwReset = new DataSet("ds");
+                    sqlDAlpha_PwReset.Fill(dsAlpha_PwReset);
+
+                    string decrypteddefaultpw = sqlDAlpha_PwReset.SelectCommand.Parameters["@DecryptedDefaultPassword"].Value.ToString();
+                    // end call reset sp
+
+                    // encrypt pw
+                    string encryptedpw = EncryptText(decrypteddefaultpw, EncryptionKey);
+
+                    // start call final sp
+
+                    //@ID nvarchar(max) = null,
+                    //@EncryptedPassword nvarchar(max) = null,
+                    //@Status nvarchar(max) = null,
+                    //@Name nvarchar(max) = null, 	
+                    //@Email nvarchar(max) = null, 	
+                    //@SADA bit = null,
+                    //@LoginUserEmail nvarchar(max) = null,
+                    //@DeveloperCode nvarchar(max) = null,
+                    //@NewSubUserID nvarchar(max) = null output
+
+                    SqlDataAdapter sqlDAlphaFinal;
+
+                    sqlDAlphaFinal = new SqlDataAdapter();
+                    sqlDAlphaFinal.SelectCommand = new SqlCommand("dbo.Sol2_SubUser_Create_Final @ID, @EncryptedPassword, @Status, @Name, @Email, @LoginUserEmail, @Code, @NewSubUserID output", connAlpha);
+                    sqlDAlphaFinal.SelectCommand.Parameters.AddWithValue("@ID", "");
+                    sqlDAlphaFinal.SelectCommand.Parameters.AddWithValue("@EncryptedPassword", encryptedpw);
+                    sqlDAlphaFinal.SelectCommand.Parameters.AddWithValue("@Status", status);
+                    sqlDAlphaFinal.SelectCommand.Parameters.AddWithValue("@Name", name);
+                    sqlDAlphaFinal.SelectCommand.Parameters.AddWithValue("@Email", "");
+                    //sqlDAlphaFinal.SelectCommand.Parameters.AddWithValue("@SADA", "");
+                    sqlDAlphaFinal.SelectCommand.Parameters.AddWithValue("@LoginUserEmail", admin);
+                    sqlDAlphaFinal.SelectCommand.Parameters.AddWithValue("@Code", devcode);
+
+                    sqlDAlphaFinal.SelectCommand.Parameters.Add("@NewSubUserID", SqlDbType.NVarChar, -1);
+                    sqlDAlphaFinal.SelectCommand.Parameters["@NewSubUserID"].Direction = ParameterDirection.Output;
+
+                    DataSet dsAlphaFinal = new DataSet("ds");
+                    sqlDAlphaFinal.Fill(dsAlphaFinal);
+
+                    NewSubUserID = sqlDAlphaFinal.SelectCommand.Parameters["@NewSubUserID"].Value.ToString();
+                    // start call final sp
+                }
+
+            }
+            catch (Exception ex)
+            {
+                string error = "Sol2_CreateSubUser failed with exception: " + ex.Message.ToString();
+                string errorDetail;
+                errorDetail = "Input Param:N/A";
+                LogErrorToDB("Sol2_CreateSubUser", "Exception", error, errorDetail);
+            }
+        }
+
 
         [WebMethod]
         public void DP_CreateSubUser(string name, string email, string status, string devcode, string admin, ref string NewSubUserID)
@@ -888,6 +1715,282 @@ namespace HLBBWS
                 string errorDetail;
                 errorDetail = "Input Param:N/A";
                 LogErrorToDB("DP_CreateSubUser", "Exception", error, errorDetail);
+            }
+        }
+
+        [WebMethod]
+        public void Val2_MailLoginID(string LoginID, ref string error)
+        {
+            error = "";
+            //ForcePasswordChange = "";
+            //PasswordExpiryWarning = "";
+            //encryptedusername = "";
+            //encryptedpassword = "";
+
+            try
+            {
+
+                DataSet ds = null;
+                DataTable dt = null;
+                SqlConnection conn = null;
+                SqlDataAdapter sqlDA = null;
+
+                string strDataSource = clsGlobal.MG_SQL_DATA_SOURCE;
+                string strDBName = clsGlobal.MG_SQL_DB_NAME;
+                string strID = clsGlobal.MG_SQL_ID;
+                string strPassword = clsGlobal.MG_SQL_PASSWORD;
+                bool blnIsWinAuth = clsGlobal.MG_SQL_IS_WIN_AUTH;
+
+                string connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Persist Security Info=True;User ID=" + strID + ";Password=" + strPassword;
+                if (blnIsWinAuth)
+                {
+                    connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Integrated Security=True;";
+                }
+
+                // start get encrypted key
+                SqlConnection connBeta = null;
+                SqlDataAdapter sqlDABeta = null;
+                DataTable dtBeta = null;
+
+                connBeta = new SqlConnection(connstr);
+
+                sqlDABeta = new SqlDataAdapter();
+                sqlDABeta.SelectCommand = new SqlCommand("dbo.usp_get_encryptionkey ", connBeta);
+
+                DataSet dsBETA = new DataSet("ds");
+                sqlDABeta.Fill(dsBETA);
+
+                DataTable dtBETA = dsBETA.Tables[0];
+                string EncryptionKey = dtBETA.Rows[0]["EncryptionKey"].ToString();
+
+                // end get encrypted key
+
+                // start get login detail               
+
+                SqlConnection connAlpha = null;
+                SqlDataAdapter sqlDAlpha = null;
+
+                connAlpha = new SqlConnection(connstr);
+
+                sqlDAlpha = new SqlDataAdapter();
+                sqlDAlpha.SelectCommand = new SqlCommand("dbo.Val2_SubUser_UserIDEmail_Select @LoginID", connAlpha);
+                sqlDAlpha.SelectCommand.Parameters.AddWithValue("@LoginID", LoginID);
+
+                DataSet dsAlpha = new DataSet("ds");
+                sqlDAlpha.Fill(dsAlpha);
+
+                DataTable dtAlpha = dsAlpha.Tables[0];
+
+                string Password = dtAlpha.Rows[0]["Password"].ToString();
+                string Email = dtAlpha.Rows[0]["Email"].ToString();
+                string IsSubUser = dtAlpha.Rows[0]["IsSubUser"].ToString();
+
+                // end get login detail
+
+                // start gen password 
+                string decryptedpw = DecryptText(Password, EncryptionKey);
+                // end gen password 
+
+                // start gen email content 
+                SqlConnection conn_GenEmail = null;
+                SqlDataAdapter sqlDA_GenEmail = null;
+
+                conn_GenEmail = new SqlConnection(connstr);
+
+                sqlDA_GenEmail = new SqlDataAdapter();
+                sqlDA_GenEmail.SelectCommand = new SqlCommand("dbo.Val2_SubUser_UserIDEmail_GenerateEmail @LoginID , @DecryptedPassword ,@Receiver ,@IsSubUser ,@EmailHeader output,@EmailContent output,@EmailSender output,@EmailReceiver output ", conn_GenEmail);
+                sqlDA_GenEmail.SelectCommand.Parameters.AddWithValue("@LoginID", LoginID);
+                sqlDA_GenEmail.SelectCommand.Parameters.AddWithValue("@DecryptedPassword", decryptedpw);
+                sqlDA_GenEmail.SelectCommand.Parameters.AddWithValue("@Receiver", Email);
+                sqlDA_GenEmail.SelectCommand.Parameters.AddWithValue("@IsSubUser", IsSubUser);
+
+                sqlDA_GenEmail.SelectCommand.Parameters.Add("@EmailHeader", SqlDbType.NVarChar, -1);
+                sqlDA_GenEmail.SelectCommand.Parameters["@EmailHeader"].Direction = ParameterDirection.Output;
+
+                sqlDA_GenEmail.SelectCommand.Parameters.Add("@EmailContent", SqlDbType.NVarChar, -1);
+                sqlDA_GenEmail.SelectCommand.Parameters["@EmailContent"].Direction = ParameterDirection.Output;
+
+                sqlDA_GenEmail.SelectCommand.Parameters.Add("@EmailSender", SqlDbType.NVarChar, -1);
+                sqlDA_GenEmail.SelectCommand.Parameters["@EmailSender"].Direction = ParameterDirection.Output;
+
+                sqlDA_GenEmail.SelectCommand.Parameters.Add("@EmailReceiver", SqlDbType.NVarChar, -1);
+                sqlDA_GenEmail.SelectCommand.Parameters["@EmailReceiver"].Direction = ParameterDirection.Output;
+
+                DataSet ds_GenEmail = new DataSet("ds");
+                sqlDA_GenEmail.Fill(ds_GenEmail);
+
+                string EmailHeader = sqlDA_GenEmail.SelectCommand.Parameters["@EmailHeader"].Value.ToString();
+                string EmailContent = sqlDA_GenEmail.SelectCommand.Parameters["@EmailContent"].Value.ToString();
+                string EmailReceiver = sqlDA_GenEmail.SelectCommand.Parameters["@EmailReceiver"].Value.ToString();
+
+                //SendMailWFParser_NoAttachment(EmailReceiver, EmailHeader, EmailContent);
+                //SendMail(EmailReceiver, EmailHeader, EmailContent, null, null);
+                // end gen email content 
+                //Infobip enhancement 
+                SendMailV2("SendToValuer-SendLoginID", "LoginID", LoginID, EmailHeader, EmailContent, EmailReceiver, 0, 1, "", "");
+
+                // save record 
+                SqlConnection conn_SaveRecord = null;
+                SqlDataAdapter sqlDA_SaveRecord = null;
+
+                conn_SaveRecord = new SqlConnection(connstr);
+
+                sqlDA_SaveRecord = new SqlDataAdapter();
+                sqlDA_SaveRecord.SelectCommand = new SqlCommand("dbo.Val2_SubUser_UserIDEmail_SaveRecord @LoginID , @IsSubUser", conn_SaveRecord);
+                sqlDA_SaveRecord.SelectCommand.Parameters.AddWithValue("@LoginID", LoginID);
+                sqlDA_SaveRecord.SelectCommand.Parameters.AddWithValue("@IsSubUser", IsSubUser);
+
+
+                DataSet ds_SaveRecord = new DataSet("ds");
+                sqlDA_SaveRecord.Fill(ds_SaveRecord);
+
+
+                // end save record 
+            }
+            catch (Exception ex)
+            {
+                error = "Val2_MailLoginID failed with exception: " + ex.Message.ToString();
+                string errorDetail;
+                errorDetail = "Input Param:" + " LoginID:" + LoginID;
+                LogErrorToDB("Val2_MailLoginID", "Exception", error, errorDetail);
+            }
+        }
+
+        [WebMethod]
+        public void Sol2_MailLoginID(string LoginID, ref string error)
+        {
+            error = "";
+            //ForcePasswordChange = "";
+            //PasswordExpiryWarning = "";
+            //encryptedusername = "";
+            //encryptedpassword = "";
+
+            try
+            {
+
+                DataSet ds = null;
+                DataTable dt = null;
+                SqlConnection conn = null;
+                SqlDataAdapter sqlDA = null;
+
+                string strDataSource = clsGlobal.MG_SQL_DATA_SOURCE;
+                string strDBName = clsGlobal.MG_SQL_DB_NAME;
+                string strID = clsGlobal.MG_SQL_ID;
+                string strPassword = clsGlobal.MG_SQL_PASSWORD;
+                bool blnIsWinAuth = clsGlobal.MG_SQL_IS_WIN_AUTH;
+
+                string connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Persist Security Info=True;User ID=" + strID + ";Password=" + strPassword;
+                if (blnIsWinAuth)
+                {
+                    connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Integrated Security=True;";
+                }
+
+                // start get encrypted key
+                SqlConnection connBeta = null;
+                SqlDataAdapter sqlDABeta = null;
+                DataTable dtBeta = null;
+
+                connBeta = new SqlConnection(connstr);
+
+                sqlDABeta = new SqlDataAdapter();
+                sqlDABeta.SelectCommand = new SqlCommand("dbo.usp_get_encryptionkey ", connBeta);
+
+                DataSet dsBETA = new DataSet("ds");
+                sqlDABeta.Fill(dsBETA);
+
+                DataTable dtBETA = dsBETA.Tables[0];
+                string EncryptionKey = dtBETA.Rows[0]["EncryptionKey"].ToString();
+
+                // end get encrypted key
+
+                // start get login detail               
+
+                SqlConnection connAlpha = null;
+                SqlDataAdapter sqlDAlpha = null;
+
+                connAlpha = new SqlConnection(connstr);
+
+                sqlDAlpha = new SqlDataAdapter();
+                sqlDAlpha.SelectCommand = new SqlCommand("dbo.Sol2_SubUser_UserIDEmail_Select @LoginID", connAlpha);
+                sqlDAlpha.SelectCommand.Parameters.AddWithValue("@LoginID", LoginID);
+
+                DataSet dsAlpha = new DataSet("ds");
+                sqlDAlpha.Fill(dsAlpha);
+
+                DataTable dtAlpha = dsAlpha.Tables[0];
+
+                string Password = dtAlpha.Rows[0]["Password"].ToString();
+                string Email = dtAlpha.Rows[0]["Email"].ToString();
+                string IsSubUser = dtAlpha.Rows[0]["IsSubUser"].ToString();
+
+                // end get login detail
+
+                // start gen password 
+                string decryptedpw = DecryptText(Password, EncryptionKey);
+                // end gen password 
+
+                // start gen email content 
+                SqlConnection conn_GenEmail = null;
+                SqlDataAdapter sqlDA_GenEmail = null;
+
+                conn_GenEmail = new SqlConnection(connstr);
+
+                sqlDA_GenEmail = new SqlDataAdapter();
+                sqlDA_GenEmail.SelectCommand = new SqlCommand("dbo.Sol2_SubUser_UserIDEmail_GenerateEmail @LoginID , @DecryptedPassword ,@Receiver ,@IsSubUser ,@EmailHeader output,@EmailContent output,@EmailSender output,@EmailReceiver output ", conn_GenEmail);
+                sqlDA_GenEmail.SelectCommand.Parameters.AddWithValue("@LoginID", LoginID);
+                sqlDA_GenEmail.SelectCommand.Parameters.AddWithValue("@DecryptedPassword", decryptedpw);
+                sqlDA_GenEmail.SelectCommand.Parameters.AddWithValue("@Receiver", Email);
+                sqlDA_GenEmail.SelectCommand.Parameters.AddWithValue("@IsSubUser", IsSubUser);
+
+                sqlDA_GenEmail.SelectCommand.Parameters.Add("@EmailHeader", SqlDbType.NVarChar, -1);
+                sqlDA_GenEmail.SelectCommand.Parameters["@EmailHeader"].Direction = ParameterDirection.Output;
+
+                sqlDA_GenEmail.SelectCommand.Parameters.Add("@EmailContent", SqlDbType.NVarChar, -1);
+                sqlDA_GenEmail.SelectCommand.Parameters["@EmailContent"].Direction = ParameterDirection.Output;
+
+                sqlDA_GenEmail.SelectCommand.Parameters.Add("@EmailSender", SqlDbType.NVarChar, -1);
+                sqlDA_GenEmail.SelectCommand.Parameters["@EmailSender"].Direction = ParameterDirection.Output;
+
+                sqlDA_GenEmail.SelectCommand.Parameters.Add("@EmailReceiver", SqlDbType.NVarChar, -1);
+                sqlDA_GenEmail.SelectCommand.Parameters["@EmailReceiver"].Direction = ParameterDirection.Output;
+
+                DataSet ds_GenEmail = new DataSet("ds");
+                sqlDA_GenEmail.Fill(ds_GenEmail);
+
+                string EmailHeader = sqlDA_GenEmail.SelectCommand.Parameters["@EmailHeader"].Value.ToString();
+                string EmailContent = sqlDA_GenEmail.SelectCommand.Parameters["@EmailContent"].Value.ToString();
+                string EmailReceiver = sqlDA_GenEmail.SelectCommand.Parameters["@EmailReceiver"].Value.ToString();
+
+                //SendMailWFParser_NoAttachment(EmailReceiver, EmailHeader, EmailContent);
+                //SendMail(EmailReceiver, EmailHeader, EmailContent, null, null);
+                // end gen email content 
+                //Infobip enhancement 
+                SendMailV2("SendToSolicitor-SendLoginID", "LoginID", LoginID, EmailHeader, EmailContent, EmailReceiver, 0, 1, "", "");
+
+                // save record 
+                SqlConnection conn_SaveRecord = null;
+                SqlDataAdapter sqlDA_SaveRecord = null;
+
+                conn_SaveRecord = new SqlConnection(connstr);
+
+                sqlDA_SaveRecord = new SqlDataAdapter();
+                sqlDA_SaveRecord.SelectCommand = new SqlCommand("dbo.Sol2_SubUser_UserIDEmail_SaveRecord @LoginID , @IsSubUser", conn_SaveRecord);
+                sqlDA_SaveRecord.SelectCommand.Parameters.AddWithValue("@LoginID", LoginID);
+                sqlDA_SaveRecord.SelectCommand.Parameters.AddWithValue("@IsSubUser", IsSubUser);
+
+
+                DataSet ds_SaveRecord = new DataSet("ds");
+                sqlDA_SaveRecord.Fill(ds_SaveRecord);
+
+
+                // end save record 
+            }
+            catch (Exception ex)
+            {
+                error = "Sol2_MailLoginID failed with exception: " + ex.Message.ToString();
+                string errorDetail;
+                errorDetail = "Input Param:" + " LoginID:" + LoginID;
+                LogErrorToDB("Sol2_MailLoginID", "Exception", error, errorDetail);
             }
         }
 
@@ -1365,10 +2468,10 @@ namespace HLBBWS
             }
             catch (Exception ex)
             {
-                error = "DP_DeveloperForcePasswordChangeLogin failed with exception: " + ex.Message.ToString();
+                error = "DP_DeveloperForcePasswordChangeLogin_v2 failed with exception: " + ex.Message.ToString();
                 string errorDetail;
                 errorDetail = "Input Param:" + " DevCode:" + DecryptedUIDevCode;
-                LogErrorToDB("DP_DeveloperForcePasswordChangeLogin", "Exception", error, errorDetail);
+                LogErrorToDB("DP_DeveloperForcePasswordChangeLogin_v2", "Exception", error, errorDetail);
             }
         }
 
@@ -2766,7 +3869,8 @@ namespace HLBBWS
                     error = "DP_ExportK2FileToEDMS failed with message: " + strErrorMsg.ToString();
                     string errorDetail;
                     //errorDetail = strErrorCode.ToString() + "," + strErrorMsg.ToString();
-                    errorDetail = "Input Param: " + strProfile.ToString() + "," + strFolderName.ToString() + "," + file.ToString() + "," + fileName.ToString() + "," + strARN.ToString() + "," + strDocType.ToString() + "," + strCategory.ToString() + "," + strIDNumber.ToString() + "," + Name.ToString();
+                   // errorDetail = "Input Param: " + strProfile.ToString() + "," + strFolderName.ToString() + "," + file.ToString() + "," + fileName.ToString() + "," + strARN.ToString() + "," + strDocType.ToString() + "," + strCategory.ToString() + "," + strIDNumber.ToString() + "," + Name.ToString();
+                    errorDetail = "Input Param: " + strProfile.ToString() + "," + strFolderName.ToString() + "," + fileName.ToString() + "," + strARN.ToString() + "," + strDocType.ToString() + "," + strCategory.ToString() + "," + strIDNumber.ToString() + "," + Name.ToString();
                     LogErrorToDB("DP_ExportK2FileToEDMS", "Fail", error, errorDetail);
                 }
             }
@@ -2774,7 +3878,7 @@ namespace HLBBWS
             {
                 error = "DP_ExportK2FileToEDMS failed with exception: " + ex.Message.ToString();
                 string errorDetail;
-                errorDetail = "Input Param: " + strProfile.ToString() + "," + strFolderName.ToString() + "," + file.ToString() + "," + fileName.ToString() + "," + strARN.ToString() + "," + strDocType.ToString() + "," + strCategory.ToString() + "," + strIDNumber.ToString() + "," + Name.ToString();
+                errorDetail = "Input Param: " + strProfile.ToString() + "," + strFolderName.ToString() + "," + fileName.ToString() + "," + strARN.ToString() + "," + strDocType.ToString() + "," + strCategory.ToString() + "," + strIDNumber.ToString() + "," + Name.ToString();
                 LogErrorToDB("DP_ExportK2FileToEDMS", "Exception", error, errorDetail);
                 /*
                 response.Status = "-1";
@@ -2912,7 +4016,8 @@ namespace HLBBWS
             public string respInfo_respCode;
             public string respInfo_respDesc;
 
-
+            public string respInfo_EIWS_RESPCODE;
+            public string respInfo_EIWS_RESPDESC;
             /*
             public string SalesmanCode;
             public string ARNNumber;
@@ -2929,6 +4034,2617 @@ namespace HLBBWS
             public long ProfileID;
             public string FileURL;
              * */
+        }
+
+        [WebMethod]
+        public void testloads(string arn)
+        {
+            string savefilepath = HttpContext.Current.Server.MapPath("~/");
+            savefilepath = savefilepath + "testloads.txt";
+            
+            using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+            {
+                writer.WriteLine("start debug- case: " + arn);                
+            }
+           
+            List<structureLOADS> list = new List<structureLOADS>();
+            structureLOADS loads = new structureLOADS();
+
+            LOADS_API.WsEIWSLosaAppBocImpService client = new LOADS_API.WsEIWSLosaAppBocImpService();
+            LOADS_API.AppHeader xmlAppHeader = new LOADS_API.AppHeader();            
+            xmlAppHeader.agencyId = "?";
+            xmlAppHeader.bizRefNo = arn;
+            xmlAppHeader.businessArea = "?";
+            xmlAppHeader.date = "?";
+            xmlAppHeader.processId = "?";
+
+            LOADS_API.WsEIWSLosaAppLoanInfo output = client.LoanApplicationInfo(xmlAppHeader);
+
+            if (output.respInfo.respCode == "00")
+            {
+                // start collaterals section 
+                //collaterals_developerCode
+
+                //
+                try
+                {
+                    if (string.IsNullOrEmpty(output.collaterals.developerCode))
+                    {
+                        loads.collaterals_developerCode = "";
+                    }
+                    else
+                    {
+                        loads.collaterals_developerCode = output.collaterals.developerCode.ToString();
+                    }
+
+                    
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.collaterals.developerCode: " + output.collaterals.developerCode.ToString());
+                    //}
+                    
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.collaterals.developerCode: error: " + ex.Message.ToString());
+                    }
+                }
+
+                //
+                try
+                {
+                    //collaterals_buildUpArea
+                    if (string.IsNullOrEmpty(output.collaterals.buildUpArea.ToString()))
+                    {
+                        loads.collaterals_buildUpArea = "0.00";
+                    }
+                    else
+                    {
+                        loads.collaterals_buildUpArea = output.collaterals.buildUpArea.ToString();
+                    }
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.collaterals.buildUpArea: " + output.collaterals.buildUpArea.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.collaterals.buildUpArea: error: " + ex.Message.ToString());
+                    }
+                }
+
+                //
+                try
+                {
+                    //collaterals_developerName
+                    if (string.IsNullOrEmpty(output.collaterals.developerName))
+                    {
+                        loads.collaterals_developerName = "";
+                    }
+                    else
+                    {
+                        loads.collaterals_developerName = output.collaterals.developerName.ToString();
+                    }
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.collaterals.developerName: " + output.collaterals.developerName.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.collaterals.collaterals.developerName: error: " + ex.Message.ToString());
+                    }
+                }
+
+                //
+                try
+                {
+                    //collaterals_financingType
+                    if (string.IsNullOrEmpty(output.collaterals.financingType))
+                    {
+                        loads.collaterals_financingType = "";
+                    }
+                    else
+                    {
+                        loads.collaterals_financingType = output.collaterals.financingType.ToString();
+                    }
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.collaterals.financingType: " + output.collaterals.financingType.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.collaterals.financingType: error: " + ex.Message.ToString());
+                    }
+                }
+
+                //
+                try
+                {
+                    //collaterals_landArea
+                    if (string.IsNullOrEmpty(output.collaterals.landArea.ToString()))
+                    {
+                        loads.collaterals_landArea = "0.00";
+                    }
+                    else
+                    {
+                        loads.collaterals_landArea = output.collaterals.landArea.ToString();
+                    }
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.collaterals.landArea: " + output.collaterals.landArea.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.collaterals.landArea: error: " + ex.Message.ToString());
+                    }
+                }
+
+                //
+                try
+                {
+                    //collaterals_projectCode
+                    if (string.IsNullOrEmpty(output.collaterals.projectCode))
+                    {
+                        loads.collaterals_projectCode = "";
+                    }
+                    else
+                    {
+                        loads.collaterals_projectCode = output.collaterals.projectCode.ToString();
+                    }
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.collaterals.projectCode: " + output.collaterals.projectCode.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.collaterals.projectCode: error: " + ex.Message.ToString());
+                    }
+                }
+
+                //
+                try
+                {
+                    //collaterals_projectName
+                    if (string.IsNullOrEmpty(output.collaterals.projectName))
+                    {
+                        loads.collaterals_projectName = "";
+                    }
+                    else
+                    {
+                        loads.collaterals_projectName = output.collaterals.projectName.ToString();
+                    }
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.collaterals.projectName: " + output.collaterals.projectName.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.collaterals.projectName: error: " + ex.Message.ToString());
+                    }
+                }
+
+                //
+                try
+                {
+                    //collaterals_propertyAddress
+                    if (string.IsNullOrEmpty(output.collaterals.propertyAddress))
+                    {
+                        loads.collaterals_propertyAddress = "";
+                    }
+                    else
+                    {
+                        loads.collaterals_propertyAddress = output.collaterals.propertyAddress.ToString();
+                    }
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.collaterals.propertyAddress: " + output.collaterals.propertyAddress.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.collaterals.propertyAddress: error: " + ex.Message.ToString());
+                    }
+                }
+
+
+                try
+                {
+                    //collaterals_propertyType
+                    if (string.IsNullOrEmpty(output.collaterals.propertyType))
+                    {
+                        loads.collaterals_propertyType = "";
+                    }
+                    else
+                    {
+                        loads.collaterals_propertyType = output.collaterals.propertyType.ToString();
+                    }
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.collaterals.propertyType: " + output.collaterals.propertyType.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.collaterals.propertyType: error: " + ex.Message.ToString());
+                    }
+                }
+
+
+                try
+                {
+                    //collaterals_requiredValReportInd
+                    if (string.IsNullOrEmpty(output.collaterals.requiredValReportInd))
+                    {
+                        loads.collaterals_requiredValReportInd = "False";
+                    }
+                    else
+                    {
+                        if (output.collaterals.requiredValReportInd.ToString().ToUpper().Trim() == "YES")
+                        {
+                            loads.collaterals_requiredValReportInd = "True";
+                        }
+                        else
+                        {
+                            loads.collaterals_requiredValReportInd = "False";
+                        }
+                    }
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.collaterals.requiredValReportInd: " + output.collaterals.requiredValReportInd.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.collaterals.requiredValReportInd: error: " + ex.Message.ToString());
+                    }
+                }
+
+
+                try
+                {
+                    if (string.IsNullOrEmpty(output.collaterals.titleDetails))
+                    {
+                        loads.collaterals_titleDetails = "";
+                    }
+                    else
+                    {
+                        loads.collaterals_titleDetails = output.collaterals.titleDetails.ToString();
+                    }
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.collaterals.titleDetails: " + output.collaterals.titleDetails.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.collaterals.titleDetails: error: " + ex.Message.ToString());
+                    }
+                }
+
+
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.collaterals.valuerAccountNbr))
+                    {
+                        loads.collaterals_valuerAccountNbr = "";
+                    }
+                    else
+                    {
+                        loads.collaterals_valuerAccountNbr = output.collaterals.valuerAccountNbr.ToString();
+                    }
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.collaterals.valuerAccountNbr: " + output.collaterals.valuerAccountNbr.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.collaterals.valuerAccountNbr: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.collaterals.valuerAccountType))
+                    {
+                        loads.collaterals_valuerAccountType = "";
+                    }
+                    else
+                    {
+                        loads.collaterals_valuerAccountType = output.collaterals.valuerAccountType.ToString();
+                    }
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.collaterals.valuerAccountType: " + output.collaterals.valuerAccountType.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.collaterals.valuerAccountType: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.collaterals.valuerAddr1))
+                    {
+                        loads.collaterals_valuerAddr1 = "";
+                    }
+                    else
+                    {
+                        loads.collaterals_valuerAddr1 = output.collaterals.valuerAddr1.ToString();
+                    }
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.collaterals.valuerAddr1: " + output.collaterals.valuerAddr1.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.collaterals.valuerAddr1: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.collaterals.valuerAddr2))
+                    {
+                        loads.collaterals_valuerAddr2 = "";
+                    }
+                    else
+                    {
+                        loads.collaterals_valuerAddr2 = output.collaterals.valuerAddr2.ToString();
+                    }
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.collaterals.valuerAddr2: " + output.collaterals.valuerAddr2.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.collaterals.valuerAddr2: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.collaterals.valuerAddr3))
+                    {
+                        loads.collaterals_valuerAddr3 = "";
+                    }
+                    else
+                    {
+                        loads.collaterals_valuerAddr3 = output.collaterals.valuerAddr3.ToString();
+                    }
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.collaterals.valuerAddr3: " + output.collaterals.valuerAddr3.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.collaterals.valuerAddr3: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.collaterals.valuerCity))
+                    {
+                        loads.collaterals_valuerCity = "";
+                    }
+                    else
+                    {
+                        loads.collaterals_valuerCity = output.collaterals.valuerCity.ToString();
+                    }
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.collaterals.valuerCity: " + output.collaterals.valuerCity.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.collaterals.valuerCity: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.collaterals.valuerCode))
+                    {
+                        loads.collaterals_valuerCode = "";
+                    }
+                    else
+                    {
+                        loads.collaterals_valuerCode = output.collaterals.valuerCode.ToString();
+                    }
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.collaterals.valuerCode: " + output.collaterals.valuerCode.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.collaterals.valuerCode: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    // new field valuer fax 
+                    loads.collaterals_valuerFaxNbr = "";
+
+                    if (string.IsNullOrEmpty(output.collaterals.valuerFaxNbr))
+                    {
+                        loads.collaterals_valuerFaxNbr = "";
+                    }
+                    else
+                    {
+                        loads.collaterals_valuerFaxNbr = output.collaterals.valuerFaxNbr.ToString();
+                    }
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.collaterals.valuerFaxNbr: " + output.collaterals.valuerFaxNbr.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.collaterals.valuerFaxNbr: error: " + ex.Message.ToString());
+                    }
+                }
+
+
+                try
+                {
+
+                    // new field valuer phone 
+                    loads.collaterals_valuerTelNbr = "";
+
+                    if (string.IsNullOrEmpty(output.collaterals.valuerTelNbr))
+                    {
+                        loads.collaterals_valuerTelNbr = "";
+                    }
+                    else
+                    {
+                        loads.collaterals_valuerTelNbr = output.collaterals.valuerTelNbr.ToString();
+                    }
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.collaterals.valuerTelNbr: " + output.collaterals.valuerTelNbr.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.collaterals.valuerTelNbr: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    // new field valuer phone 
+                    loads.collaterals_valuerTelNbr = "";
+
+                    if (string.IsNullOrEmpty(output.collaterals.valuerCountry))
+                    {
+                        loads.collaterals_valuerCountry = "";
+                    }
+                    else
+                    {
+                        loads.collaterals_valuerCountry = output.collaterals.valuerCountry.ToString();
+                    }
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.collaterals.valuerCountry: " + output.collaterals.valuerCountry.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.collaterals.valuerCountry: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.collaterals.valuerEmail))
+                    {
+                        loads.collaterals_valuerEmail = "";
+                    }
+                    else
+                    {
+                        loads.collaterals_valuerEmail = output.collaterals.valuerEmail.ToString();
+                    }
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.collaterals.valuerEmail: " + output.collaterals.valuerEmail.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.collaterals.valuerEmail: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.collaterals.valuerName))
+                    {
+                        loads.collaterals_valuerName = "";
+                    }
+                    else
+                    {
+                        loads.collaterals_valuerName = output.collaterals.valuerName.ToString();
+                    }
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.collaterals.valuerName: " + output.collaterals.valuerName.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.collaterals.valuerName: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.collaterals.valuerPostcode))
+                    {
+                        loads.collaterals_valuerPostcode = "";
+                    }
+                    else
+                    {
+                        loads.collaterals_valuerPostcode = output.collaterals.valuerPostcode.ToString();
+                    }
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.collaterals.valuerPostcode: " + output.collaterals.valuerPostcode.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.collaterals.valuerPostcode: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.collaterals.valuerState))
+                    {
+                        loads.collaterals_valuerState = "";
+                    }
+                    else
+                    {
+                        loads.collaterals_valuerState = output.collaterals.valuerState.ToString();
+                    }
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.collaterals.valuerState: " + output.collaterals.valuerState.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.collaterals.valuerState: error: " + ex.Message.ToString());
+                    }
+                }
+
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.collaterals.verbalIndicativeValue.ToString()))
+                    {
+                        loads.collaterals_verbalIndicativeValue = "0.00";
+                    }
+                    else
+                    {
+                        loads.collaterals_verbalIndicativeValue = output.collaterals.verbalIndicativeValue.ToString();
+                    }
+                    // end collaterals section 
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.collaterals.verbalIndicativeValue: " + output.collaterals.verbalIndicativeValue.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.collaterals.verbalIndicativeValue: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    // start facilities section 
+                    if (string.IsNullOrEmpty(output.facilities.disbursementManner))
+                    {
+                        loads.facilities_disbursementManner = "";
+                    }
+                    else
+                    {
+                        loads.facilities_disbursementManner = output.facilities.disbursementManner.ToString();
+                    }
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.facilities.disbursementManner: " + output.facilities.disbursementManner.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.facilities.disbursementManner: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.facilities.facilityAmount1.ToString()))
+                    {
+                        loads.facilities_facilityAmount1 = "0.00";
+                    }
+                    else
+                    {
+                        loads.facilities_facilityAmount1 = output.facilities.facilityAmount1.ToString();
+                    }
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.facilities.facilityAmount1: " + output.facilities.facilityAmount1.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.facilities.facilityAmount1: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.facilities.facilityAmount2.ToString()))
+                    {
+                        loads.facilities_facilityAmount2 = "0.00";
+                    }
+                    else
+                    {
+                        loads.facilities_facilityAmount2 = output.facilities.facilityAmount2.ToString();
+                    }
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.facilities.facilityAmount2: " + output.facilities.facilityAmount2.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.facilities.facilityAmount2: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.facilities.facilityAmount3.ToString()))
+                    {
+                        loads.facilities_facilityAmount3 = "0.00";
+                    }
+                    else
+                    {
+                        loads.facilities_facilityAmount3 = output.facilities.facilityAmount3.ToString();
+                    }
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.facilities.facilityAmount3: " + output.facilities.facilityAmount3.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.facilities.facilityAmount3: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.facilities.facilityAmount4.ToString()))
+                    {
+                        loads.facilities_facilityAmount4 = "0.00";
+                    }
+                    else
+                    {
+                        loads.facilities_facilityAmount4 = output.facilities.facilityAmount4.ToString();
+                    }
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.facilities.facilityAmount4: " + output.facilities.facilityAmount4.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.facilities.facilityAmount4: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.facilities.gracePeriod.ToString()))
+                    {
+                        loads.facilities_gracePeriod = "0";
+                    }
+                    else
+                    {
+                        loads.facilities_gracePeriod = output.facilities.gracePeriod.ToString();
+                    }
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.facilities.gracePeriod: " + output.facilities.gracePeriod.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.facilities.gracePeriod: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.facilities.productName1))
+                    {
+                        loads.facilities_productName1 = "";
+                    }
+                    else
+                    {
+                        loads.facilities_productName1 = output.facilities.productName1.ToString();
+                    }
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.facilities.productName1: " + output.facilities.productName1.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.facilities.productName1: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.facilities.productName2))
+                    {
+                        loads.facilities_productName2 = "";
+                    }
+                    else
+                    {
+                        loads.facilities_productName2 = output.facilities.productName2.ToString();
+                    }
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.facilities.productName2: " + output.facilities.productName2.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.facilities.productName2: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.facilities.productName3))
+                    {
+                        loads.facilities_productName3 = "";
+                    }
+                    else
+                    {
+                        loads.facilities_productName3 = output.facilities.productName3.ToString();
+                    }
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.facilities.productName3: " + output.facilities.productName3.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.facilities.productName3: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.facilities.productName4))
+                    {
+                        loads.facilities_productName4 = "";
+                    }
+                    else
+                    {
+                        loads.facilities_productName4 = output.facilities.productName4.ToString();
+                    }
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.facilities.productName4: " + output.facilities.productName4.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.facilities.productName4: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.facilities.purposeCode))
+                    {
+                        loads.facilities_purposeCode = "";
+                    }
+                    else
+                    {
+                        loads.facilities_purposeCode = output.facilities.purposeCode.ToString();
+                    }
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.facilities.purposeCode: " + output.facilities.purposeCode.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.facilities.purposeCode: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.facilities.totFeesAmount.ToString()))
+                    {
+                        loads.facilities_totFeesAmount = "0.00";
+                    }
+                    else
+                    {
+                        loads.facilities_totFeesAmount = output.facilities.totFeesAmount.ToString();
+                    }
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.facilities.totFeesAmount: " + output.facilities.totFeesAmount.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.facilities.totFeesAmount: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.facilities.totFinancingAmount.ToString()))
+                    {
+                        loads.facilities_totFinancingAmount = "0.00";
+                    }
+                    else
+                    {
+                        loads.facilities_totFinancingAmount = output.facilities.totFinancingAmount.ToString();
+                    }
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.facilities.totFinancingAmount: " + output.facilities.totFinancingAmount.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.facilities.totFinancingAmount: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.facilities.totFinancingAmountIncFlvm.ToString()))
+                    {
+                        loads.facilities_totFinancingAmountIncFlvm = "0.00";
+                    }
+                    else
+                    {
+                        loads.facilities_totFinancingAmountIncFlvm = output.facilities.totFinancingAmountIncFlvm.ToString();
+                    }
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.facilities.totFinancingAmountIncFlvm: " + output.facilities.totFinancingAmountIncFlvm.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.facilities.totFinancingAmountIncFlvm: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.facilities.totInsAmount.ToString()))
+                    {
+                        loads.facilities_totInsAmount = "0.00";
+                    }
+                    else
+                    {
+                        loads.facilities_totInsAmount = output.facilities.totInsAmount.ToString();
+                    }
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.facilities.totInsAmount: " + output.facilities.totInsAmount.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.facilities.totInsAmount: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.facilities.totValuationFees.ToString()))
+                    {
+                        loads.facilities_totValuationFees = "0.00";
+                    }
+                    else
+                    {
+                        loads.facilities_totValuationFees = output.facilities.totValuationFees.ToString();
+                    }
+                    // end facilities section 
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.facilities.totValuationFees: " + output.facilities.totValuationFees.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.facilities.totValuationFees: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    // start loanApplicationInfo section 
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.appStatus))
+                    {
+                        loads.loanApplicationInfo_appStatus = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_appStatus = output.loanApplicationInfo.appStatus.ToString();
+                    }
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.loanApplicationInfo.appStatus: " + output.loanApplicationInfo.appStatus.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.loanApplicationInfo.appStatus: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.branchAddr1))
+                    {
+                        loads.loanApplicationInfo_branchAddr1 = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_branchAddr1 = output.loanApplicationInfo.branchAddr1.ToString();
+                    }
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.loanApplicationInfo.branchAddr1: " + output.loanApplicationInfo.branchAddr1.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.loanApplicationInfo.branchAddr1: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.branchAddr2))
+                    {
+                        loads.loanApplicationInfo_branchAddr2 = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_branchAddr2 = output.loanApplicationInfo.branchAddr2.ToString();
+                    }
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.loanApplicationInfo.branchAddr2: " + output.loanApplicationInfo.branchAddr2.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.loanApplicationInfo.branchAddr2: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.branchAddr3))
+                    {
+                        loads.loanApplicationInfo_branchAddr3 = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_branchAddr3 = output.loanApplicationInfo.branchAddr3.ToString();
+                    }
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.loanApplicationInfo.branchAddr3: " + output.loanApplicationInfo.branchAddr3.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.loanApplicationInfo.branchAddr3: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.branchAddrCity))
+                    {
+                        loads.loanApplicationInfo_branchAddrCity = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_branchAddrCity = output.loanApplicationInfo.branchAddrCity.ToString();
+                    }
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.loanApplicationInfo.branchAddrCity: " + output.loanApplicationInfo.branchAddrCity.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.loanApplicationInfo.branchAddrCity: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.branchAddrCountry))
+                    {
+                        loads.loanApplicationInfo_branchAddrCountry = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_branchAddrCountry = output.loanApplicationInfo.branchAddrCountry.ToString();
+                    }
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.loanApplicationInfo.branchAddrCountry: " + output.loanApplicationInfo.branchAddrCountry.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.loanApplicationInfo.branchAddrCountry: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.branchAddrPostcode))
+                    {
+                        loads.loanApplicationInfo_branchAddrPostcode = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_branchAddrPostcode = output.loanApplicationInfo.branchAddrPostcode.ToString();
+                    }
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.loanApplicationInfo.branchAddrPostcode: " + output.loanApplicationInfo.branchAddrPostcode.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.loanApplicationInfo.branchAddrPostcode: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.branchAddrState))
+                    {
+                        loads.loanApplicationInfo_branchAddrState = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_branchAddrState = output.loanApplicationInfo.branchAddrState.ToString();
+                    }
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.loanApplicationInfo.branchAddrState: " + output.loanApplicationInfo.branchAddrState.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.loanApplicationInfo.branchAddrState: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.branchManagerEmail))
+                    {
+                        loads.loanApplicationInfo_branchManagerEmail = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_branchManagerEmail = output.loanApplicationInfo.branchManagerEmail.ToString();
+                    }
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.loanApplicationInfo.branchManagerEmail: " + output.loanApplicationInfo.branchManagerEmail.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.loanApplicationInfo.branchManagerEmail: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.branchManagerName))
+                    {
+                        loads.loanApplicationInfo_branchManagerName = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_branchManagerName = output.loanApplicationInfo.branchManagerName.ToString();
+                    }
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.loanApplicationInfo.branchManagerName: " + output.loanApplicationInfo.branchManagerName.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.loanApplicationInfo.branchManagerName: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.closingBranch))
+                    {
+                        loads.loanApplicationInfo_closingBranch = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_closingBranch = output.loanApplicationInfo.closingBranch.ToString();
+                    }
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.loanApplicationInfo.closingBranch: " + output.loanApplicationInfo.closingBranch.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.loanApplicationInfo.closingBranch: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.lendingType))
+                    {
+                        loads.loanApplicationInfo_lendingType = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_lendingType = output.loanApplicationInfo.lendingType.ToString();
+                    }
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.loanApplicationInfo.lendingType: " + output.loanApplicationInfo.lendingType.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.loanApplicationInfo.lendingType: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.loAcceptanceDt.ToString()))
+                    {
+                        loads.loanApplicationInfo_loAcceptanceDt = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_loAcceptanceDt = DateTime.ParseExact(output.loanApplicationInfo.loAcceptanceDt.ToString(), "dd/MM/yyyy", null).ToString();
+                    }
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.loanApplicationInfo.loAcceptanceDt: " + output.loanApplicationInfo.loAcceptanceDt.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.loanApplicationInfo.loAcceptanceDt: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.mortgageCenterCode))
+                    {
+                        loads.loanApplicationInfo_mortgageCenterCode = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_mortgageCenterCode = output.loanApplicationInfo.mortgageCenterCode.ToString();
+                    }
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.loanApplicationInfo.mortgageCenterCode: " + output.loanApplicationInfo.mortgageCenterCode.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.loanApplicationInfo.mortgageCenterCode: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.mortgageCenterEmail))
+                    {
+                        loads.loanApplicationInfo_mortgageCenterEmail = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_mortgageCenterEmail = output.loanApplicationInfo.mortgageCenterEmail.ToString();
+                    }
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.loanApplicationInfo.mortgageCenterEmail: " + output.loanApplicationInfo.mortgageCenterEmail.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.loanApplicationInfo.mortgageCenterEmail: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.salesEmail))
+                    {
+                        loads.loanApplicationInfo_salesEmail = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_salesEmail = output.loanApplicationInfo.salesEmail.ToString();
+                    }
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.loanApplicationInfo.salesEmail: " + output.loanApplicationInfo.salesEmail.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.loanApplicationInfo.salesEmail: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.salesName))
+                    {
+                        loads.loanApplicationInfo_salesName = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_salesName = output.loanApplicationInfo.salesName.ToString();
+                    }
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.loanApplicationInfo.salesName: " + output.loanApplicationInfo.salesName.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.loanApplicationInfo.salesName: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.solicitorAccountType))
+                    {
+                        loads.loanApplicationInfo_solicitorAccountType = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_solicitorAccountType = output.loanApplicationInfo.solicitorAccountType.ToString();
+                    }
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.loanApplicationInfo.solicitorAccountType: " + output.loanApplicationInfo.solicitorAccountType.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.loanApplicationInfo.solicitorAccountType: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.solicitorAddr1))
+                    {
+                        loads.loanApplicationInfo_solicitorAddr1 = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_solicitorAddr1 = output.loanApplicationInfo.solicitorAddr1.ToString();
+                    }
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.loanApplicationInfo.solicitorAddr1: " + output.loanApplicationInfo.solicitorAddr1.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.loanApplicationInfo.solicitorAddr1: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.solicitorAddr2))
+                    {
+                        loads.loanApplicationInfo_solicitorAddr2 = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_solicitorAddr2 = output.loanApplicationInfo.solicitorAddr2.ToString();
+                    }
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.loanApplicationInfo.solicitorAddr2: " + output.loanApplicationInfo.solicitorAddr2.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.loanApplicationInfo.solicitorAddr2: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.solicitorAddr3))
+                    {
+                        loads.loanApplicationInfo_solicitorAddr3 = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_solicitorAddr3 = output.loanApplicationInfo.solicitorAddr3.ToString();
+                    }
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.loanApplicationInfo.solicitorAddr3: " + output.loanApplicationInfo.solicitorAddr3.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.loanApplicationInfo.solicitorAddr3: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.solicitorCity))
+                    {
+                        loads.loanApplicationInfo_solicitorCity = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_solicitorCity = output.loanApplicationInfo.solicitorCity.ToString();
+                    }
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.loanApplicationInfo.solicitorCity: " + output.loanApplicationInfo.solicitorCity.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.loanApplicationInfo.solicitorCity: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.solicitorCode))
+                    {
+                        loads.loanApplicationInfo_solicitorCode = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_solicitorCode = output.loanApplicationInfo.solicitorCode.ToString();
+                    }
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.loanApplicationInfo.solicitorCode: " + output.loanApplicationInfo.solicitorCode.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.loanApplicationInfo.solicitorCode: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    // new field solicitor fax
+                    loads.loanApplicationInfo_solicitorFaxNbr = "";
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.solicitorFaxNbr))
+                    {
+                        loads.loanApplicationInfo_solicitorFaxNbr = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_solicitorFaxNbr = output.loanApplicationInfo.solicitorFaxNbr.ToString();
+                    }
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.loanApplicationInfo.solicitorFaxNbr: " + output.loanApplicationInfo.solicitorFaxNbr.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.loanApplicationInfo.solicitorFaxNbr: error: " + ex.Message.ToString());
+                    }
+                }
+
+
+                try
+                {
+
+                    // new field solicitor phone
+                    loads.loanApplicationInfo_solicitorTelNbr = "";
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.solicitorTelNbr))
+                    {
+                        loads.loanApplicationInfo_solicitorTelNbr = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_solicitorTelNbr = output.loanApplicationInfo.solicitorTelNbr.ToString();
+                    }
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.loanApplicationInfo.solicitorTelNbr: " + output.loanApplicationInfo.solicitorTelNbr.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.loanApplicationInfo.solicitorTelNbr: error: " + ex.Message.ToString());
+                    }
+                }
+
+
+                /*
+                public string loanApplicationInfo_phaseCode;
+                public string loanApplicationInfo_phaseName;
+                public string loanApplicationInfo_unitParcelNo;
+                public string loanApplicationInfo_spaValue;
+                public string loanApplicationInfo_category;
+                */
+
+                try
+                {
+
+                    // dev portal new field loanApplicationInfo_phaseCode
+                    loads.loanApplicationInfo_phaseCode = "";
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.phaseCode))
+                    {
+                        loads.loanApplicationInfo_phaseCode = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_phaseCode = output.loanApplicationInfo.phaseCode.ToString();
+                    }
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.loanApplicationInfo.phaseCode: " + output.loanApplicationInfo.phaseCode.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.loanApplicationInfo.phaseCode: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    // dev portal new field loanApplicationInfo_phaseName
+                    loads.loanApplicationInfo_phaseName = "";
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.phaseName))
+                    {
+                        loads.loanApplicationInfo_phaseName = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_phaseName = output.loanApplicationInfo.phaseName.ToString();
+                    }
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.loanApplicationInfo.phaseName: " + output.loanApplicationInfo.phaseName.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.loanApplicationInfo.phaseName: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    // dev portal new field loanApplicationInfo_unitParcelNo
+                    loads.loanApplicationInfo_unitParcelNo = "";
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.unitParcelNo))
+                    {
+                        loads.loanApplicationInfo_unitParcelNo = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_unitParcelNo = output.loanApplicationInfo.unitParcelNo.ToString();
+                    }
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.loanApplicationInfo.unitParcelNo: " + output.loanApplicationInfo.unitParcelNo.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.loanApplicationInfo.unitParcelNo: error: " + ex.Message.ToString());
+                    }
+                }
+
+
+
+                // dev portal new field loanApplicationInfo_unitParcelNo
+                //loads.loanApplicationInfo_spaValue = "";
+
+                /*
+                if (string.IsNullOrEmpty(output.loanApplicationInfo.spaValue))
+                {
+                    loads.loanApplicationInfo_spaValue = "0.00";
+                }
+                else
+                {
+                    loads.loanApplicationInfo_spaValue = output.loanApplicationInfo.spaValue.ToString();
+                }
+                */
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.spaValue.ToString()))
+                    {
+                        loads.loanApplicationInfo_spaValue = "0.00";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_spaValue = output.loanApplicationInfo.spaValue.ToString();
+                    }
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.loanApplicationInfo.spaValue: " + output.loanApplicationInfo.spaValue.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.loanApplicationInfo.spaValue: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    // dev portal new field loanApplicationInfo_category
+                    loads.loanApplicationInfo_category = "";
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.category))
+                    {
+                        loads.loanApplicationInfo_category = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_category = output.loanApplicationInfo.category.ToString();
+                    }
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.loanApplicationInfo.category: " + output.loanApplicationInfo.category.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.loanApplicationInfo.category: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.solicitorCountry))
+                    {
+                        loads.loanApplicationInfo_solicitorCountry = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_solicitorCountry = output.loanApplicationInfo.solicitorCountry.ToString();
+                    }
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.loanApplicationInfo.solicitorCountry: " + output.loanApplicationInfo.solicitorCountry.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.loanApplicationInfo.solicitorCountry: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.solicitorEmail))
+                    {
+                        loads.loanApplicationInfo_solicitorEmail = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_solicitorEmail = output.loanApplicationInfo.solicitorEmail.ToString();
+                    }
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.loanApplicationInfo.solicitorEmail: " + output.loanApplicationInfo.solicitorEmail.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.loanApplicationInfo.solicitorEmail: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.solicitorIntStatus))
+                    {
+                        loads.loanApplicationInfo_solicitorIntStatus = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_solicitorIntStatus = output.loanApplicationInfo.solicitorIntStatus.ToString();
+                    }
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.loanApplicationInfo.solicitorIntStatus: " + output.loanApplicationInfo.solicitorIntStatus.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.loanApplicationInfo.solicitorIntStatus: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.solicitorNBR))
+                    {
+                        loads.loanApplicationInfo_solicitorNBR = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_solicitorNBR = output.loanApplicationInfo.solicitorNBR.ToString();
+                    }
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.loanApplicationInfo.solicitorNBR: " + output.loanApplicationInfo.solicitorNBR.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.loanApplicationInfo.solicitorNBR: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.solicitorName))
+                    {
+                        loads.loanApplicationInfo_solicitorName = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_solicitorName = output.loanApplicationInfo.solicitorName.ToString();
+                    }
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.loanApplicationInfo.solicitorName: " + output.loanApplicationInfo.solicitorName.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.loanApplicationInfo.solicitorName: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.solicitorPostcode))
+                    {
+                        loads.loanApplicationInfo_solicitorPostcode = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_solicitorPostcode = output.loanApplicationInfo.solicitorPostcode.ToString();
+                    }
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.loanApplicationInfo.solicitorPostcode: " + output.loanApplicationInfo.solicitorPostcode.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.loanApplicationInfo.solicitorPostcode: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.solicitorState))
+                    {
+                        loads.loanApplicationInfo_solicitorState = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_solicitorState = output.loanApplicationInfo.solicitorState.ToString();
+                    }
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.loanApplicationInfo.solicitorState: " + output.loanApplicationInfo.solicitorState.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.loanApplicationInfo.solicitorState: error: " + ex.Message.ToString());
+                    }
+                }
+
+
+                /*
+                if (string.IsNullOrEmpty(output.loanApplicationInfo.topupLoanInd))
+                {
+                    loads.loanApplicationInfo_topupLoanInd = "";
+                }
+                else
+                {
+                    loads.loanApplicationInfo_topupLoanInd = output.loanApplicationInfo.topupLoanInd.ToString();
+                }                    
+                */
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.topupLoanInd))
+                    {
+                        loads.loanApplicationInfo_topupLoanInd = "False";
+                    }
+                    else
+                    {
+                        if (output.loanApplicationInfo.topupLoanInd.ToString().ToUpper().Trim() == "YES")
+                        {
+                            loads.loanApplicationInfo_topupLoanInd = "True";
+                        }
+                        else
+                        {
+                            loads.loanApplicationInfo_topupLoanInd = "False";
+                        }
+                    }
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.loanApplicationInfo.topupLoanInd: " + output.loanApplicationInfo.topupLoanInd.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.loanApplicationInfo.topupLoanInd: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    // start loanApptPersonnelInfo section
+                    if (string.IsNullOrEmpty(output.loanApptPersonnelInfo.applicantAddr1))
+                    {
+                        loads.loanApptPersonnelInfo_applicantAddr1 = "";
+                    }
+                    else
+                    {
+                        loads.loanApptPersonnelInfo_applicantAddr1 = output.loanApptPersonnelInfo.applicantAddr1.ToString();
+                    }
+
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.loanApptPersonnelInfo.applicantAddr1: " + output.loanApptPersonnelInfo.applicantAddr1.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.loanApptPersonnelInfo.applicantAddr1: error: " + ex.Message.ToString());
+                    }
+                }
+
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.loanApptPersonnelInfo.applicantAddr2))
+                    {
+                        loads.loanApptPersonnelInfo_applicantAddr2 = "";
+                    }
+                    else
+                    {
+                        loads.loanApptPersonnelInfo_applicantAddr2 = output.loanApptPersonnelInfo.applicantAddr2.ToString();
+                    }
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.loanApptPersonnelInfo.applicantAddr2: " + output.loanApptPersonnelInfo.applicantAddr2.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.loanApptPersonnelInfo.applicantAddr2: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.loanApptPersonnelInfo.applicantAddr3))
+                    {
+                        loads.loanApptPersonnelInfo_applicantAddr3 = "";
+                    }
+                    else
+                    {
+                        loads.loanApptPersonnelInfo_applicantAddr3 = output.loanApptPersonnelInfo.applicantAddr3.ToString();
+                    }
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.loanApptPersonnelInfo.applicantAddr3: " + output.loanApptPersonnelInfo.applicantAddr3.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.loanApptPersonnelInfo.applicantAddr3: error: " + ex.Message.ToString());
+                    }
+                }
+
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.loanApptPersonnelInfo.applicantAddrCity))
+                    {
+                        loads.loanApptPersonnelInfo_applicantAddrCity = "";
+                    }
+                    else
+                    {
+                        loads.loanApptPersonnelInfo_applicantAddrCity = output.loanApptPersonnelInfo.applicantAddrCity.ToString();
+                    }
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.loanApptPersonnelInfo.applicantAddrCity: " + output.loanApptPersonnelInfo.applicantAddrCity.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.loanApptPersonnelInfo.applicantAddrCity: error: " + ex.Message.ToString());
+                    }
+                }
+
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.loanApptPersonnelInfo.applicantAddrCountry))
+                    {
+                        loads.loanApptPersonnelInfo_applicantAddrCountry = "";
+                    }
+                    else
+                    {
+                        loads.loanApptPersonnelInfo_applicantAddrCountry = output.loanApptPersonnelInfo.applicantAddrCountry.ToString();
+                    }
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.loanApptPersonnelInfo.applicantAddrCountry: " + output.loanApptPersonnelInfo.applicantAddrCountry.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.loanApptPersonnelInfo.applicantAddrCountry: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.loanApptPersonnelInfo.applicantAddrPostcode))
+                    {
+                        loads.loanApptPersonnelInfo_applicantAddrPostcode = "";
+                    }
+                    else
+                    {
+                        loads.loanApptPersonnelInfo_applicantAddrPostcode = output.loanApptPersonnelInfo.applicantAddrPostcode.ToString();
+                    }
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.loanApptPersonnelInfo.applicantAddrPostcode: " + output.loanApptPersonnelInfo.applicantAddrPostcode.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.loanApptPersonnelInfo.applicantAddrPostcode: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.loanApptPersonnelInfo.applicantAddrState))
+                    {
+                        loads.loanApptPersonnelInfo_applicantAddrState = "";
+                    }
+                    else
+                    {
+                        loads.loanApptPersonnelInfo_applicantAddrState = output.loanApptPersonnelInfo.applicantAddrState.ToString();
+                    }
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.loanApptPersonnelInfo.applicantAddrState: " + output.loanApptPersonnelInfo.applicantAddrState.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.loanApptPersonnelInfo.applicantAddrState: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.loanApptPersonnelInfo.applicantEmails))
+                    {
+                        loads.loanApptPersonnelInfo_applicantEmails = "";
+                    }
+                    else
+                    {
+                        loads.loanApptPersonnelInfo_applicantEmails = output.loanApptPersonnelInfo.applicantEmails.ToString();
+                    }
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.loanApptPersonnelInfo.applicantEmails: " + output.loanApptPersonnelInfo.applicantEmails.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.loanApptPersonnelInfo.applicantEmails: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.loanApptPersonnelInfo.applicantIDs))
+                    {
+                        loads.loanApptPersonnelInfo_applicantIDs = "";
+                    }
+                    else
+                    {
+                        loads.loanApptPersonnelInfo_applicantIDs = output.loanApptPersonnelInfo.applicantIDs.ToString();
+                    }
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.loanApptPersonnelInfo.applicantIDs: " + output.loanApptPersonnelInfo.applicantIDs.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.loanApptPersonnelInfo.applicantIDs: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.loanApptPersonnelInfo.applicantNamesCombine))
+                    {
+                        loads.loanApptPersonnelInfo_applicantNamesCombine = "";
+                    }
+                    else
+                    {
+                        loads.loanApptPersonnelInfo_applicantNamesCombine = output.loanApptPersonnelInfo.applicantNamesCombine.ToString();
+                    }
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.loanApptPersonnelInfo.applicantNamesCombine: " + output.loanApptPersonnelInfo.applicantNamesCombine.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.loanApptPersonnelInfo.applicantNamesCombine: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.loanApptPersonnelInfo.chargorIDs))
+                    {
+                        loads.loanApptPersonnelInfo_chargorIDs = "";
+                    }
+                    else
+                    {
+                        loads.loanApptPersonnelInfo_chargorIDs = output.loanApptPersonnelInfo.chargorIDs.ToString();
+                    }
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.loanApptPersonnelInfo.chargorIDs: " + output.loanApptPersonnelInfo.chargorIDs.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.loanApptPersonnelInfo.chargorIDs: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.loanApptPersonnelInfo.chargorNames))
+                    {
+                        loads.loanApptPersonnelInfo_chargorNames = "";
+                    }
+                    else
+                    {
+                        loads.loanApptPersonnelInfo_chargorNames = output.loanApptPersonnelInfo.chargorNames.ToString();
+                    }
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.loanApptPersonnelInfo.chargorNames: " + output.loanApptPersonnelInfo.chargorNames.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.loanApptPersonnelInfo.chargorNames: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.loanApptPersonnelInfo.eStatementFlagInd))
+                    {
+                        loads.loanApptPersonnelInfo_eStatementFlagInd = "";
+                    }
+                    else
+                    {
+                        loads.loanApptPersonnelInfo_eStatementFlagInd = output.loanApptPersonnelInfo.eStatementFlagInd.ToString();
+                    }
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.loanApptPersonnelInfo.eStatementFlagInd: " + output.loanApptPersonnelInfo.eStatementFlagInd.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.loanApptPersonnelInfo.eStatementFlagInd: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.loanApptPersonnelInfo.guarantorIDs))
+                    {
+                        loads.loanApptPersonnelInfo_guarantorIDs = "";
+                    }
+                    else
+                    {
+                        loads.loanApptPersonnelInfo_guarantorIDs = output.loanApptPersonnelInfo.guarantorIDs.ToString();
+                    }
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.loanApptPersonnelInfo.guarantorIDs: " + output.loanApptPersonnelInfo.guarantorIDs.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.loanApptPersonnelInfo.guarantorIDs: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.loanApptPersonnelInfo.guarantorNames))
+                    {
+                        loads.loanApptPersonnelInfo_guarantorNames = "";
+                    }
+                    else
+                    {
+                        loads.loanApptPersonnelInfo_guarantorNames = output.loanApptPersonnelInfo.guarantorNames.ToString();
+                    }
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.loanApptPersonnelInfo.guarantorNames: " + output.loanApptPersonnelInfo.guarantorNames.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.loanApptPersonnelInfo.guarantorNames: error: " + ex.Message.ToString());
+                    }
+                }
+
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.loanApptPersonnelInfo.priApplicantName))
+                    {
+                        loads.loanApptPersonnelInfo_priApplicantName = "";
+                    }
+                    else
+                    {
+                        loads.loanApptPersonnelInfo_priApplicantName = output.loanApptPersonnelInfo.priApplicantName.ToString();
+                    }
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.loanApptPersonnelInfo.priApplicantName: " + output.loanApptPersonnelInfo.priApplicantName.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.loanApptPersonnelInfo.priApplicantName: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    loads.loanApptPersonnelInfo_priApplicantId = "";
+                    // new field primary application id                     
+
+                    if (string.IsNullOrEmpty(output.loanApptPersonnelInfo.priApplicantId))
+                    {
+                        loads.loanApptPersonnelInfo_priApplicantId = "";
+                    }
+                    else
+                    {
+                        loads.loanApptPersonnelInfo_priApplicantId = output.loanApptPersonnelInfo.priApplicantId.ToString();
+                    }
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.loanApptPersonnelInfo.priApplicantId: " + output.loanApptPersonnelInfo.priApplicantId.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.loanApptPersonnelInfo.priApplicantId: error: " + ex.Message.ToString());
+                    }
+                }
+
+
+                // end loanApptPersonnelInfo section 
+
+                try
+                {
+
+                    // start respInfo section
+                    if (string.IsNullOrEmpty(output.respInfo.respCode))
+                    {
+                        loads.respInfo_respCode = "";
+                    }
+                    else
+                    {
+                        loads.respInfo_respCode = output.respInfo.respCode.ToString();
+                    }
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.respInfo.respCode: " + output.respInfo.respCode.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.respInfo.respCode: error: " + ex.Message.ToString());
+                    }
+                }
+
+                try
+                {
+
+                    if (string.IsNullOrEmpty(output.respInfo.respDesc))
+                    {
+                        loads.respInfo_respDesc = "";
+                    }
+                    else
+                    {
+                        loads.respInfo_respDesc = output.respInfo.respDesc.ToString();
+                    }
+                    // end respInfo section
+                    //using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    //{
+                    //    writer.WriteLine("output.respInfo.respDesc: " + output.respInfo.respDesc.ToString());
+                    //}
+                }
+                catch (Exception ex)
+                {
+                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                    {
+                        writer.WriteLine("output.respInfo.respDesc: error: " + ex.Message.ToString());
+                    }
+                }
+                
+
+                list.Add(loads);
+
+            }
+            else
+            {
+               // error = "DP_GetDataFromLOADS failed with message: " + output.respInfo.respDesc.ToString();
+               // string errorDetail;
+                //errorDetail = "Input Param: " + arn.ToString();
+                //errorDetail = output.respInfo.respCode.ToString() + "," + output.respInfo.respDesc.ToString();
+                //LogErrorToDB("DP_GetDataFromLOADS", "Fail", error, errorDetail);
+
+                using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+                {
+                    writer.WriteLine("error: " + output.respInfo.respDesc.ToString());
+                }
+            }
+
+            using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+            {
+                writer.WriteLine("end debug- case: " + arn);
+            }
         }
 
         // Mortgage-MG API
@@ -4005,1065 +7721,1163 @@ namespace HLBBWS
             return list;
         }
 
+        
+
         [WebMethod]
-        public List<structureLOADS> DP_NewLI_GetDataFromLOADS(string arn)
+        public void Val2_FirstAdvicePendingVREmail()
         {
+            try
+            {
+
+                // log the result in db
+                DataSet ds = null;
+                DataTable dt = null;
+                SqlConnection conn = null;
+                SqlDataAdapter sqlDA = null;
+
+                string strDataSource = clsGlobal.MG_SQL_DATA_SOURCE;
+                string strDBName = clsGlobal.MG_SQL_DB_NAME;
+                string strID = clsGlobal.MG_SQL_ID;
+                string strPassword = clsGlobal.MG_SQL_PASSWORD;
+                bool blnIsWinAuth = clsGlobal.MG_SQL_IS_WIN_AUTH;
+
+                string connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Persist Security Info=True;User ID=" + strID + ";Password=" + strPassword;
+                if (blnIsWinAuth)
+                {
+                    connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Integrated Security=True;";
+                }
+
+                SqlConnection connPRE = null;
+                SqlDataAdapter sqlDAPRE = null;
+
+                connPRE = new SqlConnection(connstr);
+
+                sqlDAPRE = new SqlDataAdapter();
+                sqlDAPRE.SelectCommand = new SqlCommand("dbo.Val2_FirstAdvicePendingVREmail_GetCase @casefound output, @SurrogateID output, @arn output, @FirstAdviceSubmissionDate output, @EmailHeader output, @EmailContent output, @EmailReceiver output", connPRE);
+
+                sqlDAPRE.SelectCommand.Parameters.Add("@casefound", SqlDbType.Int);
+                sqlDAPRE.SelectCommand.Parameters["@casefound"].Direction = ParameterDirection.Output;
+
+                sqlDAPRE.SelectCommand.Parameters.Add("@SurrogateID", SqlDbType.BigInt);
+                sqlDAPRE.SelectCommand.Parameters["@SurrogateID"].Direction = ParameterDirection.Output;
+
+                sqlDAPRE.SelectCommand.Parameters.Add("@arn", SqlDbType.NVarChar, -1);
+                sqlDAPRE.SelectCommand.Parameters["@arn"].Direction = ParameterDirection.Output;
+
+                sqlDAPRE.SelectCommand.Parameters.Add("@FirstAdviceSubmissionDate", SqlDbType.NVarChar, -1);
+                sqlDAPRE.SelectCommand.Parameters["@FirstAdviceSubmissionDate"].Direction = ParameterDirection.Output;
+
+                sqlDAPRE.SelectCommand.Parameters.Add("@EmailHeader", SqlDbType.NVarChar, -1);
+                sqlDAPRE.SelectCommand.Parameters["@EmailHeader"].Direction = ParameterDirection.Output;
+
+                sqlDAPRE.SelectCommand.Parameters.Add("@EmailContent", SqlDbType.NVarChar, -1);
+                sqlDAPRE.SelectCommand.Parameters["@EmailContent"].Direction = ParameterDirection.Output;
+                
+                sqlDAPRE.SelectCommand.Parameters.Add("@EmailReceiver", SqlDbType.NVarChar, -1);
+                sqlDAPRE.SelectCommand.Parameters["@EmailReceiver"].Direction = ParameterDirection.Output;
+
+                //string fireeye_flag;
+                //fireeye_flag = "";
+                DataSet dsPRE = new DataSet("ds");
+                sqlDAPRE.Fill(dsPRE);
+
+                string casefound = sqlDAPRE.SelectCommand.Parameters["@casefound"].Value.ToString();
+                string SurrogateID = sqlDAPRE.SelectCommand.Parameters["@SurrogateID"].Value.ToString();
+                string arn = sqlDAPRE.SelectCommand.Parameters["@arn"].Value.ToString();
+                string FirstAdviceSubmissionDate = sqlDAPRE.SelectCommand.Parameters["@FirstAdviceSubmissionDate"].Value.ToString();
+                string EmailHeader = sqlDAPRE.SelectCommand.Parameters["@EmailHeader"].Value.ToString();
+                string EmailContent = sqlDAPRE.SelectCommand.Parameters["@EmailContent"].Value.ToString();
+                string EmailReceiver = sqlDAPRE.SelectCommand.Parameters["@EmailReceiver"].Value.ToString();
+
+                if (casefound == "1")
+                {
+                    // send email 
+                    SendMailV2("SendToValuer-Reminder", "CRA", arn, EmailHeader, EmailContent, EmailReceiver, 0, 1, null, null);
+
+                    sqlDAPRE = new SqlDataAdapter();
+                    sqlDAPRE.SelectCommand = new SqlCommand("dbo.Val2_FirstAdvicePendingVREmail_UpdateCase @SurrogateID", connPRE);
+                                      
+                    sqlDAPRE.SelectCommand.Parameters.AddWithValue("@SurrogateID", SurrogateID);
+                    DataSet dsAlpha = new DataSet("ds");
+                    sqlDAPRE.Fill(dsAlpha);
+
+                }
+            }
+            catch (Exception ex)
+            {
+                string error = "Val2_FirstAdvicePendingVREmail failed with exception: " + ex.Message.ToString();
+                string errorDetail;
+                errorDetail = "Input Param: N/A";
+                LogErrorToDB("Val2_FirstAdvicePendingVREmail", "Exception", error, errorDetail);
+
+
+            }
+
+        }
+
+        [WebMethod]
+        public List<structureLOADS> DP_NewLI_GetDataFromLOADS(string arn, ref int ErrorCode, ref string ErrorDesc)
+        {
+            ErrorCode = 0;
+            ErrorDesc = "";
+
             string error = "";
             List<structureLOADS> list = new List<structureLOADS>();
             structureLOADS loads = new structureLOADS();
-            //try
-            //{
-            SearchFileResponseData response = new SearchFileResponseData();
-
-
-            //System.ServiceModel.BasicHttpBinding binding = null;
-            //LOADS_API.WsEIWSLosaLoanApplicantInfo proxy = new LOADS_API.WsEIWSLosaLoanApplicantInfo();
-            LOADS_API.WsEIWSLosaAppBocImpService client = new LOADS_API.WsEIWSLosaAppBocImpService();
-            LOADS_API.AppHeader xmlAppHeader = new LOADS_API.AppHeader();
-            //LOADS_API.WsEIWSLosaAppHeader xmlAppHeader = new LOADS_API.WsEIWSLosaAppHeader();
-
-            xmlAppHeader.agencyId = "?";
-            xmlAppHeader.bizRefNo = arn;
-            xmlAppHeader.businessArea = "?";
-            xmlAppHeader.date = "?";
-            xmlAppHeader.processId = "?";
-
-            LOADS_API.WsEIWSLosaAppLoanInfo output = client.LoanApplicationInfo(xmlAppHeader);
-            
-            /*
-            // log the result in db
-            DataSet ds = null;
-            DataTable dt = null;
-            SqlConnection conn = null;
-            SqlDataAdapter sqlDA = null;
-
-            string strDataSource = clsGlobal.MG_SQL_DATA_SOURCE;
-            string strDBName = clsGlobal.MG_SQL_DB_NAME;
-            string strID = clsGlobal.MG_SQL_ID;
-            string strPassword = clsGlobal.MG_SQL_PASSWORD;
-            bool blnIsWinAuth = clsGlobal.MG_SQL_IS_WIN_AUTH;
-
-            string connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Persist Security Info=True;User ID=" + strID + ";Password=" + strPassword;
-            if (blnIsWinAuth)
+            try
             {
-                connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Integrated Security=True;";
-            }
-            conn = new SqlConnection(connstr);
-            conn.Open();
-
-            sqlDA = new SqlDataAdapter();
-            sqlDA.SelectCommand = new SqlCommand("insert into LOADS_API_LOG values ('" + arn + "', '" + output.respInfo.respCode.ToString() + "', '" + output.respInfo.respDesc.ToString() + "', getdate())", conn);
-
-            ds = new DataSet("ds");
-            sqlDA.Fill(ds);
-            //dt = ds.Tables[0];
-
-            conn.Close();
-            */
-            if (output.respInfo.respCode == "00")
-            {
-                // start collaterals section 
-                //collaterals_developerCode
-                if (string.IsNullOrEmpty(output.collaterals.developerCode))
-                {
-                    loads.collaterals_developerCode = "";
-                }
-                else
-                {
-                    loads.collaterals_developerCode = output.collaterals.developerCode.ToString();
-                }
-
-                //collaterals_buildUpArea
-                if (string.IsNullOrEmpty(output.collaterals.buildUpArea.ToString()))
-                {
-                    loads.collaterals_buildUpArea = "0.00";
-                }
-                else
-                {
-                    loads.collaterals_buildUpArea = output.collaterals.buildUpArea.ToString();
-                }
-
-                //collaterals_developerName
-                if (string.IsNullOrEmpty(output.collaterals.developerName))
-                {
-                    loads.collaterals_developerName = "";
-                }
-                else
-                {
-                    loads.collaterals_developerName = output.collaterals.developerName.ToString();
-                }
-
-                //collaterals_financingType
-                if (string.IsNullOrEmpty(output.collaterals.financingType))
-                {
-                    loads.collaterals_financingType = "";
-                }
-                else
-                {
-                    loads.collaterals_financingType = output.collaterals.financingType.ToString();
-                }
-
-                //collaterals_landArea
-                if (string.IsNullOrEmpty(output.collaterals.landArea.ToString()))
-                {
-                    loads.collaterals_landArea = "0.00";
-                }
-                else
-                {
-                    loads.collaterals_landArea = output.collaterals.landArea.ToString();
-                }
+                SearchFileResponseData response = new SearchFileResponseData();
 
 
-                //collaterals_projectCode
-                if (string.IsNullOrEmpty(output.collaterals.projectCode))
-                {
-                    loads.collaterals_projectCode = "";
-                }
-                else
-                {
-                    loads.collaterals_projectCode = output.collaterals.projectCode.ToString();
-                }
+                //System.ServiceModel.BasicHttpBinding binding = null;
+                //LOADS_API.WsEIWSLosaLoanApplicantInfo proxy = new LOADS_API.WsEIWSLosaLoanApplicantInfo();
+                LOADS_API.WsEIWSLosaAppBocImpService client = new LOADS_API.WsEIWSLosaAppBocImpService();
+                LOADS_API.AppHeader xmlAppHeader = new LOADS_API.AppHeader();
+                //LOADS_API.WsEIWSLosaAppHeader xmlAppHeader = new LOADS_API.WsEIWSLosaAppHeader();
 
-                //collaterals_projectName
-                if (string.IsNullOrEmpty(output.collaterals.projectName))
-                {
-                    loads.collaterals_projectName = "";
-                }
-                else
-                {
-                    loads.collaterals_projectName = output.collaterals.projectName.ToString();
-                }
+                xmlAppHeader.agencyId = "?";
+                xmlAppHeader.bizRefNo = arn;
+                xmlAppHeader.businessArea = "?";
+                xmlAppHeader.date = "?";
+                xmlAppHeader.processId = "?";
 
-                //collaterals_propertyAddress
-                if (string.IsNullOrEmpty(output.collaterals.propertyAddress))
-                {
-                    loads.collaterals_propertyAddress = "";
-                }
-                else
-                {
-                    loads.collaterals_propertyAddress = output.collaterals.propertyAddress.ToString();
-                }
+                LOADS_API.WsEIWSLosaAppLoanInfo output = client.LoanApplicationInfo(xmlAppHeader);
 
-                //collaterals_propertyType
-                if (string.IsNullOrEmpty(output.collaterals.propertyType))
-                {
-                    loads.collaterals_propertyType = "";
-                }
-                else
-                {
-                    loads.collaterals_propertyType = output.collaterals.propertyType.ToString();
-                }
+                /*
+                // log the result in db
+                DataSet ds = null;
+                DataTable dt = null;
+                SqlConnection conn = null;
+                SqlDataAdapter sqlDA = null;
 
-                //collaterals_requiredValReportInd
-                if (string.IsNullOrEmpty(output.collaterals.requiredValReportInd))
+                string strDataSource = clsGlobal.MG_SQL_DATA_SOURCE;
+                string strDBName = clsGlobal.MG_SQL_DB_NAME;
+                string strID = clsGlobal.MG_SQL_ID;
+                string strPassword = clsGlobal.MG_SQL_PASSWORD;
+                bool blnIsWinAuth = clsGlobal.MG_SQL_IS_WIN_AUTH;
+
+                string connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Persist Security Info=True;User ID=" + strID + ";Password=" + strPassword;
+                if (blnIsWinAuth)
                 {
-                    loads.collaterals_requiredValReportInd = "False";
+                    connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Integrated Security=True;";
                 }
-                else
+                conn = new SqlConnection(connstr);
+                conn.Open();
+
+                sqlDA = new SqlDataAdapter();
+                sqlDA.SelectCommand = new SqlCommand("insert into LOADS_API_LOG values ('" + arn + "', '" + output.respInfo.respCode.ToString() + "', '" + output.respInfo.respDesc.ToString() + "', getdate())", conn);
+
+                ds = new DataSet("ds");
+                sqlDA.Fill(ds);
+                //dt = ds.Tables[0];
+
+                conn.Close();
+                */
+                if (output.respInfo.respCode == "00")
                 {
-                    if (output.collaterals.requiredValReportInd.ToString().ToUpper().Trim() == "YES")
+                    // start collaterals section 
+                    //collaterals_developerCode
+                    if (string.IsNullOrEmpty(output.collaterals.developerCode))
                     {
-                        loads.collaterals_requiredValReportInd = "True";
+                        loads.collaterals_developerCode = "";
                     }
                     else
+                    {
+                        loads.collaterals_developerCode = output.collaterals.developerCode.ToString();
+                    }
+
+                    //collaterals_buildUpArea
+                    if (string.IsNullOrEmpty(output.collaterals.buildUpArea.ToString()))
+                    {
+                        loads.collaterals_buildUpArea = "0.00";
+                    }
+                    else
+                    {
+                        loads.collaterals_buildUpArea = output.collaterals.buildUpArea.ToString();
+                    }
+
+                    //collaterals_developerName
+                    if (string.IsNullOrEmpty(output.collaterals.developerName))
+                    {
+                        loads.collaterals_developerName = "";
+                    }
+                    else
+                    {
+                        loads.collaterals_developerName = output.collaterals.developerName.ToString();
+                    }
+
+                    //collaterals_financingType
+                    if (string.IsNullOrEmpty(output.collaterals.financingType))
+                    {
+                        loads.collaterals_financingType = "";
+                    }
+                    else
+                    {
+                        loads.collaterals_financingType = output.collaterals.financingType.ToString();
+                    }
+
+                    //collaterals_landArea
+                    if (string.IsNullOrEmpty(output.collaterals.landArea.ToString()))
+                    {
+                        loads.collaterals_landArea = "0.00";
+                    }
+                    else
+                    {
+                        loads.collaterals_landArea = output.collaterals.landArea.ToString();
+                    }
+
+
+                    //collaterals_projectCode
+                    if (string.IsNullOrEmpty(output.collaterals.projectCode))
+                    {
+                        loads.collaterals_projectCode = "";
+                    }
+                    else
+                    {
+                        loads.collaterals_projectCode = output.collaterals.projectCode.ToString();
+                    }
+
+                    //collaterals_projectName
+                    if (string.IsNullOrEmpty(output.collaterals.projectName))
+                    {
+                        loads.collaterals_projectName = "";
+                    }
+                    else
+                    {
+                        loads.collaterals_projectName = output.collaterals.projectName.ToString();
+                    }
+
+                    //collaterals_propertyAddress
+                    if (string.IsNullOrEmpty(output.collaterals.propertyAddress))
+                    {
+                        loads.collaterals_propertyAddress = "";
+                    }
+                    else
+                    {
+                        loads.collaterals_propertyAddress = output.collaterals.propertyAddress.ToString();
+                    }
+
+                    //collaterals_propertyType
+                    if (string.IsNullOrEmpty(output.collaterals.propertyType))
+                    {
+                        loads.collaterals_propertyType = "";
+                    }
+                    else
+                    {
+                        loads.collaterals_propertyType = output.collaterals.propertyType.ToString();
+                    }
+
+                    //collaterals_requiredValReportInd
+                    if (string.IsNullOrEmpty(output.collaterals.requiredValReportInd))
                     {
                         loads.collaterals_requiredValReportInd = "False";
                     }
-                }
-
-                if (string.IsNullOrEmpty(output.collaterals.titleDetails))
-                {
-                    loads.collaterals_titleDetails = "";
-                }
-                else
-                {
-                    loads.collaterals_titleDetails = output.collaterals.titleDetails.ToString();
-                }
-
-                if (string.IsNullOrEmpty(output.collaterals.valuerAccountNbr))
-                {
-                    loads.collaterals_valuerAccountNbr = "";
-                }
-                else
-                {
-                    loads.collaterals_valuerAccountNbr = output.collaterals.valuerAccountNbr.ToString();
-                }
-
-                if (string.IsNullOrEmpty(output.collaterals.valuerAccountType))
-                {
-                    loads.collaterals_valuerAccountType = "";
-                }
-                else
-                {
-                    loads.collaterals_valuerAccountType = output.collaterals.valuerAccountType.ToString();
-                }
-
-                if (string.IsNullOrEmpty(output.collaterals.valuerAddr1))
-                {
-                    loads.collaterals_valuerAddr1 = "";
-                }
-                else
-                {
-                    loads.collaterals_valuerAddr1 = output.collaterals.valuerAddr1.ToString();
-                }
-
-                if (string.IsNullOrEmpty(output.collaterals.valuerAddr2))
-                {
-                    loads.collaterals_valuerAddr2 = "";
-                }
-                else
-                {
-                    loads.collaterals_valuerAddr2 = output.collaterals.valuerAddr2.ToString();
-                }
-
-                if (string.IsNullOrEmpty(output.collaterals.valuerAddr3))
-                {
-                    loads.collaterals_valuerAddr3 = "";
-                }
-                else
-                {
-                    loads.collaterals_valuerAddr3 = output.collaterals.valuerAddr3.ToString();
-                }
-
-                if (string.IsNullOrEmpty(output.collaterals.valuerCity))
-                {
-                    loads.collaterals_valuerCity = "";
-                }
-                else
-                {
-                    loads.collaterals_valuerCity = output.collaterals.valuerCity.ToString();
-                }
-
-                if (string.IsNullOrEmpty(output.collaterals.valuerCode))
-                {
-                    loads.collaterals_valuerCode = "";
-                }
-                else
-                {
-                    loads.collaterals_valuerCode = output.collaterals.valuerCode.ToString();
-                }
-
-                // new field valuer fax 
-                loads.collaterals_valuerFaxNbr = "";
-
-                if (string.IsNullOrEmpty(output.collaterals.valuerFaxNbr))
-                {
-                    loads.collaterals_valuerFaxNbr = "";
-                }
-                else
-                {
-                    loads.collaterals_valuerFaxNbr = output.collaterals.valuerFaxNbr.ToString();
-                }
-
-
-                // new field valuer phone 
-                loads.collaterals_valuerTelNbr = "";
-
-                if (string.IsNullOrEmpty(output.collaterals.valuerTelNbr))
-                {
-                    loads.collaterals_valuerTelNbr = "";
-                }
-                else
-                {
-                    loads.collaterals_valuerTelNbr = output.collaterals.valuerTelNbr.ToString();
-                }
-
-
-                if (string.IsNullOrEmpty(output.collaterals.valuerCountry))
-                {
-                    loads.collaterals_valuerCountry = "";
-                }
-                else
-                {
-                    loads.collaterals_valuerCountry = output.collaterals.valuerCountry.ToString();
-                }
-
-                if (string.IsNullOrEmpty(output.collaterals.valuerEmail))
-                {
-                    loads.collaterals_valuerEmail = "";
-                }
-                else
-                {
-                    loads.collaterals_valuerEmail = output.collaterals.valuerEmail.ToString();
-                }
-
-                if (string.IsNullOrEmpty(output.collaterals.valuerName))
-                {
-                    loads.collaterals_valuerName = "";
-                }
-                else
-                {
-                    loads.collaterals_valuerName = output.collaterals.valuerName.ToString();
-                }
-
-                if (string.IsNullOrEmpty(output.collaterals.valuerPostcode))
-                {
-                    loads.collaterals_valuerPostcode = "";
-                }
-                else
-                {
-                    loads.collaterals_valuerPostcode = output.collaterals.valuerPostcode.ToString();
-                }
-
-                if (string.IsNullOrEmpty(output.collaterals.valuerState))
-                {
-                    loads.collaterals_valuerState = "";
-                }
-                else
-                {
-                    loads.collaterals_valuerState = output.collaterals.valuerState.ToString();
-                }
-
-                if (string.IsNullOrEmpty(output.collaterals.verbalIndicativeValue.ToString()))
-                {
-                    loads.collaterals_verbalIndicativeValue = "0.00";
-                }
-                else
-                {
-                    loads.collaterals_verbalIndicativeValue = output.collaterals.verbalIndicativeValue.ToString();
-                }
-                // end collaterals section 
-
-                // start facilities section 
-                if (string.IsNullOrEmpty(output.facilities.disbursementManner))
-                {
-                    loads.facilities_disbursementManner = "";
-                }
-                else
-                {
-                    loads.facilities_disbursementManner = output.facilities.disbursementManner.ToString();
-                }
-
-                if (string.IsNullOrEmpty(output.facilities.facilityAmount1.ToString()))
-                {
-                    loads.facilities_facilityAmount1 = "0.00";
-                }
-                else
-                {
-                    loads.facilities_facilityAmount1 = output.facilities.facilityAmount1.ToString();
-                }
-
-                if (string.IsNullOrEmpty(output.facilities.facilityAmount2.ToString()))
-                {
-                    loads.facilities_facilityAmount2 = "0.00";
-                }
-                else
-                {
-                    loads.facilities_facilityAmount2 = output.facilities.facilityAmount2.ToString();
-                }
-
-                if (string.IsNullOrEmpty(output.facilities.facilityAmount3.ToString()))
-                {
-                    loads.facilities_facilityAmount3 = "0.00";
-                }
-                else
-                {
-                    loads.facilities_facilityAmount3 = output.facilities.facilityAmount3.ToString();
-                }
-
-                if (string.IsNullOrEmpty(output.facilities.facilityAmount4.ToString()))
-                {
-                    loads.facilities_facilityAmount4 = "0.00";
-                }
-                else
-                {
-                    loads.facilities_facilityAmount4 = output.facilities.facilityAmount4.ToString();
-                }
-
-                if (string.IsNullOrEmpty(output.facilities.gracePeriod.ToString()))
-                {
-                    loads.facilities_gracePeriod = "0";
-                }
-                else
-                {
-                    loads.facilities_gracePeriod = output.facilities.gracePeriod.ToString();
-                }
-
-                if (string.IsNullOrEmpty(output.facilities.productName1))
-                {
-                    loads.facilities_productName1 = "";
-                }
-                else
-                {
-                    loads.facilities_productName1 = output.facilities.productName1.ToString();
-                }
-
-                if (string.IsNullOrEmpty(output.facilities.productName2))
-                {
-                    loads.facilities_productName2 = "";
-                }
-                else
-                {
-                    loads.facilities_productName2 = output.facilities.productName2.ToString();
-                }
-
-                if (string.IsNullOrEmpty(output.facilities.productName3))
-                {
-                    loads.facilities_productName3 = "";
-                }
-                else
-                {
-                    loads.facilities_productName3 = output.facilities.productName3.ToString();
-                }
-
-                if (string.IsNullOrEmpty(output.facilities.productName4))
-                {
-                    loads.facilities_productName4 = "";
-                }
-                else
-                {
-                    loads.facilities_productName4 = output.facilities.productName4.ToString();
-                }
-
-                if (string.IsNullOrEmpty(output.facilities.purposeCode))
-                {
-                    loads.facilities_purposeCode = "";
-                }
-                else
-                {
-                    loads.facilities_purposeCode = output.facilities.purposeCode.ToString();
-                }
-
-                if (string.IsNullOrEmpty(output.facilities.totFeesAmount.ToString()))
-                {
-                    loads.facilities_totFeesAmount = "0.00";
-                }
-                else
-                {
-                    loads.facilities_totFeesAmount = output.facilities.totFeesAmount.ToString();
-                }
-
-                if (string.IsNullOrEmpty(output.facilities.totFinancingAmount.ToString()))
-                {
-                    loads.facilities_totFinancingAmount = "0.00";
-                }
-                else
-                {
-                    loads.facilities_totFinancingAmount = output.facilities.totFinancingAmount.ToString();
-                }
-
-                if (string.IsNullOrEmpty(output.facilities.totFinancingAmountIncFlvm.ToString()))
-                {
-                    loads.facilities_totFinancingAmountIncFlvm = "0.00";
-                }
-                else
-                {
-                    loads.facilities_totFinancingAmountIncFlvm = output.facilities.totFinancingAmountIncFlvm.ToString();
-                }
-
-                if (string.IsNullOrEmpty(output.facilities.totInsAmount.ToString()))
-                {
-                    loads.facilities_totInsAmount = "0.00";
-                }
-                else
-                {
-                    loads.facilities_totInsAmount = output.facilities.totInsAmount.ToString();
-                }
-
-                if (string.IsNullOrEmpty(output.facilities.totValuationFees.ToString()))
-                {
-                    loads.facilities_totValuationFees = "0.00";
-                }
-                else
-                {
-                    loads.facilities_totValuationFees = output.facilities.totValuationFees.ToString();
-                }
-                // end facilities section 
-
-                // start loanApplicationInfo section 
-                if (string.IsNullOrEmpty(output.loanApplicationInfo.appStatus))
-                {
-                    loads.loanApplicationInfo_appStatus = "";
-                }
-                else
-                {
-                    loads.loanApplicationInfo_appStatus = output.loanApplicationInfo.appStatus.ToString();
-                }
-
-                if (string.IsNullOrEmpty(output.loanApplicationInfo.branchAddr1))
-                {
-                    loads.loanApplicationInfo_branchAddr1 = "";
-                }
-                else
-                {
-                    loads.loanApplicationInfo_branchAddr1 = output.loanApplicationInfo.branchAddr1.ToString();
-                }
-
-                if (string.IsNullOrEmpty(output.loanApplicationInfo.branchAddr2))
-                {
-                    loads.loanApplicationInfo_branchAddr2 = "";
-                }
-                else
-                {
-                    loads.loanApplicationInfo_branchAddr2 = output.loanApplicationInfo.branchAddr2.ToString();
-                }
-
-                if (string.IsNullOrEmpty(output.loanApplicationInfo.branchAddr3))
-                {
-                    loads.loanApplicationInfo_branchAddr3 = "";
-                }
-                else
-                {
-                    loads.loanApplicationInfo_branchAddr3 = output.loanApplicationInfo.branchAddr3.ToString();
-                }
-
-                if (string.IsNullOrEmpty(output.loanApplicationInfo.branchAddrCity))
-                {
-                    loads.loanApplicationInfo_branchAddrCity = "";
-                }
-                else
-                {
-                    loads.loanApplicationInfo_branchAddrCity = output.loanApplicationInfo.branchAddrCity.ToString();
-                }
-
-                if (string.IsNullOrEmpty(output.loanApplicationInfo.branchAddrCountry))
-                {
-                    loads.loanApplicationInfo_branchAddrCountry = "";
-                }
-                else
-                {
-                    loads.loanApplicationInfo_branchAddrCountry = output.loanApplicationInfo.branchAddrCountry.ToString();
-                }
-
-                if (string.IsNullOrEmpty(output.loanApplicationInfo.branchAddrPostcode))
-                {
-                    loads.loanApplicationInfo_branchAddrPostcode = "";
-                }
-                else
-                {
-                    loads.loanApplicationInfo_branchAddrPostcode = output.loanApplicationInfo.branchAddrPostcode.ToString();
-                }
-
-                if (string.IsNullOrEmpty(output.loanApplicationInfo.branchAddrState))
-                {
-                    loads.loanApplicationInfo_branchAddrState = "";
-                }
-                else
-                {
-                    loads.loanApplicationInfo_branchAddrState = output.loanApplicationInfo.branchAddrState.ToString();
-                }
-
-                if (string.IsNullOrEmpty(output.loanApplicationInfo.branchManagerEmail))
-                {
-                    loads.loanApplicationInfo_branchManagerEmail = "";
-                }
-                else
-                {
-                    loads.loanApplicationInfo_branchManagerEmail = output.loanApplicationInfo.branchManagerEmail.ToString();
-                }
-
-                if (string.IsNullOrEmpty(output.loanApplicationInfo.branchManagerName))
-                {
-                    loads.loanApplicationInfo_branchManagerName = "";
-                }
-                else
-                {
-                    loads.loanApplicationInfo_branchManagerName = output.loanApplicationInfo.branchManagerName.ToString();
-                }
-
-                if (string.IsNullOrEmpty(output.loanApplicationInfo.closingBranch))
-                {
-                    loads.loanApplicationInfo_closingBranch = "";
-                }
-                else
-                {
-                    loads.loanApplicationInfo_closingBranch = output.loanApplicationInfo.closingBranch.ToString();
-                }
-
-                if (string.IsNullOrEmpty(output.loanApplicationInfo.lendingType))
-                {
-                    loads.loanApplicationInfo_lendingType = "";
-                }
-                else
-                {
-                    loads.loanApplicationInfo_lendingType = output.loanApplicationInfo.lendingType.ToString();
-                }
-
-                if (string.IsNullOrEmpty(output.loanApplicationInfo.loAcceptanceDt.ToString()))
-                {
-                    loads.loanApplicationInfo_loAcceptanceDt = "";
-                }
-                else
-                {
-                    loads.loanApplicationInfo_loAcceptanceDt = DateTime.ParseExact(output.loanApplicationInfo.loAcceptanceDt.ToString(), "dd/MM/yyyy", null).ToString();
-                }
-
-                if (string.IsNullOrEmpty(output.loanApplicationInfo.mortgageCenterCode))
-                {
-                    loads.loanApplicationInfo_mortgageCenterCode = "";
-                }
-                else
-                {
-                    loads.loanApplicationInfo_mortgageCenterCode = output.loanApplicationInfo.mortgageCenterCode.ToString();
-                }
-
-                if (string.IsNullOrEmpty(output.loanApplicationInfo.mortgageCenterEmail))
-                {
-                    loads.loanApplicationInfo_mortgageCenterEmail = "";
-                }
-                else
-                {
-                    loads.loanApplicationInfo_mortgageCenterEmail = output.loanApplicationInfo.mortgageCenterEmail.ToString();
-                }
-
-                if (string.IsNullOrEmpty(output.loanApplicationInfo.salesEmail))
-                {
-                    loads.loanApplicationInfo_salesEmail = "";
-                }
-                else
-                {
-                    loads.loanApplicationInfo_salesEmail = output.loanApplicationInfo.salesEmail.ToString();
-                }
-
-                if (string.IsNullOrEmpty(output.loanApplicationInfo.salesName))
-                {
-                    loads.loanApplicationInfo_salesName = "";
-                }
-                else
-                {
-                    loads.loanApplicationInfo_salesName = output.loanApplicationInfo.salesName.ToString();
-                }
-
-                if (string.IsNullOrEmpty(output.loanApplicationInfo.solicitorAccountType))
-                {
-                    loads.loanApplicationInfo_solicitorAccountType = "";
-                }
-                else
-                {
-                    loads.loanApplicationInfo_solicitorAccountType = output.loanApplicationInfo.solicitorAccountType.ToString();
-                }
-
-                if (string.IsNullOrEmpty(output.loanApplicationInfo.solicitorAddr1))
-                {
-                    loads.loanApplicationInfo_solicitorAddr1 = "";
-                }
-                else
-                {
-                    loads.loanApplicationInfo_solicitorAddr1 = output.loanApplicationInfo.solicitorAddr1.ToString();
-                }
-
-                if (string.IsNullOrEmpty(output.loanApplicationInfo.solicitorAddr2))
-                {
-                    loads.loanApplicationInfo_solicitorAddr2 = "";
-                }
-                else
-                {
-                    loads.loanApplicationInfo_solicitorAddr2 = output.loanApplicationInfo.solicitorAddr2.ToString();
-                }
-
-                if (string.IsNullOrEmpty(output.loanApplicationInfo.solicitorAddr3))
-                {
-                    loads.loanApplicationInfo_solicitorAddr3 = "";
-                }
-                else
-                {
-                    loads.loanApplicationInfo_solicitorAddr3 = output.loanApplicationInfo.solicitorAddr3.ToString();
-                }
-
-                if (string.IsNullOrEmpty(output.loanApplicationInfo.solicitorCity))
-                {
-                    loads.loanApplicationInfo_solicitorCity = "";
-                }
-                else
-                {
-                    loads.loanApplicationInfo_solicitorCity = output.loanApplicationInfo.solicitorCity.ToString();
-                }
-
-                if (string.IsNullOrEmpty(output.loanApplicationInfo.solicitorCode))
-                {
-                    loads.loanApplicationInfo_solicitorCode = "";
-                }
-                else
-                {
-                    loads.loanApplicationInfo_solicitorCode = output.loanApplicationInfo.solicitorCode.ToString();
-                }
-
-                // new field solicitor fax
-                loads.loanApplicationInfo_solicitorFaxNbr = "";
-
-                if (string.IsNullOrEmpty(output.loanApplicationInfo.solicitorFaxNbr))
-                {
-                    loads.loanApplicationInfo_solicitorFaxNbr = "";
-                }
-                else
-                {
-                    loads.loanApplicationInfo_solicitorFaxNbr = output.loanApplicationInfo.solicitorFaxNbr.ToString();
-                }
-
-
-                // new field solicitor phone
-                loads.loanApplicationInfo_solicitorTelNbr = "";
-
-                if (string.IsNullOrEmpty(output.loanApplicationInfo.solicitorTelNbr))
-                {
-                    loads.loanApplicationInfo_solicitorTelNbr = "";
-                }
-                else
-                {
-                    loads.loanApplicationInfo_solicitorTelNbr = output.loanApplicationInfo.solicitorTelNbr.ToString();
-                }
-
-                /*
-                   public string loanApplicationInfo_phaseCode;
-                   public string loanApplicationInfo_phaseName;
-                   public string loanApplicationInfo_unitParcelNo;
-                   public string loanApplicationInfo_spaValue;
-                   public string loanApplicationInfo_category;
-                   */
-
-                // dev portal new field loanApplicationInfo_phaseCode
-                loads.loanApplicationInfo_phaseCode = "";
-
-                if (string.IsNullOrEmpty(output.loanApplicationInfo.phaseCode))
-                {
-                    loads.loanApplicationInfo_phaseCode = "";
-                }
-                else
-                {
-                    loads.loanApplicationInfo_phaseCode = output.loanApplicationInfo.phaseCode.ToString();
-                }
-
-                // dev portal new field loanApplicationInfo_phaseName
-                loads.loanApplicationInfo_phaseName = "";
-
-                if (string.IsNullOrEmpty(output.loanApplicationInfo.phaseName))
-                {
-                    loads.loanApplicationInfo_phaseName = "";
-                }
-                else
-                {
-                    loads.loanApplicationInfo_phaseName = output.loanApplicationInfo.phaseName.ToString();
-                }
-
-                // dev portal new field loanApplicationInfo_unitParcelNo
-                loads.loanApplicationInfo_unitParcelNo = "";
-
-                if (string.IsNullOrEmpty(output.loanApplicationInfo.unitParcelNo))
-                {
-                    loads.loanApplicationInfo_unitParcelNo = "";
-                }
-                else
-                {
-                    loads.loanApplicationInfo_unitParcelNo = output.loanApplicationInfo.unitParcelNo.ToString();
-                }
-
-                // dev portal new field loanApplicationInfo_unitParcelNo
-               // loads.loanApplicationInfo_spaValue = "";
-                /*
-                if (string.IsNullOrEmpty(output.loanApplicationInfo.spaValue))
-                {
-                    loads.loanApplicationInfo_spaValue = "0.00";
-                }
-                else
-                {
-                    loads.loanApplicationInfo_spaValue = output.loanApplicationInfo.spaValue.ToString();
-                }
-                */
-                if (string.IsNullOrEmpty(output.loanApplicationInfo.spaValue.ToString()))
-                {
-                    loads.loanApplicationInfo_spaValue = "0.00";
-                }
-                else
-                {
-                    loads.loanApplicationInfo_spaValue = output.loanApplicationInfo.spaValue.ToString();
-                }
-
-                // dev portal new field loanApplicationInfo_category
-                loads.loanApplicationInfo_category = "";
-
-                if (string.IsNullOrEmpty(output.loanApplicationInfo.category))
-                {
-                    loads.loanApplicationInfo_category = "";
-                }
-                else
-                {
-                    loads.loanApplicationInfo_category = output.loanApplicationInfo.category.ToString();
-                }
-
-                if (string.IsNullOrEmpty(output.loanApplicationInfo.solicitorCountry))
-                {
-                    loads.loanApplicationInfo_solicitorCountry = "";
-                }
-                else
-                {
-                    loads.loanApplicationInfo_solicitorCountry = output.loanApplicationInfo.solicitorCountry.ToString();
-                }
-
-                if (string.IsNullOrEmpty(output.loanApplicationInfo.solicitorEmail))
-                {
-                    loads.loanApplicationInfo_solicitorEmail = "";
-                }
-                else
-                {
-                    loads.loanApplicationInfo_solicitorEmail = output.loanApplicationInfo.solicitorEmail.ToString();
-                }
-
-                if (string.IsNullOrEmpty(output.loanApplicationInfo.solicitorIntStatus))
-                {
-                    loads.loanApplicationInfo_solicitorIntStatus = "";
-                }
-                else
-                {
-                    loads.loanApplicationInfo_solicitorIntStatus = output.loanApplicationInfo.solicitorIntStatus.ToString();
-                }
-
-                if (string.IsNullOrEmpty(output.loanApplicationInfo.solicitorNBR))
-                {
-                    loads.loanApplicationInfo_solicitorNBR = "";
-                }
-                else
-                {
-                    loads.loanApplicationInfo_solicitorNBR = output.loanApplicationInfo.solicitorNBR.ToString();
-                }
-
-                if (string.IsNullOrEmpty(output.loanApplicationInfo.solicitorName))
-                {
-                    loads.loanApplicationInfo_solicitorName = "";
-                }
-                else
-                {
-                    loads.loanApplicationInfo_solicitorName = output.loanApplicationInfo.solicitorName.ToString();
-                }
-
-                if (string.IsNullOrEmpty(output.loanApplicationInfo.solicitorPostcode))
-                {
-                    loads.loanApplicationInfo_solicitorPostcode = "";
-                }
-                else
-                {
-                    loads.loanApplicationInfo_solicitorPostcode = output.loanApplicationInfo.solicitorPostcode.ToString();
-                }
-
-                if (string.IsNullOrEmpty(output.loanApplicationInfo.solicitorState))
-                {
-                    loads.loanApplicationInfo_solicitorState = "";
-                }
-                else
-                {
-                    loads.loanApplicationInfo_solicitorState = output.loanApplicationInfo.solicitorState.ToString();
-                }
-
-                /*
-                if (string.IsNullOrEmpty(output.loanApplicationInfo.topupLoanInd))
-                {
-                    loads.loanApplicationInfo_topupLoanInd = "";
-                }
-                else
-                {
-                    loads.loanApplicationInfo_topupLoanInd = output.loanApplicationInfo.topupLoanInd.ToString();
-                }                    
-                */
-
-                if (string.IsNullOrEmpty(output.loanApplicationInfo.topupLoanInd))
-                {
-                    loads.loanApplicationInfo_topupLoanInd = "False";
-                }
-                else
-                {
-                    if (output.loanApplicationInfo.topupLoanInd.ToString().ToUpper().Trim() == "YES")
+                    else
                     {
-                        loads.loanApplicationInfo_topupLoanInd = "True";
+                        if (output.collaterals.requiredValReportInd.ToString().ToUpper().Trim() == "YES")
+                        {
+                            loads.collaterals_requiredValReportInd = "True";
+                        }
+                        else
+                        {
+                            loads.collaterals_requiredValReportInd = "False";
+                        }
+                    }
+
+                    if (string.IsNullOrEmpty(output.collaterals.titleDetails))
+                    {
+                        loads.collaterals_titleDetails = "";
                     }
                     else
                     {
+                        loads.collaterals_titleDetails = output.collaterals.titleDetails.ToString();
+                    }
+
+                    if (string.IsNullOrEmpty(output.collaterals.valuerAccountNbr))
+                    {
+                        loads.collaterals_valuerAccountNbr = "";
+                    }
+                    else
+                    {
+                        loads.collaterals_valuerAccountNbr = output.collaterals.valuerAccountNbr.ToString();
+                    }
+
+                    if (string.IsNullOrEmpty(output.collaterals.valuerAccountType))
+                    {
+                        loads.collaterals_valuerAccountType = "";
+                    }
+                    else
+                    {
+                        loads.collaterals_valuerAccountType = output.collaterals.valuerAccountType.ToString();
+                    }
+
+                    if (string.IsNullOrEmpty(output.collaterals.valuerAddr1))
+                    {
+                        loads.collaterals_valuerAddr1 = "";
+                    }
+                    else
+                    {
+                        loads.collaterals_valuerAddr1 = output.collaterals.valuerAddr1.ToString();
+                    }
+
+                    if (string.IsNullOrEmpty(output.collaterals.valuerAddr2))
+                    {
+                        loads.collaterals_valuerAddr2 = "";
+                    }
+                    else
+                    {
+                        loads.collaterals_valuerAddr2 = output.collaterals.valuerAddr2.ToString();
+                    }
+
+                    if (string.IsNullOrEmpty(output.collaterals.valuerAddr3))
+                    {
+                        loads.collaterals_valuerAddr3 = "";
+                    }
+                    else
+                    {
+                        loads.collaterals_valuerAddr3 = output.collaterals.valuerAddr3.ToString();
+                    }
+
+                    if (string.IsNullOrEmpty(output.collaterals.valuerCity))
+                    {
+                        loads.collaterals_valuerCity = "";
+                    }
+                    else
+                    {
+                        loads.collaterals_valuerCity = output.collaterals.valuerCity.ToString();
+                    }
+
+                    if (string.IsNullOrEmpty(output.collaterals.valuerCode))
+                    {
+                        loads.collaterals_valuerCode = "";
+                    }
+                    else
+                    {
+                        loads.collaterals_valuerCode = output.collaterals.valuerCode.ToString();
+                    }
+
+                    // new field valuer fax 
+                    loads.collaterals_valuerFaxNbr = "";
+
+                    if (string.IsNullOrEmpty(output.collaterals.valuerFaxNbr))
+                    {
+                        loads.collaterals_valuerFaxNbr = "";
+                    }
+                    else
+                    {
+                        loads.collaterals_valuerFaxNbr = output.collaterals.valuerFaxNbr.ToString();
+                    }
+
+
+                    // new field valuer phone 
+                    loads.collaterals_valuerTelNbr = "";
+
+                    if (string.IsNullOrEmpty(output.collaterals.valuerTelNbr))
+                    {
+                        loads.collaterals_valuerTelNbr = "";
+                    }
+                    else
+                    {
+                        loads.collaterals_valuerTelNbr = output.collaterals.valuerTelNbr.ToString();
+                    }
+
+
+                    if (string.IsNullOrEmpty(output.collaterals.valuerCountry))
+                    {
+                        loads.collaterals_valuerCountry = "";
+                    }
+                    else
+                    {
+                        loads.collaterals_valuerCountry = output.collaterals.valuerCountry.ToString();
+                    }
+
+                    if (string.IsNullOrEmpty(output.collaterals.valuerEmail))
+                    {
+                        loads.collaterals_valuerEmail = "";
+                    }
+                    else
+                    {
+                        loads.collaterals_valuerEmail = output.collaterals.valuerEmail.ToString();
+                    }
+
+                    if (string.IsNullOrEmpty(output.collaterals.valuerName))
+                    {
+                        loads.collaterals_valuerName = "";
+                    }
+                    else
+                    {
+                        loads.collaterals_valuerName = output.collaterals.valuerName.ToString();
+                    }
+
+                    if (string.IsNullOrEmpty(output.collaterals.valuerPostcode))
+                    {
+                        loads.collaterals_valuerPostcode = "";
+                    }
+                    else
+                    {
+                        loads.collaterals_valuerPostcode = output.collaterals.valuerPostcode.ToString();
+                    }
+
+                    if (string.IsNullOrEmpty(output.collaterals.valuerState))
+                    {
+                        loads.collaterals_valuerState = "";
+                    }
+                    else
+                    {
+                        loads.collaterals_valuerState = output.collaterals.valuerState.ToString();
+                    }
+
+                    if (string.IsNullOrEmpty(output.collaterals.verbalIndicativeValue.ToString()))
+                    {
+                        loads.collaterals_verbalIndicativeValue = "0.00";
+                    }
+                    else
+                    {
+                        loads.collaterals_verbalIndicativeValue = output.collaterals.verbalIndicativeValue.ToString();
+                    }
+                    // end collaterals section 
+
+                    // start facilities section 
+                    if (string.IsNullOrEmpty(output.facilities.disbursementManner))
+                    {
+                        loads.facilities_disbursementManner = "";
+                    }
+                    else
+                    {
+                        loads.facilities_disbursementManner = output.facilities.disbursementManner.ToString();
+                    }
+
+                    if (string.IsNullOrEmpty(output.facilities.facilityAmount1.ToString()))
+                    {
+                        loads.facilities_facilityAmount1 = "0.00";
+                    }
+                    else
+                    {
+                        loads.facilities_facilityAmount1 = output.facilities.facilityAmount1.ToString();
+                    }
+
+                    if (string.IsNullOrEmpty(output.facilities.facilityAmount2.ToString()))
+                    {
+                        loads.facilities_facilityAmount2 = "0.00";
+                    }
+                    else
+                    {
+                        loads.facilities_facilityAmount2 = output.facilities.facilityAmount2.ToString();
+                    }
+
+                    if (string.IsNullOrEmpty(output.facilities.facilityAmount3.ToString()))
+                    {
+                        loads.facilities_facilityAmount3 = "0.00";
+                    }
+                    else
+                    {
+                        loads.facilities_facilityAmount3 = output.facilities.facilityAmount3.ToString();
+                    }
+
+                    if (string.IsNullOrEmpty(output.facilities.facilityAmount4.ToString()))
+                    {
+                        loads.facilities_facilityAmount4 = "0.00";
+                    }
+                    else
+                    {
+                        loads.facilities_facilityAmount4 = output.facilities.facilityAmount4.ToString();
+                    }
+
+                    if (string.IsNullOrEmpty(output.facilities.gracePeriod.ToString()))
+                    {
+                        loads.facilities_gracePeriod = "0";
+                    }
+                    else
+                    {
+                        loads.facilities_gracePeriod = output.facilities.gracePeriod.ToString();
+                    }
+
+                    if (string.IsNullOrEmpty(output.facilities.productName1))
+                    {
+                        loads.facilities_productName1 = "";
+                    }
+                    else
+                    {
+                        loads.facilities_productName1 = output.facilities.productName1.ToString();
+                    }
+
+                    if (string.IsNullOrEmpty(output.facilities.productName2))
+                    {
+                        loads.facilities_productName2 = "";
+                    }
+                    else
+                    {
+                        loads.facilities_productName2 = output.facilities.productName2.ToString();
+                    }
+
+                    if (string.IsNullOrEmpty(output.facilities.productName3))
+                    {
+                        loads.facilities_productName3 = "";
+                    }
+                    else
+                    {
+                        loads.facilities_productName3 = output.facilities.productName3.ToString();
+                    }
+
+                    if (string.IsNullOrEmpty(output.facilities.productName4))
+                    {
+                        loads.facilities_productName4 = "";
+                    }
+                    else
+                    {
+                        loads.facilities_productName4 = output.facilities.productName4.ToString();
+                    }
+
+                    if (string.IsNullOrEmpty(output.facilities.purposeCode))
+                    {
+                        loads.facilities_purposeCode = "";
+                    }
+                    else
+                    {
+                        loads.facilities_purposeCode = output.facilities.purposeCode.ToString();
+                    }
+
+                    if (string.IsNullOrEmpty(output.facilities.totFeesAmount.ToString()))
+                    {
+                        loads.facilities_totFeesAmount = "0.00";
+                    }
+                    else
+                    {
+                        loads.facilities_totFeesAmount = output.facilities.totFeesAmount.ToString();
+                    }
+
+                    if (string.IsNullOrEmpty(output.facilities.totFinancingAmount.ToString()))
+                    {
+                        loads.facilities_totFinancingAmount = "0.00";
+                    }
+                    else
+                    {
+                        loads.facilities_totFinancingAmount = output.facilities.totFinancingAmount.ToString();
+                    }
+
+                    if (string.IsNullOrEmpty(output.facilities.totFinancingAmountIncFlvm.ToString()))
+                    {
+                        loads.facilities_totFinancingAmountIncFlvm = "0.00";
+                    }
+                    else
+                    {
+                        loads.facilities_totFinancingAmountIncFlvm = output.facilities.totFinancingAmountIncFlvm.ToString();
+                    }
+
+                    if (string.IsNullOrEmpty(output.facilities.totInsAmount.ToString()))
+                    {
+                        loads.facilities_totInsAmount = "0.00";
+                    }
+                    else
+                    {
+                        loads.facilities_totInsAmount = output.facilities.totInsAmount.ToString();
+                    }
+
+                    if (string.IsNullOrEmpty(output.facilities.totValuationFees.ToString()))
+                    {
+                        loads.facilities_totValuationFees = "0.00";
+                    }
+                    else
+                    {
+                        loads.facilities_totValuationFees = output.facilities.totValuationFees.ToString();
+                    }
+                    // end facilities section 
+
+                    // start loanApplicationInfo section 
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.appStatus))
+                    {
+                        loads.loanApplicationInfo_appStatus = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_appStatus = output.loanApplicationInfo.appStatus.ToString();
+                    }
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.branchAddr1))
+                    {
+                        loads.loanApplicationInfo_branchAddr1 = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_branchAddr1 = output.loanApplicationInfo.branchAddr1.ToString();
+                    }
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.branchAddr2))
+                    {
+                        loads.loanApplicationInfo_branchAddr2 = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_branchAddr2 = output.loanApplicationInfo.branchAddr2.ToString();
+                    }
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.branchAddr3))
+                    {
+                        loads.loanApplicationInfo_branchAddr3 = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_branchAddr3 = output.loanApplicationInfo.branchAddr3.ToString();
+                    }
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.branchAddrCity))
+                    {
+                        loads.loanApplicationInfo_branchAddrCity = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_branchAddrCity = output.loanApplicationInfo.branchAddrCity.ToString();
+                    }
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.branchAddrCountry))
+                    {
+                        loads.loanApplicationInfo_branchAddrCountry = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_branchAddrCountry = output.loanApplicationInfo.branchAddrCountry.ToString();
+                    }
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.branchAddrPostcode))
+                    {
+                        loads.loanApplicationInfo_branchAddrPostcode = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_branchAddrPostcode = output.loanApplicationInfo.branchAddrPostcode.ToString();
+                    }
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.branchAddrState))
+                    {
+                        loads.loanApplicationInfo_branchAddrState = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_branchAddrState = output.loanApplicationInfo.branchAddrState.ToString();
+                    }
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.branchManagerEmail))
+                    {
+                        loads.loanApplicationInfo_branchManagerEmail = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_branchManagerEmail = output.loanApplicationInfo.branchManagerEmail.ToString();
+                    }
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.branchManagerName))
+                    {
+                        loads.loanApplicationInfo_branchManagerName = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_branchManagerName = output.loanApplicationInfo.branchManagerName.ToString();
+                    }
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.closingBranch))
+                    {
+                        loads.loanApplicationInfo_closingBranch = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_closingBranch = output.loanApplicationInfo.closingBranch.ToString();
+                    }
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.lendingType))
+                    {
+                        loads.loanApplicationInfo_lendingType = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_lendingType = output.loanApplicationInfo.lendingType.ToString();
+                    }
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.loAcceptanceDt.ToString()))
+                    {
+                        loads.loanApplicationInfo_loAcceptanceDt = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_loAcceptanceDt = DateTime.ParseExact(output.loanApplicationInfo.loAcceptanceDt.ToString(), "dd/MM/yyyy", null).ToString();
+                    }
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.mortgageCenterCode))
+                    {
+                        loads.loanApplicationInfo_mortgageCenterCode = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_mortgageCenterCode = output.loanApplicationInfo.mortgageCenterCode.ToString();
+                    }
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.mortgageCenterEmail))
+                    {
+                        loads.loanApplicationInfo_mortgageCenterEmail = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_mortgageCenterEmail = output.loanApplicationInfo.mortgageCenterEmail.ToString();
+                    }
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.salesEmail))
+                    {
+                        loads.loanApplicationInfo_salesEmail = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_salesEmail = output.loanApplicationInfo.salesEmail.ToString();
+                    }
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.salesName))
+                    {
+                        loads.loanApplicationInfo_salesName = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_salesName = output.loanApplicationInfo.salesName.ToString();
+                    }
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.solicitorAccountType))
+                    {
+                        loads.loanApplicationInfo_solicitorAccountType = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_solicitorAccountType = output.loanApplicationInfo.solicitorAccountType.ToString();
+                    }
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.solicitorAddr1))
+                    {
+                        loads.loanApplicationInfo_solicitorAddr1 = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_solicitorAddr1 = output.loanApplicationInfo.solicitorAddr1.ToString();
+                    }
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.solicitorAddr2))
+                    {
+                        loads.loanApplicationInfo_solicitorAddr2 = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_solicitorAddr2 = output.loanApplicationInfo.solicitorAddr2.ToString();
+                    }
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.solicitorAddr3))
+                    {
+                        loads.loanApplicationInfo_solicitorAddr3 = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_solicitorAddr3 = output.loanApplicationInfo.solicitorAddr3.ToString();
+                    }
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.solicitorCity))
+                    {
+                        loads.loanApplicationInfo_solicitorCity = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_solicitorCity = output.loanApplicationInfo.solicitorCity.ToString();
+                    }
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.solicitorCode))
+                    {
+                        loads.loanApplicationInfo_solicitorCode = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_solicitorCode = output.loanApplicationInfo.solicitorCode.ToString();
+                    }
+
+                    // new field solicitor fax
+                    loads.loanApplicationInfo_solicitorFaxNbr = "";
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.solicitorFaxNbr))
+                    {
+                        loads.loanApplicationInfo_solicitorFaxNbr = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_solicitorFaxNbr = output.loanApplicationInfo.solicitorFaxNbr.ToString();
+                    }
+
+
+                    // new field solicitor phone
+                    loads.loanApplicationInfo_solicitorTelNbr = "";
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.solicitorTelNbr))
+                    {
+                        loads.loanApplicationInfo_solicitorTelNbr = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_solicitorTelNbr = output.loanApplicationInfo.solicitorTelNbr.ToString();
+                    }
+
+                    /*
+                       public string loanApplicationInfo_phaseCode;
+                       public string loanApplicationInfo_phaseName;
+                       public string loanApplicationInfo_unitParcelNo;
+                       public string loanApplicationInfo_spaValue;
+                       public string loanApplicationInfo_category;
+                       */
+
+                    // dev portal new field loanApplicationInfo_phaseCode
+                    loads.loanApplicationInfo_phaseCode = "";
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.phaseCode))
+                    {
+                        loads.loanApplicationInfo_phaseCode = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_phaseCode = output.loanApplicationInfo.phaseCode.ToString();
+                    }
+
+                    // dev portal new field loanApplicationInfo_phaseName
+                    loads.loanApplicationInfo_phaseName = "";
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.phaseName))
+                    {
+                        loads.loanApplicationInfo_phaseName = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_phaseName = output.loanApplicationInfo.phaseName.ToString();
+                    }
+
+                    // dev portal new field loanApplicationInfo_unitParcelNo
+                    loads.loanApplicationInfo_unitParcelNo = "";
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.unitParcelNo))
+                    {
+                        loads.loanApplicationInfo_unitParcelNo = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_unitParcelNo = output.loanApplicationInfo.unitParcelNo.ToString();
+                    }
+
+                    // dev portal new field loanApplicationInfo_unitParcelNo
+                    // loads.loanApplicationInfo_spaValue = "";
+                    /*
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.spaValue))
+                    {
+                        loads.loanApplicationInfo_spaValue = "0.00";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_spaValue = output.loanApplicationInfo.spaValue.ToString();
+                    }
+                    */
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.spaValue.ToString()))
+                    {
+                        loads.loanApplicationInfo_spaValue = "0.00";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_spaValue = output.loanApplicationInfo.spaValue.ToString();
+                    }
+
+                    // dev portal new field loanApplicationInfo_category
+                    loads.loanApplicationInfo_category = "";
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.category))
+                    {
+                        loads.loanApplicationInfo_category = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_category = output.loanApplicationInfo.category.ToString();
+                    }
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.solicitorCountry))
+                    {
+                        loads.loanApplicationInfo_solicitorCountry = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_solicitorCountry = output.loanApplicationInfo.solicitorCountry.ToString();
+                    }
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.solicitorEmail))
+                    {
+                        loads.loanApplicationInfo_solicitorEmail = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_solicitorEmail = output.loanApplicationInfo.solicitorEmail.ToString();
+                    }
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.solicitorIntStatus))
+                    {
+                        loads.loanApplicationInfo_solicitorIntStatus = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_solicitorIntStatus = output.loanApplicationInfo.solicitorIntStatus.ToString();
+                    }
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.solicitorNBR))
+                    {
+                        loads.loanApplicationInfo_solicitorNBR = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_solicitorNBR = output.loanApplicationInfo.solicitorNBR.ToString();
+                    }
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.solicitorName))
+                    {
+                        loads.loanApplicationInfo_solicitorName = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_solicitorName = output.loanApplicationInfo.solicitorName.ToString();
+                    }
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.solicitorPostcode))
+                    {
+                        loads.loanApplicationInfo_solicitorPostcode = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_solicitorPostcode = output.loanApplicationInfo.solicitorPostcode.ToString();
+                    }
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.solicitorState))
+                    {
+                        loads.loanApplicationInfo_solicitorState = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_solicitorState = output.loanApplicationInfo.solicitorState.ToString();
+                    }
+
+                    /*
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.topupLoanInd))
+                    {
+                        loads.loanApplicationInfo_topupLoanInd = "";
+                    }
+                    else
+                    {
+                        loads.loanApplicationInfo_topupLoanInd = output.loanApplicationInfo.topupLoanInd.ToString();
+                    }                    
+                    */
+
+                    if (string.IsNullOrEmpty(output.loanApplicationInfo.topupLoanInd))
+                    {
                         loads.loanApplicationInfo_topupLoanInd = "False";
                     }
-                }
-                // end loanApplicationInfo section 
+                    else
+                    {
+                        if (output.loanApplicationInfo.topupLoanInd.ToString().ToUpper().Trim() == "YES")
+                        {
+                            loads.loanApplicationInfo_topupLoanInd = "True";
+                        }
+                        else
+                        {
+                            loads.loanApplicationInfo_topupLoanInd = "False";
+                        }
+                    }
+                    // end loanApplicationInfo section 
 
-                // start loanApptPersonnelInfo section
-                if (string.IsNullOrEmpty(output.loanApptPersonnelInfo.applicantAddr1))
-                {
-                    loads.loanApptPersonnelInfo_applicantAddr1 = "";
-                }
-                else
-                {
-                    loads.loanApptPersonnelInfo_applicantAddr1 = output.loanApptPersonnelInfo.applicantAddr1.ToString();
-                }
+                    // start loanApptPersonnelInfo section
+                    if (string.IsNullOrEmpty(output.loanApptPersonnelInfo.applicantAddr1))
+                    {
+                        loads.loanApptPersonnelInfo_applicantAddr1 = "";
+                    }
+                    else
+                    {
+                        loads.loanApptPersonnelInfo_applicantAddr1 = output.loanApptPersonnelInfo.applicantAddr1.ToString();
+                    }
 
-                if (string.IsNullOrEmpty(output.loanApptPersonnelInfo.applicantAddr2))
-                {
-                    loads.loanApptPersonnelInfo_applicantAddr2 = "";
-                }
-                else
-                {
-                    loads.loanApptPersonnelInfo_applicantAddr2 = output.loanApptPersonnelInfo.applicantAddr2.ToString();
-                }
+                    if (string.IsNullOrEmpty(output.loanApptPersonnelInfo.applicantAddr2))
+                    {
+                        loads.loanApptPersonnelInfo_applicantAddr2 = "";
+                    }
+                    else
+                    {
+                        loads.loanApptPersonnelInfo_applicantAddr2 = output.loanApptPersonnelInfo.applicantAddr2.ToString();
+                    }
 
-                if (string.IsNullOrEmpty(output.loanApptPersonnelInfo.applicantAddr3))
-                {
-                    loads.loanApptPersonnelInfo_applicantAddr3 = "";
-                }
-                else
-                {
-                    loads.loanApptPersonnelInfo_applicantAddr3 = output.loanApptPersonnelInfo.applicantAddr3.ToString();
-                }
+                    if (string.IsNullOrEmpty(output.loanApptPersonnelInfo.applicantAddr3))
+                    {
+                        loads.loanApptPersonnelInfo_applicantAddr3 = "";
+                    }
+                    else
+                    {
+                        loads.loanApptPersonnelInfo_applicantAddr3 = output.loanApptPersonnelInfo.applicantAddr3.ToString();
+                    }
 
-                if (string.IsNullOrEmpty(output.loanApptPersonnelInfo.applicantAddrCity))
-                {
-                    loads.loanApptPersonnelInfo_applicantAddrCity = "";
-                }
-                else
-                {
-                    loads.loanApptPersonnelInfo_applicantAddrCity = output.loanApptPersonnelInfo.applicantAddrCity.ToString();
-                }
+                    if (string.IsNullOrEmpty(output.loanApptPersonnelInfo.applicantAddrCity))
+                    {
+                        loads.loanApptPersonnelInfo_applicantAddrCity = "";
+                    }
+                    else
+                    {
+                        loads.loanApptPersonnelInfo_applicantAddrCity = output.loanApptPersonnelInfo.applicantAddrCity.ToString();
+                    }
 
-                if (string.IsNullOrEmpty(output.loanApptPersonnelInfo.applicantAddrCountry))
-                {
-                    loads.loanApptPersonnelInfo_applicantAddrCountry = "";
-                }
-                else
-                {
-                    loads.loanApptPersonnelInfo_applicantAddrCountry = output.loanApptPersonnelInfo.applicantAddrCountry.ToString();
-                }
+                    if (string.IsNullOrEmpty(output.loanApptPersonnelInfo.applicantAddrCountry))
+                    {
+                        loads.loanApptPersonnelInfo_applicantAddrCountry = "";
+                    }
+                    else
+                    {
+                        loads.loanApptPersonnelInfo_applicantAddrCountry = output.loanApptPersonnelInfo.applicantAddrCountry.ToString();
+                    }
 
-                if (string.IsNullOrEmpty(output.loanApptPersonnelInfo.applicantAddrPostcode))
-                {
-                    loads.loanApptPersonnelInfo_applicantAddrPostcode = "";
-                }
-                else
-                {
-                    loads.loanApptPersonnelInfo_applicantAddrPostcode = output.loanApptPersonnelInfo.applicantAddrPostcode.ToString();
-                }
+                    if (string.IsNullOrEmpty(output.loanApptPersonnelInfo.applicantAddrPostcode))
+                    {
+                        loads.loanApptPersonnelInfo_applicantAddrPostcode = "";
+                    }
+                    else
+                    {
+                        loads.loanApptPersonnelInfo_applicantAddrPostcode = output.loanApptPersonnelInfo.applicantAddrPostcode.ToString();
+                    }
 
-                if (string.IsNullOrEmpty(output.loanApptPersonnelInfo.applicantAddrState))
-                {
-                    loads.loanApptPersonnelInfo_applicantAddrState = "";
-                }
-                else
-                {
-                    loads.loanApptPersonnelInfo_applicantAddrState = output.loanApptPersonnelInfo.applicantAddrState.ToString();
-                }
+                    if (string.IsNullOrEmpty(output.loanApptPersonnelInfo.applicantAddrState))
+                    {
+                        loads.loanApptPersonnelInfo_applicantAddrState = "";
+                    }
+                    else
+                    {
+                        loads.loanApptPersonnelInfo_applicantAddrState = output.loanApptPersonnelInfo.applicantAddrState.ToString();
+                    }
 
-                if (string.IsNullOrEmpty(output.loanApptPersonnelInfo.applicantEmails))
-                {
-                    loads.loanApptPersonnelInfo_applicantEmails = "";
-                }
-                else
-                {
-                    loads.loanApptPersonnelInfo_applicantEmails = output.loanApptPersonnelInfo.applicantEmails.ToString();
-                }
+                    if (string.IsNullOrEmpty(output.loanApptPersonnelInfo.applicantEmails))
+                    {
+                        loads.loanApptPersonnelInfo_applicantEmails = "";
+                    }
+                    else
+                    {
+                        loads.loanApptPersonnelInfo_applicantEmails = output.loanApptPersonnelInfo.applicantEmails.ToString();
+                    }
 
-                if (string.IsNullOrEmpty(output.loanApptPersonnelInfo.applicantIDs))
-                {
-                    loads.loanApptPersonnelInfo_applicantIDs = "";
-                }
-                else
-                {
-                    loads.loanApptPersonnelInfo_applicantIDs = output.loanApptPersonnelInfo.applicantIDs.ToString();
-                }
+                    if (string.IsNullOrEmpty(output.loanApptPersonnelInfo.applicantIDs))
+                    {
+                        loads.loanApptPersonnelInfo_applicantIDs = "";
+                    }
+                    else
+                    {
+                        loads.loanApptPersonnelInfo_applicantIDs = output.loanApptPersonnelInfo.applicantIDs.ToString();
+                    }
 
-                if (string.IsNullOrEmpty(output.loanApptPersonnelInfo.applicantNamesCombine))
-                {
-                    loads.loanApptPersonnelInfo_applicantNamesCombine = "";
-                }
-                else
-                {
-                    loads.loanApptPersonnelInfo_applicantNamesCombine = output.loanApptPersonnelInfo.applicantNamesCombine.ToString();
-                }
+                    if (string.IsNullOrEmpty(output.loanApptPersonnelInfo.applicantNamesCombine))
+                    {
+                        loads.loanApptPersonnelInfo_applicantNamesCombine = "";
+                    }
+                    else
+                    {
+                        loads.loanApptPersonnelInfo_applicantNamesCombine = output.loanApptPersonnelInfo.applicantNamesCombine.ToString();
+                    }
 
-                if (string.IsNullOrEmpty(output.loanApptPersonnelInfo.chargorIDs))
-                {
-                    loads.loanApptPersonnelInfo_chargorIDs = "";
-                }
-                else
-                {
-                    loads.loanApptPersonnelInfo_chargorIDs = output.loanApptPersonnelInfo.chargorIDs.ToString();
-                }
+                    if (string.IsNullOrEmpty(output.loanApptPersonnelInfo.chargorIDs))
+                    {
+                        loads.loanApptPersonnelInfo_chargorIDs = "";
+                    }
+                    else
+                    {
+                        loads.loanApptPersonnelInfo_chargorIDs = output.loanApptPersonnelInfo.chargorIDs.ToString();
+                    }
 
-                if (string.IsNullOrEmpty(output.loanApptPersonnelInfo.chargorNames))
-                {
-                    loads.loanApptPersonnelInfo_chargorNames = "";
-                }
-                else
-                {
-                    loads.loanApptPersonnelInfo_chargorNames = output.loanApptPersonnelInfo.chargorNames.ToString();
-                }
+                    if (string.IsNullOrEmpty(output.loanApptPersonnelInfo.chargorNames))
+                    {
+                        loads.loanApptPersonnelInfo_chargorNames = "";
+                    }
+                    else
+                    {
+                        loads.loanApptPersonnelInfo_chargorNames = output.loanApptPersonnelInfo.chargorNames.ToString();
+                    }
 
-                if (string.IsNullOrEmpty(output.loanApptPersonnelInfo.eStatementFlagInd))
-                {
-                    loads.loanApptPersonnelInfo_eStatementFlagInd = "";
-                }
-                else
-                {
-                    loads.loanApptPersonnelInfo_eStatementFlagInd = output.loanApptPersonnelInfo.eStatementFlagInd.ToString();
-                }
+                    if (string.IsNullOrEmpty(output.loanApptPersonnelInfo.eStatementFlagInd))
+                    {
+                        loads.loanApptPersonnelInfo_eStatementFlagInd = "";
+                    }
+                    else
+                    {
+                        loads.loanApptPersonnelInfo_eStatementFlagInd = output.loanApptPersonnelInfo.eStatementFlagInd.ToString();
+                    }
 
-                if (string.IsNullOrEmpty(output.loanApptPersonnelInfo.guarantorIDs))
-                {
-                    loads.loanApptPersonnelInfo_guarantorIDs = "";
-                }
-                else
-                {
-                    loads.loanApptPersonnelInfo_guarantorIDs = output.loanApptPersonnelInfo.guarantorIDs.ToString();
-                }
+                    if (string.IsNullOrEmpty(output.loanApptPersonnelInfo.guarantorIDs))
+                    {
+                        loads.loanApptPersonnelInfo_guarantorIDs = "";
+                    }
+                    else
+                    {
+                        loads.loanApptPersonnelInfo_guarantorIDs = output.loanApptPersonnelInfo.guarantorIDs.ToString();
+                    }
 
-                if (string.IsNullOrEmpty(output.loanApptPersonnelInfo.guarantorNames))
-                {
-                    loads.loanApptPersonnelInfo_guarantorNames = "";
-                }
-                else
-                {
-                    loads.loanApptPersonnelInfo_guarantorNames = output.loanApptPersonnelInfo.guarantorNames.ToString();
-                }
+                    if (string.IsNullOrEmpty(output.loanApptPersonnelInfo.guarantorNames))
+                    {
+                        loads.loanApptPersonnelInfo_guarantorNames = "";
+                    }
+                    else
+                    {
+                        loads.loanApptPersonnelInfo_guarantorNames = output.loanApptPersonnelInfo.guarantorNames.ToString();
+                    }
 
-                if (string.IsNullOrEmpty(output.loanApptPersonnelInfo.priApplicantName))
-                {
-                    loads.loanApptPersonnelInfo_priApplicantName = "";
-                }
-                else
-                {
-                    loads.loanApptPersonnelInfo_priApplicantName = output.loanApptPersonnelInfo.priApplicantName.ToString();
-                }
+                    if (string.IsNullOrEmpty(output.loanApptPersonnelInfo.priApplicantName))
+                    {
+                        loads.loanApptPersonnelInfo_priApplicantName = "";
+                    }
+                    else
+                    {
+                        loads.loanApptPersonnelInfo_priApplicantName = output.loanApptPersonnelInfo.priApplicantName.ToString();
+                    }
 
-                loads.loanApptPersonnelInfo_priApplicantId = "";
-                // new field primary application id                     
-
-                if (string.IsNullOrEmpty(output.loanApptPersonnelInfo.priApplicantId))
-                {
                     loads.loanApptPersonnelInfo_priApplicantId = "";
+                    // new field primary application id                     
+
+                    if (string.IsNullOrEmpty(output.loanApptPersonnelInfo.priApplicantId))
+                    {
+                        loads.loanApptPersonnelInfo_priApplicantId = "";
+                    }
+                    else
+                    {
+                        loads.loanApptPersonnelInfo_priApplicantId = output.loanApptPersonnelInfo.priApplicantId.ToString();
+                    }
+
+                    // end loanApptPersonnelInfo section 
+
+
+                    // start respInfo section
+                    if (string.IsNullOrEmpty(output.respInfo.respCode))
+                    {
+                        loads.respInfo_respCode = "";
+                    }
+                    else
+                    {
+                        loads.respInfo_respCode = output.respInfo.respCode.ToString();
+                    }
+
+                    if (string.IsNullOrEmpty(output.respInfo.respDesc))
+                    {
+                        loads.respInfo_respDesc = "";
+                    }
+                    else
+                    {
+                        loads.respInfo_respDesc = output.respInfo.respDesc.ToString();
+                    }
+                    // end respInfo section
+
+                    list.Add(loads);
+
                 }
                 else
                 {
-                    loads.loanApptPersonnelInfo_priApplicantId = output.loanApptPersonnelInfo.priApplicantId.ToString();
+                    error = "DP_NewLI_GetDataFromLOADS failed with message: " + output.respInfo.respDesc.ToString();
+                    string errorDetail;
+                    errorDetail = "Input Param: " + arn.ToString();
+                    //errorDetail = output.respInfo.respCode.ToString() + "," + output.respInfo.respDesc.ToString();
+                    LogErrorToDB("DP_NewLI_GetDataFromLOADS", "Fail", error, errorDetail);
+
+                    ErrorCode = 1;
+                    ErrorDesc = "DP_NewLI_GetDataFromLOADS Failed with message: " + arn.ToString() + ";error:" + output.respInfo.respDesc.ToString();
                 }
-
-                // end loanApptPersonnelInfo section 
-
-
-                // start respInfo section
-                if (string.IsNullOrEmpty(output.respInfo.respCode))
-                {
-                    loads.respInfo_respCode = "";
-                }
-                else
-                {
-                    loads.respInfo_respCode = output.respInfo.respCode.ToString();
-                }
-
-                if (string.IsNullOrEmpty(output.respInfo.respDesc))
-                {
-                    loads.respInfo_respDesc = "";
-                }
-                else
-                {
-                    loads.respInfo_respDesc = output.respInfo.respDesc.ToString();
-                }
-                // end respInfo section
-
-                list.Add(loads);
-
-            }
-            else
-            {
-                error = "DP_NewLI_GetDataFromLOADS failed with message: " + output.respInfo.respDesc.ToString();
-                string errorDetail;
-                errorDetail = "Input Param: " + arn.ToString();
-                //errorDetail = output.respInfo.respCode.ToString() + "," + output.respInfo.respDesc.ToString();
-                LogErrorToDB("DP_NewLI_GetDataFromLOADS", "Fail", error, errorDetail);
-
-            }
-            /*
             }
             catch (Exception ex)
             {
@@ -5071,8 +8885,11 @@ namespace HLBBWS
                 string errorDetail;
                 errorDetail = "Input Param: " + arn.ToString();
                 LogErrorToDB("DP_NewLI_GetDataFromLOADS", "Exception", error, errorDetail);
+
+                ErrorCode = 1;
+                ErrorDesc = "DP_NewLI_GetDataFromLOADS failed with exception: " + arn.ToString() + ";error:" + errorDetail;
             }
-            */
+            
 
             return list;
         }
@@ -5133,170 +8950,178 @@ namespace HLBBWS
                         List<HLBBWS.AppWS.structureLOADS> list = new List<HLBBWS.AppWS.structureLOADS>();
 
                         string DP_GetDataFromLOADS_error = "";
+                        int errorcode = 0;
+                        string errordesc = "";
 
-                        list = ws.DP_NewLI_GetDataFromLOADS(dt.Rows[i]["ARN"].ToString());
+                        list = ws.DP_NewLI_GetDataFromLOADS(dt.Rows[i]["ARN"].ToString(),ref errorcode,ref errordesc);
 
-                        if (list.Count > 0)
+                        if (errorcode == 0)
                         {
-                            if (list[0].respInfo_respCode == "00")
+                            if (list.Count > 0)
                             {
-                                //SqlDataAdapter sqlDA2 = null;
-                                //sqlDA2 = new SqlDataAdapter();
-                                //sqlDA2.SelectCommand = new SqlCommand("dbo.loads_staging_insert_test", conn);            
+                                if (list[0].respInfo_respCode == "00")
+                                {
+                                    //SqlDataAdapter sqlDA2 = null;
+                                    //sqlDA2 = new SqlDataAdapter();
+                                    //sqlDA2.SelectCommand = new SqlCommand("dbo.loads_staging_insert_test", conn);            
 
 
-                                SqlConnection conn2 = null;
-                                conn2 = new SqlConnection(connstr);
+                                    SqlConnection conn2 = null;
+                                    conn2 = new SqlConnection(connstr);
 
-                                //SqlCommand sqlcommand1 = new SqlCommand("dbo.usp_loads_staging_insert_test @param_ARN,@RESPONSECODE,@RESPONSEDESCRIPTION", conn2);
+                                    //SqlCommand sqlcommand1 = new SqlCommand("dbo.usp_loads_staging_insert_test @param_ARN,@RESPONSECODE,@RESPONSEDESCRIPTION", conn2);
 
-                                //SqlCommand sqlcommand1 = new SqlCommand("dbo.usp_ws_loads_staging_insert @ARN  ,	@Status ,	@BranchAddr1 ,	@BranchAddr2  ,	@BranchAddr3  ,	@BranchAddrCity  ,	@BranchAddrCountry ,	@BranchAddrPostCode  ,	@BranchAddrState  ,	@BranchManagerEmailAddress  ,	@BranchManagerName  ,	@ClosingBranch ,	@DateOfLOAcceptance ,	@FinancingType  ,	@MortgateCenterCode  ,	@MortgateCenterEmail ,	@PFSalesEmailAddress ,	@PFCSalesName  ,	@SolicitorAccountNbr  ,	@SolicitorAccountType,	@SolicitorAddr1 ,	@SolicitorAddr2  ,	@SolicitorAddr3 ,	@SolicitorAddrCity  ,	@SolicitorAddrCountry  ,	@SolicitorAddrPostCode  ,	@SolicitorAddrState  ,	@SolicitorEmail  ,	@SolInternalStatus  ,	@SolicitorName  ,	@SolicitorCode  ,	@TopUpLoanIndicator  ,	@ChargorIDNumber ,	@ChargorName  ,	@CustomerAddr1  ,	@CustomerAddr2  ,	@CustomerAddr3  ,	@CustomerAddrCity  ,	@CustomerAddrCountry ,	@CustomerAddrPostCode ,	@CustomerAddrState,	@ApplicantEmail  ,	@CustomerID  ,	@ApplicantName  ,	@CustomerName  ,	@EStatementFlagIndicator ,	@GuarantorIDNumber ,	@GuarantorName ,	@DisbursementManner ,	@LoanAmount  ,	@FacilityAmount1  ,	@FacilityAmount2  ,	@FacilityAmount3  ,	@FacilityAmount4  ,	@FinancingProductName1  ,	@FinancingProductName2  ,	@FinancingProductName3  ,	@FinancingProductName4  ,	@GracePeriod  ,	@LegalFeesFinancedAmount  ,	@MRTAFinancedAmount  ,	@PurposeCode  ,	@TotalFinancingAmount  ,	@ValuationFeesFinancedAmount  ,	@BuildUpArea  ,	@DeveloperCode  ,	@DeveloperName  ,	@CollateralPurpose  ,	@LandArea  ,	@ProjectCode  ,	@ProjectName  ,	@PropertyAddress  ,	@PropertyType  ,	@ValuationRequired  ,	@TitleDetailsLO  ,	@ValuerAccountNBR  ,	@ValuerAccountType,	@ValuerAddr1  ,	@ValuerAddr2 ,	@ValuerAddr3 ,	@ValuerAddrCity  ,	@ValuerAddrCountry  ,	@ValuerAddrPostCode,	@ValuerAddrState,	@ValuerCode ,	@ValuerEmail,	@ValuerName ,	@VerbalIndicativeValue ,	@RESPONSECODE,	@RESPONSEDESCRIPTION", conn2);
-                                //SqlCommand sqlcommand1 = new SqlCommand("dbo.usp_ws_loads_staging_insert @ARN  ,	@Status ,	@BranchAddr1 ,	@BranchAddr2  ,	@BranchAddr3  ,	@BranchAddrCity  ,	@BranchAddrCountry ,	@BranchAddrPostCode  ,	@BranchAddrState  ,	@BranchManagerEmailAddress  ,	@BranchManagerName  ,	@ClosingBranch ,	@DateOfLOAcceptance ,	@FinancingType  ,	@MortgateCenterCode  ,	@MortgateCenterEmail ,	@PFSalesEmailAddress ,	@PFCSalesName  ,	@SolicitorAccountNbr  ,	@SolicitorAccountType,	@SolicitorAddr1 ,	@SolicitorAddr2  ,	@SolicitorAddr3 ,	@SolicitorAddrCity  ,	@SolicitorAddrCountry  ,	@SolicitorAddrPostCode  ,	@SolicitorAddrState  ,	@SolicitorEmail  ,	@SolInternalStatus  ,	@SolicitorName  ,	@SolicitorCode  ,	@TopUpLoanIndicator  ,	@ChargorIDNumber ,	@ChargorName  ,	@CustomerAddr1  ,	@CustomerAddr2  ,	@CustomerAddr3  ,	@CustomerAddrCity  ,	@CustomerAddrCountry ,	@CustomerAddrPostCode ,	@CustomerAddrState,	@ApplicantEmail  ,	@CustomerID  ,	@ApplicantName  ,	@CustomerName  ,	@EStatementFlagIndicator ,	@GuarantorIDNumber ,	@GuarantorName ,	@DisbursementManner ,	@LoanAmount  ,	@FacilityAmount1  ,	@FacilityAmount2  ,	@FacilityAmount3  ,	@FacilityAmount4  ,	@FinancingProductName1  ,	@FinancingProductName2  ,	@FinancingProductName3  ,	@FinancingProductName4  ,	@GracePeriod  ,	@LegalFeesFinancedAmount  ,	@MRTAFinancedAmount  ,	@PurposeCode  ,	@TotalFinancingAmount  ,	@ValuationFeesFinancedAmount  ,	@BuildUpArea  ,	@DeveloperCode  ,	@DeveloperName  ,	@CollateralPurpose  ,	@LandArea  ,	@ProjectCode  ,	@ProjectName  ,	@PropertyAddress  ,	@PropertyType  ,	@ValuationRequired  ,	@TitleDetailsLO  ,	@ValuerAccountNBR  ,	@ValuerAccountType,	@ValuerAddr1  ,	@ValuerAddr2 ,	@ValuerAddr3 ,	@ValuerAddrCity  ,	@ValuerAddrCountry  ,	@ValuerAddrPostCode,	@ValuerAddrState,	@ValuerCode ,	@ValuerEmail,	@ValuerName ,	@VerbalIndicativeValue ,	@RESPONSECODE,	@RESPONSEDESCRIPTION, @priApplicantId, @valuerFaxNbr, @valuerTelNbr, @solicitorFaxNbr, @solicitorTelNbr", conn2); 
-                                SqlCommand sqlcommand1 = new SqlCommand("dbo.usp_ws_loads_staging_insert @ARN  ,	@Status ,	@BranchAddr1 ,	@BranchAddr2  ,	@BranchAddr3  ,	@BranchAddrCity  ,	@BranchAddrCountry ,	@BranchAddrPostCode  ,	@BranchAddrState  ,	@BranchManagerEmailAddress  ,	@BranchManagerName  ,	@ClosingBranch ,	@DateOfLOAcceptance ,	@FinancingType  ,	@MortgateCenterCode  ,	@MortgateCenterEmail ,	@PFSalesEmailAddress ,	@PFCSalesName  ,	@SolicitorAccountNbr  ,	@SolicitorAccountType,	@SolicitorAddr1 ,	@SolicitorAddr2  ,	@SolicitorAddr3 ,	@SolicitorAddrCity  ,	@SolicitorAddrCountry  ,	@SolicitorAddrPostCode  ,	@SolicitorAddrState  ,	@SolicitorEmail  ,	@SolInternalStatus  ,	@SolicitorName  ,	@SolicitorCode  ,	@TopUpLoanIndicator  ,	@ChargorIDNumber ,	@ChargorName  ,	@CustomerAddr1  ,	@CustomerAddr2  ,	@CustomerAddr3  ,	@CustomerAddrCity  ,	@CustomerAddrCountry ,	@CustomerAddrPostCode ,	@CustomerAddrState,	@ApplicantEmail  ,	@CustomerID  ,	@ApplicantName  ,	@CustomerName  ,	@EStatementFlagIndicator ,	@GuarantorIDNumber ,	@GuarantorName ,	@DisbursementManner ,	@LoanAmount  ,	@FacilityAmount1  ,	@FacilityAmount2  ,	@FacilityAmount3  ,	@FacilityAmount4  ,	@FinancingProductName1  ,	@FinancingProductName2  ,	@FinancingProductName3  ,	@FinancingProductName4  ,	@GracePeriod  ,	@LegalFeesFinancedAmount  ,	@MRTAFinancedAmount  ,	@PurposeCode  ,	@TotalFinancingAmount  ,	@ValuationFeesFinancedAmount  ,	@BuildUpArea  ,	@DeveloperCode  ,	@DeveloperName  ,	@CollateralPurpose  ,	@LandArea  ,	@ProjectCode  ,	@ProjectName  ,	@PropertyAddress  ,	@PropertyType  ,	@ValuationRequired  ,	@TitleDetailsLO  ,	@ValuerAccountNBR  ,	@ValuerAccountType,	@ValuerAddr1  ,	@ValuerAddr2 ,	@ValuerAddr3 ,	@ValuerAddrCity  ,	@ValuerAddrCountry  ,	@ValuerAddrPostCode,	@ValuerAddrState,	@ValuerCode ,	@ValuerEmail,	@ValuerName ,	@VerbalIndicativeValue ,	@RESPONSECODE,	@RESPONSEDESCRIPTION, @priApplicantId, @valuerFaxNbr, @valuerTelNbr, @solicitorFaxNbr, @solicitorTelNbr,@phaseCode,@phaseName ,@unitParcelNo ,@spaValue,@category ", conn2);
+                                    //SqlCommand sqlcommand1 = new SqlCommand("dbo.usp_ws_loads_staging_insert @ARN  ,	@Status ,	@BranchAddr1 ,	@BranchAddr2  ,	@BranchAddr3  ,	@BranchAddrCity  ,	@BranchAddrCountry ,	@BranchAddrPostCode  ,	@BranchAddrState  ,	@BranchManagerEmailAddress  ,	@BranchManagerName  ,	@ClosingBranch ,	@DateOfLOAcceptance ,	@FinancingType  ,	@MortgateCenterCode  ,	@MortgateCenterEmail ,	@PFSalesEmailAddress ,	@PFCSalesName  ,	@SolicitorAccountNbr  ,	@SolicitorAccountType,	@SolicitorAddr1 ,	@SolicitorAddr2  ,	@SolicitorAddr3 ,	@SolicitorAddrCity  ,	@SolicitorAddrCountry  ,	@SolicitorAddrPostCode  ,	@SolicitorAddrState  ,	@SolicitorEmail  ,	@SolInternalStatus  ,	@SolicitorName  ,	@SolicitorCode  ,	@TopUpLoanIndicator  ,	@ChargorIDNumber ,	@ChargorName  ,	@CustomerAddr1  ,	@CustomerAddr2  ,	@CustomerAddr3  ,	@CustomerAddrCity  ,	@CustomerAddrCountry ,	@CustomerAddrPostCode ,	@CustomerAddrState,	@ApplicantEmail  ,	@CustomerID  ,	@ApplicantName  ,	@CustomerName  ,	@EStatementFlagIndicator ,	@GuarantorIDNumber ,	@GuarantorName ,	@DisbursementManner ,	@LoanAmount  ,	@FacilityAmount1  ,	@FacilityAmount2  ,	@FacilityAmount3  ,	@FacilityAmount4  ,	@FinancingProductName1  ,	@FinancingProductName2  ,	@FinancingProductName3  ,	@FinancingProductName4  ,	@GracePeriod  ,	@LegalFeesFinancedAmount  ,	@MRTAFinancedAmount  ,	@PurposeCode  ,	@TotalFinancingAmount  ,	@ValuationFeesFinancedAmount  ,	@BuildUpArea  ,	@DeveloperCode  ,	@DeveloperName  ,	@CollateralPurpose  ,	@LandArea  ,	@ProjectCode  ,	@ProjectName  ,	@PropertyAddress  ,	@PropertyType  ,	@ValuationRequired  ,	@TitleDetailsLO  ,	@ValuerAccountNBR  ,	@ValuerAccountType,	@ValuerAddr1  ,	@ValuerAddr2 ,	@ValuerAddr3 ,	@ValuerAddrCity  ,	@ValuerAddrCountry  ,	@ValuerAddrPostCode,	@ValuerAddrState,	@ValuerCode ,	@ValuerEmail,	@ValuerName ,	@VerbalIndicativeValue ,	@RESPONSECODE,	@RESPONSEDESCRIPTION", conn2);
+                                    //SqlCommand sqlcommand1 = new SqlCommand("dbo.usp_ws_loads_staging_insert @ARN  ,	@Status ,	@BranchAddr1 ,	@BranchAddr2  ,	@BranchAddr3  ,	@BranchAddrCity  ,	@BranchAddrCountry ,	@BranchAddrPostCode  ,	@BranchAddrState  ,	@BranchManagerEmailAddress  ,	@BranchManagerName  ,	@ClosingBranch ,	@DateOfLOAcceptance ,	@FinancingType  ,	@MortgateCenterCode  ,	@MortgateCenterEmail ,	@PFSalesEmailAddress ,	@PFCSalesName  ,	@SolicitorAccountNbr  ,	@SolicitorAccountType,	@SolicitorAddr1 ,	@SolicitorAddr2  ,	@SolicitorAddr3 ,	@SolicitorAddrCity  ,	@SolicitorAddrCountry  ,	@SolicitorAddrPostCode  ,	@SolicitorAddrState  ,	@SolicitorEmail  ,	@SolInternalStatus  ,	@SolicitorName  ,	@SolicitorCode  ,	@TopUpLoanIndicator  ,	@ChargorIDNumber ,	@ChargorName  ,	@CustomerAddr1  ,	@CustomerAddr2  ,	@CustomerAddr3  ,	@CustomerAddrCity  ,	@CustomerAddrCountry ,	@CustomerAddrPostCode ,	@CustomerAddrState,	@ApplicantEmail  ,	@CustomerID  ,	@ApplicantName  ,	@CustomerName  ,	@EStatementFlagIndicator ,	@GuarantorIDNumber ,	@GuarantorName ,	@DisbursementManner ,	@LoanAmount  ,	@FacilityAmount1  ,	@FacilityAmount2  ,	@FacilityAmount3  ,	@FacilityAmount4  ,	@FinancingProductName1  ,	@FinancingProductName2  ,	@FinancingProductName3  ,	@FinancingProductName4  ,	@GracePeriod  ,	@LegalFeesFinancedAmount  ,	@MRTAFinancedAmount  ,	@PurposeCode  ,	@TotalFinancingAmount  ,	@ValuationFeesFinancedAmount  ,	@BuildUpArea  ,	@DeveloperCode  ,	@DeveloperName  ,	@CollateralPurpose  ,	@LandArea  ,	@ProjectCode  ,	@ProjectName  ,	@PropertyAddress  ,	@PropertyType  ,	@ValuationRequired  ,	@TitleDetailsLO  ,	@ValuerAccountNBR  ,	@ValuerAccountType,	@ValuerAddr1  ,	@ValuerAddr2 ,	@ValuerAddr3 ,	@ValuerAddrCity  ,	@ValuerAddrCountry  ,	@ValuerAddrPostCode,	@ValuerAddrState,	@ValuerCode ,	@ValuerEmail,	@ValuerName ,	@VerbalIndicativeValue ,	@RESPONSECODE,	@RESPONSEDESCRIPTION, @priApplicantId, @valuerFaxNbr, @valuerTelNbr, @solicitorFaxNbr, @solicitorTelNbr", conn2); 
+                                    SqlCommand sqlcommand1 = new SqlCommand("dbo.usp_ws_loads_staging_insert @ARN  ,	@Status ,	@BranchAddr1 ,	@BranchAddr2  ,	@BranchAddr3  ,	@BranchAddrCity  ,	@BranchAddrCountry ,	@BranchAddrPostCode  ,	@BranchAddrState  ,	@BranchManagerEmailAddress  ,	@BranchManagerName  ,	@ClosingBranch ,	@DateOfLOAcceptance ,	@FinancingType  ,	@MortgateCenterCode  ,	@MortgateCenterEmail ,	@PFSalesEmailAddress ,	@PFCSalesName  ,	@SolicitorAccountNbr  ,	@SolicitorAccountType,	@SolicitorAddr1 ,	@SolicitorAddr2  ,	@SolicitorAddr3 ,	@SolicitorAddrCity  ,	@SolicitorAddrCountry  ,	@SolicitorAddrPostCode  ,	@SolicitorAddrState  ,	@SolicitorEmail  ,	@SolInternalStatus  ,	@SolicitorName  ,	@SolicitorCode  ,	@TopUpLoanIndicator  ,	@ChargorIDNumber ,	@ChargorName  ,	@CustomerAddr1  ,	@CustomerAddr2  ,	@CustomerAddr3  ,	@CustomerAddrCity  ,	@CustomerAddrCountry ,	@CustomerAddrPostCode ,	@CustomerAddrState,	@ApplicantEmail  ,	@CustomerID  ,	@ApplicantName  ,	@CustomerName  ,	@EStatementFlagIndicator ,	@GuarantorIDNumber ,	@GuarantorName ,	@DisbursementManner ,	@LoanAmount  ,	@FacilityAmount1  ,	@FacilityAmount2  ,	@FacilityAmount3  ,	@FacilityAmount4  ,	@FinancingProductName1  ,	@FinancingProductName2  ,	@FinancingProductName3  ,	@FinancingProductName4  ,	@GracePeriod  ,	@LegalFeesFinancedAmount  ,	@MRTAFinancedAmount  ,	@PurposeCode  ,	@TotalFinancingAmount  ,	@ValuationFeesFinancedAmount  ,	@BuildUpArea  ,	@DeveloperCode  ,	@DeveloperName  ,	@CollateralPurpose  ,	@LandArea  ,	@ProjectCode  ,	@ProjectName  ,	@PropertyAddress  ,	@PropertyType  ,	@ValuationRequired  ,	@TitleDetailsLO  ,	@ValuerAccountNBR  ,	@ValuerAccountType,	@ValuerAddr1  ,	@ValuerAddr2 ,	@ValuerAddr3 ,	@ValuerAddrCity  ,	@ValuerAddrCountry  ,	@ValuerAddrPostCode,	@ValuerAddrState,	@ValuerCode ,	@ValuerEmail,	@ValuerName ,	@VerbalIndicativeValue ,	@RESPONSECODE,	@RESPONSEDESCRIPTION, @priApplicantId, @valuerFaxNbr, @valuerTelNbr, @solicitorFaxNbr, @solicitorTelNbr,@phaseCode,@phaseName ,@unitParcelNo ,@spaValue,@category ", conn2);
 
-                                sqlcommand1.Parameters.AddWithValue("@ARN", dt.Rows[i]["ARN"].ToString());
-                                sqlcommand1.Parameters.AddWithValue("@Status", list[0].loanApplicationInfo_appStatus);
-                                sqlcommand1.Parameters.AddWithValue("@BranchAddr1", list[0].loanApplicationInfo_branchAddr1);
-                                sqlcommand1.Parameters.AddWithValue("@BranchAddr2", list[0].loanApplicationInfo_branchAddr2);
-                                sqlcommand1.Parameters.AddWithValue("@BranchAddr3", list[0].loanApplicationInfo_branchAddr3);
-                                sqlcommand1.Parameters.AddWithValue("@BranchAddrCity", list[0].loanApplicationInfo_branchAddrCity);
-                                sqlcommand1.Parameters.AddWithValue("@BranchAddrCountry", list[0].loanApplicationInfo_branchAddrCountry);
-                                sqlcommand1.Parameters.AddWithValue("@BranchAddrPostCode", list[0].loanApplicationInfo_branchAddrPostcode);
-                                sqlcommand1.Parameters.AddWithValue("@BranchAddrState", list[0].loanApplicationInfo_branchAddrState);
-                                sqlcommand1.Parameters.AddWithValue("@BranchManagerEmailAddress", list[0].loanApplicationInfo_branchManagerEmail);
-                                sqlcommand1.Parameters.AddWithValue("@BranchManagerName", list[0].loanApplicationInfo_branchManagerName);
-                                sqlcommand1.Parameters.AddWithValue("@ClosingBranch", list[0].loanApplicationInfo_closingBranch);
-                                sqlcommand1.Parameters.AddWithValue("@DateOfLOAcceptance", list[0].loanApplicationInfo_loAcceptanceDt);
+                                    sqlcommand1.Parameters.AddWithValue("@ARN", dt.Rows[i]["ARN"].ToString());
+                                    sqlcommand1.Parameters.AddWithValue("@Status", list[0].loanApplicationInfo_appStatus);
+                                    sqlcommand1.Parameters.AddWithValue("@BranchAddr1", list[0].loanApplicationInfo_branchAddr1);
+                                    sqlcommand1.Parameters.AddWithValue("@BranchAddr2", list[0].loanApplicationInfo_branchAddr2);
+                                    sqlcommand1.Parameters.AddWithValue("@BranchAddr3", list[0].loanApplicationInfo_branchAddr3);
+                                    sqlcommand1.Parameters.AddWithValue("@BranchAddrCity", list[0].loanApplicationInfo_branchAddrCity);
+                                    sqlcommand1.Parameters.AddWithValue("@BranchAddrCountry", list[0].loanApplicationInfo_branchAddrCountry);
+                                    sqlcommand1.Parameters.AddWithValue("@BranchAddrPostCode", list[0].loanApplicationInfo_branchAddrPostcode);
+                                    sqlcommand1.Parameters.AddWithValue("@BranchAddrState", list[0].loanApplicationInfo_branchAddrState);
+                                    sqlcommand1.Parameters.AddWithValue("@BranchManagerEmailAddress", list[0].loanApplicationInfo_branchManagerEmail);
+                                    sqlcommand1.Parameters.AddWithValue("@BranchManagerName", list[0].loanApplicationInfo_branchManagerName);
+                                    sqlcommand1.Parameters.AddWithValue("@ClosingBranch", list[0].loanApplicationInfo_closingBranch);
+                                    sqlcommand1.Parameters.AddWithValue("@DateOfLOAcceptance", list[0].loanApplicationInfo_loAcceptanceDt);
 
-                                // sqlcommand1.Parameters.AddWithValue("@FinancingType", list[0].collaterals_financingType);
-                                sqlcommand1.Parameters.AddWithValue("@FinancingType", list[0].loanApplicationInfo_lendingType);
-                                sqlcommand1.Parameters.AddWithValue("@MortgateCenterCode", list[0].loanApplicationInfo_mortgageCenterCode);
-                                sqlcommand1.Parameters.AddWithValue("@MortgateCenterEmail", list[0].loanApplicationInfo_mortgageCenterEmail);
-                                sqlcommand1.Parameters.AddWithValue("@PFSalesEmailAddress", list[0].loanApplicationInfo_salesEmail);
-                                sqlcommand1.Parameters.AddWithValue("@PFCSalesName", list[0].loanApplicationInfo_salesName);
-                                sqlcommand1.Parameters.AddWithValue("@SolicitorAccountNbr", list[0].loanApplicationInfo_solicitorNBR);
-                                sqlcommand1.Parameters.AddWithValue("@SolicitorAccountType", list[0].loanApplicationInfo_solicitorAccountType);
-                                sqlcommand1.Parameters.AddWithValue("@SolicitorAddr1", list[0].loanApplicationInfo_solicitorAddr1);
-                                sqlcommand1.Parameters.AddWithValue("@SolicitorAddr2", list[0].loanApplicationInfo_solicitorAddr2);
-                                //sqlcommand1.Parameters.AddWithValue("@SolicitorAddr3", list[0].loanApptPersonnelInfo_applicantAddr3);
-                                sqlcommand1.Parameters.AddWithValue("@SolicitorAddr3", list[0].loanApplicationInfo_solicitorAddr3);
+                                    // sqlcommand1.Parameters.AddWithValue("@FinancingType", list[0].collaterals_financingType);
+                                    sqlcommand1.Parameters.AddWithValue("@FinancingType", list[0].loanApplicationInfo_lendingType);
+                                    sqlcommand1.Parameters.AddWithValue("@MortgateCenterCode", list[0].loanApplicationInfo_mortgageCenterCode);
+                                    sqlcommand1.Parameters.AddWithValue("@MortgateCenterEmail", list[0].loanApplicationInfo_mortgageCenterEmail);
+                                    sqlcommand1.Parameters.AddWithValue("@PFSalesEmailAddress", list[0].loanApplicationInfo_salesEmail);
+                                    sqlcommand1.Parameters.AddWithValue("@PFCSalesName", list[0].loanApplicationInfo_salesName);
+                                    sqlcommand1.Parameters.AddWithValue("@SolicitorAccountNbr", list[0].loanApplicationInfo_solicitorNBR);
+                                    sqlcommand1.Parameters.AddWithValue("@SolicitorAccountType", list[0].loanApplicationInfo_solicitorAccountType);
+                                    sqlcommand1.Parameters.AddWithValue("@SolicitorAddr1", list[0].loanApplicationInfo_solicitorAddr1);
+                                    sqlcommand1.Parameters.AddWithValue("@SolicitorAddr2", list[0].loanApplicationInfo_solicitorAddr2);
+                                    //sqlcommand1.Parameters.AddWithValue("@SolicitorAddr3", list[0].loanApptPersonnelInfo_applicantAddr3);
+                                    sqlcommand1.Parameters.AddWithValue("@SolicitorAddr3", list[0].loanApplicationInfo_solicitorAddr3);
 
-                                //sqlcommand1.Parameters.AddWithValue("@SolicitorAddrCity", list[0].loanApptPersonnelInfo_applicantAddrCity);
-                                sqlcommand1.Parameters.AddWithValue("@SolicitorAddrCity", list[0].loanApplicationInfo_solicitorCity);
-                                sqlcommand1.Parameters.AddWithValue("@SolicitorAddrCountry", list[0].loanApplicationInfo_solicitorCountry);
-                                sqlcommand1.Parameters.AddWithValue("@SolicitorAddrPostCode", list[0].loanApplicationInfo_solicitorPostcode);
-                                sqlcommand1.Parameters.AddWithValue("@SolicitorAddrState", list[0].loanApplicationInfo_solicitorState);
-                                sqlcommand1.Parameters.AddWithValue("@SolicitorEmail", list[0].loanApplicationInfo_solicitorEmail);
-                                sqlcommand1.Parameters.AddWithValue("@SolInternalStatus", list[0].loanApplicationInfo_solicitorIntStatus);
-                                sqlcommand1.Parameters.AddWithValue("@SolicitorName", list[0].loanApplicationInfo_solicitorName);
-                                sqlcommand1.Parameters.AddWithValue("@SolicitorCode", list[0].loanApplicationInfo_solicitorCode);
-                                sqlcommand1.Parameters.AddWithValue("@TopUpLoanIndicator", list[0].loanApplicationInfo_topupLoanInd);
-                                sqlcommand1.Parameters.AddWithValue("@ChargorIDNumber", list[0].loanApptPersonnelInfo_chargorIDs);
+                                    //sqlcommand1.Parameters.AddWithValue("@SolicitorAddrCity", list[0].loanApptPersonnelInfo_applicantAddrCity);
+                                    sqlcommand1.Parameters.AddWithValue("@SolicitorAddrCity", list[0].loanApplicationInfo_solicitorCity);
+                                    sqlcommand1.Parameters.AddWithValue("@SolicitorAddrCountry", list[0].loanApplicationInfo_solicitorCountry);
+                                    sqlcommand1.Parameters.AddWithValue("@SolicitorAddrPostCode", list[0].loanApplicationInfo_solicitorPostcode);
+                                    sqlcommand1.Parameters.AddWithValue("@SolicitorAddrState", list[0].loanApplicationInfo_solicitorState);
+                                    sqlcommand1.Parameters.AddWithValue("@SolicitorEmail", list[0].loanApplicationInfo_solicitorEmail);
+                                    sqlcommand1.Parameters.AddWithValue("@SolInternalStatus", list[0].loanApplicationInfo_solicitorIntStatus);
+                                    sqlcommand1.Parameters.AddWithValue("@SolicitorName", list[0].loanApplicationInfo_solicitorName);
+                                    sqlcommand1.Parameters.AddWithValue("@SolicitorCode", list[0].loanApplicationInfo_solicitorCode);
+                                    sqlcommand1.Parameters.AddWithValue("@TopUpLoanIndicator", list[0].loanApplicationInfo_topupLoanInd);
+                                    sqlcommand1.Parameters.AddWithValue("@ChargorIDNumber", list[0].loanApptPersonnelInfo_chargorIDs);
 
-                                sqlcommand1.Parameters.AddWithValue("@ChargorName", list[0].loanApptPersonnelInfo_chargorNames);
-                                sqlcommand1.Parameters.AddWithValue("@CustomerAddr1", list[0].loanApptPersonnelInfo_applicantAddr1);
-                                sqlcommand1.Parameters.AddWithValue("@CustomerAddr2", list[0].loanApptPersonnelInfo_applicantAddr2);
-                                sqlcommand1.Parameters.AddWithValue("@CustomerAddr3", list[0].loanApptPersonnelInfo_applicantAddr3);
-                                sqlcommand1.Parameters.AddWithValue("@CustomerAddrCity", list[0].loanApptPersonnelInfo_applicantAddrCity);
-                                sqlcommand1.Parameters.AddWithValue("@CustomerAddrCountry", list[0].loanApptPersonnelInfo_applicantAddrCountry);
-                                sqlcommand1.Parameters.AddWithValue("@CustomerAddrPostCode", list[0].loanApptPersonnelInfo_applicantAddrPostcode);
-                                sqlcommand1.Parameters.AddWithValue("@CustomerAddrState", list[0].loanApptPersonnelInfo_applicantAddrState);
-                                sqlcommand1.Parameters.AddWithValue("@ApplicantEmail ", list[0].loanApptPersonnelInfo_applicantEmails);
+                                    sqlcommand1.Parameters.AddWithValue("@ChargorName", list[0].loanApptPersonnelInfo_chargorNames);
+                                    sqlcommand1.Parameters.AddWithValue("@CustomerAddr1", list[0].loanApptPersonnelInfo_applicantAddr1);
+                                    sqlcommand1.Parameters.AddWithValue("@CustomerAddr2", list[0].loanApptPersonnelInfo_applicantAddr2);
+                                    sqlcommand1.Parameters.AddWithValue("@CustomerAddr3", list[0].loanApptPersonnelInfo_applicantAddr3);
+                                    sqlcommand1.Parameters.AddWithValue("@CustomerAddrCity", list[0].loanApptPersonnelInfo_applicantAddrCity);
+                                    sqlcommand1.Parameters.AddWithValue("@CustomerAddrCountry", list[0].loanApptPersonnelInfo_applicantAddrCountry);
+                                    sqlcommand1.Parameters.AddWithValue("@CustomerAddrPostCode", list[0].loanApptPersonnelInfo_applicantAddrPostcode);
+                                    sqlcommand1.Parameters.AddWithValue("@CustomerAddrState", list[0].loanApptPersonnelInfo_applicantAddrState);
+                                    sqlcommand1.Parameters.AddWithValue("@ApplicantEmail ", list[0].loanApptPersonnelInfo_applicantEmails);
 
-                                sqlcommand1.Parameters.AddWithValue("@CustomerID", list[0].loanApptPersonnelInfo_applicantIDs);
-                                sqlcommand1.Parameters.AddWithValue("@ApplicantName", list[0].loanApptPersonnelInfo_priApplicantName);
-                                sqlcommand1.Parameters.AddWithValue("@CustomerName", list[0].loanApptPersonnelInfo_applicantNamesCombine);
-                                sqlcommand1.Parameters.AddWithValue("@EStatementFlagIndicator", list[0].loanApptPersonnelInfo_eStatementFlagInd);
-                                sqlcommand1.Parameters.AddWithValue("@GuarantorIDNumber", list[0].loanApptPersonnelInfo_guarantorIDs);
-                                sqlcommand1.Parameters.AddWithValue("@GuarantorName", list[0].loanApptPersonnelInfo_guarantorNames);
-                                sqlcommand1.Parameters.AddWithValue("@DisbursementManner", list[0].facilities_disbursementManner);
-                                sqlcommand1.Parameters.AddWithValue("@LoanAmount", list[0].facilities_totFinancingAmount);
-                                sqlcommand1.Parameters.AddWithValue("@FacilityAmount1", list[0].facilities_facilityAmount1);
-                                sqlcommand1.Parameters.AddWithValue("@FacilityAmount2", list[0].facilities_facilityAmount2);
-                                sqlcommand1.Parameters.AddWithValue("@FacilityAmount3", list[0].facilities_facilityAmount3);
-                                sqlcommand1.Parameters.AddWithValue("@FacilityAmount4", list[0].facilities_facilityAmount4);
+                                    sqlcommand1.Parameters.AddWithValue("@CustomerID", list[0].loanApptPersonnelInfo_applicantIDs);
+                                    sqlcommand1.Parameters.AddWithValue("@ApplicantName", list[0].loanApptPersonnelInfo_priApplicantName);
+                                    sqlcommand1.Parameters.AddWithValue("@CustomerName", list[0].loanApptPersonnelInfo_applicantNamesCombine);
+                                    sqlcommand1.Parameters.AddWithValue("@EStatementFlagIndicator", list[0].loanApptPersonnelInfo_eStatementFlagInd);
+                                    sqlcommand1.Parameters.AddWithValue("@GuarantorIDNumber", list[0].loanApptPersonnelInfo_guarantorIDs);
+                                    sqlcommand1.Parameters.AddWithValue("@GuarantorName", list[0].loanApptPersonnelInfo_guarantorNames);
+                                    sqlcommand1.Parameters.AddWithValue("@DisbursementManner", list[0].facilities_disbursementManner);
+                                    sqlcommand1.Parameters.AddWithValue("@LoanAmount", list[0].facilities_totFinancingAmount);
+                                    sqlcommand1.Parameters.AddWithValue("@FacilityAmount1", list[0].facilities_facilityAmount1);
+                                    sqlcommand1.Parameters.AddWithValue("@FacilityAmount2", list[0].facilities_facilityAmount2);
+                                    sqlcommand1.Parameters.AddWithValue("@FacilityAmount3", list[0].facilities_facilityAmount3);
+                                    sqlcommand1.Parameters.AddWithValue("@FacilityAmount4", list[0].facilities_facilityAmount4);
 
-                                sqlcommand1.Parameters.AddWithValue("@FinancingProductName1", list[0].facilities_productName1);
-                                sqlcommand1.Parameters.AddWithValue("@FinancingProductName2", list[0].facilities_productName2);
-                                sqlcommand1.Parameters.AddWithValue("@FinancingProductName3", list[0].facilities_productName3);
-                                sqlcommand1.Parameters.AddWithValue("@FinancingProductName4", list[0].facilities_productName4);
-                                sqlcommand1.Parameters.AddWithValue("@GracePeriod", list[0].facilities_gracePeriod);
-                                sqlcommand1.Parameters.AddWithValue("@LegalFeesFinancedAmount", list[0].facilities_totFeesAmount);
-                                sqlcommand1.Parameters.AddWithValue("@MRTAFinancedAmount", list[0].facilities_totInsAmount);
-                                sqlcommand1.Parameters.AddWithValue("@PurposeCode", list[0].facilities_purposeCode);
-                                sqlcommand1.Parameters.AddWithValue("@TotalFinancingAmount", list[0].facilities_totFinancingAmountIncFlvm);
-                                sqlcommand1.Parameters.AddWithValue("@ValuationFeesFinancedAmount", list[0].facilities_totValuationFees);
-                                sqlcommand1.Parameters.AddWithValue("@BuildUpArea", list[0].collaterals_buildUpArea);
-                                sqlcommand1.Parameters.AddWithValue("@DeveloperCode", list[0].collaterals_developerCode);
+                                    sqlcommand1.Parameters.AddWithValue("@FinancingProductName1", list[0].facilities_productName1);
+                                    sqlcommand1.Parameters.AddWithValue("@FinancingProductName2", list[0].facilities_productName2);
+                                    sqlcommand1.Parameters.AddWithValue("@FinancingProductName3", list[0].facilities_productName3);
+                                    sqlcommand1.Parameters.AddWithValue("@FinancingProductName4", list[0].facilities_productName4);
+                                    sqlcommand1.Parameters.AddWithValue("@GracePeriod", list[0].facilities_gracePeriod);
+                                    sqlcommand1.Parameters.AddWithValue("@LegalFeesFinancedAmount", list[0].facilities_totFeesAmount);
+                                    sqlcommand1.Parameters.AddWithValue("@MRTAFinancedAmount", list[0].facilities_totInsAmount);
+                                    sqlcommand1.Parameters.AddWithValue("@PurposeCode", list[0].facilities_purposeCode);
+                                    sqlcommand1.Parameters.AddWithValue("@TotalFinancingAmount", list[0].facilities_totFinancingAmountIncFlvm);
+                                    sqlcommand1.Parameters.AddWithValue("@ValuationFeesFinancedAmount", list[0].facilities_totValuationFees);
+                                    sqlcommand1.Parameters.AddWithValue("@BuildUpArea", list[0].collaterals_buildUpArea);
+                                    sqlcommand1.Parameters.AddWithValue("@DeveloperCode", list[0].collaterals_developerCode);
 
-                                sqlcommand1.Parameters.AddWithValue("@DeveloperName", list[0].collaterals_developerName);
-                                sqlcommand1.Parameters.AddWithValue("@CollateralPurpose", list[0].collaterals_financingType);
-                                sqlcommand1.Parameters.AddWithValue("@LandArea", list[0].collaterals_landArea);
-                                sqlcommand1.Parameters.AddWithValue("@ProjectCode", list[0].collaterals_projectCode);
-                                sqlcommand1.Parameters.AddWithValue("@ProjectName", list[0].collaterals_projectName);
-                                sqlcommand1.Parameters.AddWithValue("@PropertyAddress", list[0].collaterals_propertyAddress);
-                                sqlcommand1.Parameters.AddWithValue("@PropertyType", list[0].collaterals_propertyType);
-                                sqlcommand1.Parameters.AddWithValue("@ValuationRequired", list[0].collaterals_requiredValReportInd);
-                                sqlcommand1.Parameters.AddWithValue("@TitleDetailsLO", list[0].collaterals_titleDetails);
-                                sqlcommand1.Parameters.AddWithValue("@ValuerAccountNBR", list[0].collaterals_valuerAccountNbr);
-                                sqlcommand1.Parameters.AddWithValue("@ValuerAccountType", list[0].collaterals_valuerAccountType);
-                                sqlcommand1.Parameters.AddWithValue("@ValuerAddr1", list[0].collaterals_valuerAddr1);
-                                sqlcommand1.Parameters.AddWithValue("@ValuerAddr2", list[0].collaterals_valuerAddr2);
-                                sqlcommand1.Parameters.AddWithValue("@ValuerAddr3", list[0].collaterals_valuerAddr3);
+                                    sqlcommand1.Parameters.AddWithValue("@DeveloperName", list[0].collaterals_developerName);
+                                    sqlcommand1.Parameters.AddWithValue("@CollateralPurpose", list[0].collaterals_financingType);
+                                    sqlcommand1.Parameters.AddWithValue("@LandArea", list[0].collaterals_landArea);
+                                    sqlcommand1.Parameters.AddWithValue("@ProjectCode", list[0].collaterals_projectCode);
+                                    sqlcommand1.Parameters.AddWithValue("@ProjectName", list[0].collaterals_projectName);
+                                    sqlcommand1.Parameters.AddWithValue("@PropertyAddress", list[0].collaterals_propertyAddress);
+                                    sqlcommand1.Parameters.AddWithValue("@PropertyType", list[0].collaterals_propertyType);
+                                    sqlcommand1.Parameters.AddWithValue("@ValuationRequired", list[0].collaterals_requiredValReportInd);
+                                    sqlcommand1.Parameters.AddWithValue("@TitleDetailsLO", list[0].collaterals_titleDetails);
+                                    sqlcommand1.Parameters.AddWithValue("@ValuerAccountNBR", list[0].collaterals_valuerAccountNbr);
+                                    sqlcommand1.Parameters.AddWithValue("@ValuerAccountType", list[0].collaterals_valuerAccountType);
+                                    sqlcommand1.Parameters.AddWithValue("@ValuerAddr1", list[0].collaterals_valuerAddr1);
+                                    sqlcommand1.Parameters.AddWithValue("@ValuerAddr2", list[0].collaterals_valuerAddr2);
+                                    sqlcommand1.Parameters.AddWithValue("@ValuerAddr3", list[0].collaterals_valuerAddr3);
 
-                                sqlcommand1.Parameters.AddWithValue("@ValuerAddrCity", list[0].collaterals_valuerCity);
-                                sqlcommand1.Parameters.AddWithValue("@ValuerAddrCountry", list[0].collaterals_valuerCountry);
-                                sqlcommand1.Parameters.AddWithValue("@ValuerAddrPostCode", list[0].collaterals_valuerPostcode);
-                                sqlcommand1.Parameters.AddWithValue("@ValuerAddrState", list[0].collaterals_valuerState);
-                                sqlcommand1.Parameters.AddWithValue("@ValuerCode", list[0].collaterals_valuerCode);
-                                sqlcommand1.Parameters.AddWithValue("@ValuerEmail", list[0].collaterals_valuerEmail);
-                                sqlcommand1.Parameters.AddWithValue("@ValuerName", list[0].collaterals_valuerName);
-                                sqlcommand1.Parameters.AddWithValue("@VerbalIndicativeValue", list[0].collaterals_verbalIndicativeValue);
-                                sqlcommand1.Parameters.AddWithValue("@RESPONSECODE", list[0].respInfo_respCode);
-                                sqlcommand1.Parameters.AddWithValue("@RESPONSEDESCRIPTION", list[0].respInfo_respDesc);
+                                    sqlcommand1.Parameters.AddWithValue("@ValuerAddrCity", list[0].collaterals_valuerCity);
+                                    sqlcommand1.Parameters.AddWithValue("@ValuerAddrCountry", list[0].collaterals_valuerCountry);
+                                    sqlcommand1.Parameters.AddWithValue("@ValuerAddrPostCode", list[0].collaterals_valuerPostcode);
+                                    sqlcommand1.Parameters.AddWithValue("@ValuerAddrState", list[0].collaterals_valuerState);
+                                    sqlcommand1.Parameters.AddWithValue("@ValuerCode", list[0].collaterals_valuerCode);
+                                    sqlcommand1.Parameters.AddWithValue("@ValuerEmail", list[0].collaterals_valuerEmail);
+                                    sqlcommand1.Parameters.AddWithValue("@ValuerName", list[0].collaterals_valuerName);
+                                    sqlcommand1.Parameters.AddWithValue("@VerbalIndicativeValue", list[0].collaterals_verbalIndicativeValue);
+                                    sqlcommand1.Parameters.AddWithValue("@RESPONSECODE", list[0].respInfo_respCode);
+                                    sqlcommand1.Parameters.AddWithValue("@RESPONSEDESCRIPTION", list[0].respInfo_respDesc);
 
-                                sqlcommand1.Parameters.AddWithValue("@priApplicantId", list[0].loanApptPersonnelInfo_priApplicantId);
-                                sqlcommand1.Parameters.AddWithValue("@valuerFaxNbr", list[0].collaterals_valuerFaxNbr);
-                                sqlcommand1.Parameters.AddWithValue("@valuerTelNbr", list[0].collaterals_valuerTelNbr);
-                                sqlcommand1.Parameters.AddWithValue("@solicitorFaxNbr", list[0].loanApplicationInfo_solicitorFaxNbr);
-                                sqlcommand1.Parameters.AddWithValue("@solicitorTelNbr", list[0].loanApplicationInfo_solicitorTelNbr);
+                                    sqlcommand1.Parameters.AddWithValue("@priApplicantId", list[0].loanApptPersonnelInfo_priApplicantId);
+                                    sqlcommand1.Parameters.AddWithValue("@valuerFaxNbr", list[0].collaterals_valuerFaxNbr);
+                                    sqlcommand1.Parameters.AddWithValue("@valuerTelNbr", list[0].collaterals_valuerTelNbr);
+                                    sqlcommand1.Parameters.AddWithValue("@solicitorFaxNbr", list[0].loanApplicationInfo_solicitorFaxNbr);
+                                    sqlcommand1.Parameters.AddWithValue("@solicitorTelNbr", list[0].loanApplicationInfo_solicitorTelNbr);
 
-                                //dev portal new fields 
-                                sqlcommand1.Parameters.AddWithValue("@phaseCode", list[0].loanApplicationInfo_phaseCode);
-                                sqlcommand1.Parameters.AddWithValue("@phaseName", list[0].loanApplicationInfo_phaseName);
-                                sqlcommand1.Parameters.AddWithValue("@unitParcelNo", list[0].loanApplicationInfo_unitParcelNo);
-                                sqlcommand1.Parameters.AddWithValue("@spaValue", list[0].loanApplicationInfo_spaValue);
-                                sqlcommand1.Parameters.AddWithValue("@category", list[0].loanApplicationInfo_category);
-
-                                
-
-                                //sqlcommand1.Parameters.Add("@param_ARN", SqlDbType.NVarChar);
-                                //sqlcommand1.Parameters["@param_ARN"].Value = dt.Rows[i]["ARN"].ToString();
-
-                                //sqlcommand1.Parameters.Add("@RESPONSECODE", SqlDbType.NVarChar);
-                                //sqlcommand1.Parameters["@RESPONSECODE"].Value = list[0].respInfo_respCode.ToString();
-
-                                //sqlcommand1.Parameters.Add("@RESPONSEDESCRIPTION", SqlDbType.NVarChar);
-                                //sqlcommand1.Parameters["@RESPONSEDESCRIPTION"].Value = list[0].respInfo_respDesc.ToString();
+                                    //dev portal new fields 
+                                    sqlcommand1.Parameters.AddWithValue("@phaseCode", list[0].loanApplicationInfo_phaseCode);
+                                    sqlcommand1.Parameters.AddWithValue("@phaseName", list[0].loanApplicationInfo_phaseName);
+                                    sqlcommand1.Parameters.AddWithValue("@unitParcelNo", list[0].loanApplicationInfo_unitParcelNo);
+                                    sqlcommand1.Parameters.AddWithValue("@spaValue", list[0].loanApplicationInfo_spaValue);
+                                    sqlcommand1.Parameters.AddWithValue("@category", list[0].loanApplicationInfo_category);
 
 
-                                conn2.Open();
-                                int rowsAffected2 = sqlcommand1.ExecuteNonQuery();
-                                conn2.Close();
 
+                                    //sqlcommand1.Parameters.Add("@param_ARN", SqlDbType.NVarChar);
+                                    //sqlcommand1.Parameters["@param_ARN"].Value = dt.Rows[i]["ARN"].ToString();
+
+                                    //sqlcommand1.Parameters.Add("@RESPONSECODE", SqlDbType.NVarChar);
+                                    //sqlcommand1.Parameters["@RESPONSECODE"].Value = list[0].respInfo_respCode.ToString();
+
+                                    //sqlcommand1.Parameters.Add("@RESPONSEDESCRIPTION", SqlDbType.NVarChar);
+                                    //sqlcommand1.Parameters["@RESPONSEDESCRIPTION"].Value = list[0].respInfo_respDesc.ToString();
+
+
+                                    conn2.Open();
+                                    int rowsAffected2 = sqlcommand1.ExecuteNonQuery();
+                                    conn2.Close();
+
+                                }
                             }
-                        }
+                        }    
+                        
                     }
                     //sqlcommand2.Parameters.AddWithValue("@ARN", dt.Rows[i]["ARN"].ToString());
                     //sqlcommand1.Parameters.AddWithValue("@RESPONSECODE", list[0].respInfo_respCode);
                     //sqlcommand1.Parameters.AddWithValue("@RESPONSEDESCRIPTION", list[0].respInfo_respDesc);
 
+                    /*
                     SqlConnection conn3 = null;
                     conn3 = new SqlConnection(connstr);
                     SqlCommand sqlcommand2 = new SqlCommand("dbo.usp_ws_loads_staging_complete", conn3);
                     conn3.Open();
                     int rowsAffected3 = sqlcommand2.ExecuteNonQuery();
                     conn3.Close();
+                    */
                 }
                 conn.Close();
 
@@ -5317,232 +9142,232 @@ namespace HLBBWS
         {
             error = "";
 
-            try
-            {
-                // log the result in db
-                DataSet ds = null;
-                DataTable dt = null;
-                SqlConnection conn = null;
-                SqlDataAdapter sqlDA = null;
+            //try
+            //{
+            //    // log the result in db
+            //    DataSet ds = null;
+            //    DataTable dt = null;
+            //    SqlConnection conn = null;
+            //    SqlDataAdapter sqlDA = null;
 
-                string strDataSource = clsGlobal.MG_SQL_DATA_SOURCE;
-                string strDBName = clsGlobal.MG_SQL_DB_NAME;
-                string strID = clsGlobal.MG_SQL_ID;
-                string strPassword = clsGlobal.MG_SQL_PASSWORD;
-                bool blnIsWinAuth = clsGlobal.MG_SQL_IS_WIN_AUTH;
+            //    string strDataSource = clsGlobal.MG_SQL_DATA_SOURCE;
+            //    string strDBName = clsGlobal.MG_SQL_DB_NAME;
+            //    string strID = clsGlobal.MG_SQL_ID;
+            //    string strPassword = clsGlobal.MG_SQL_PASSWORD;
+            //    bool blnIsWinAuth = clsGlobal.MG_SQL_IS_WIN_AUTH;
 
-                string connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Persist Security Info=True;User ID=" + strID + ";Password=" + strPassword;
-                if (blnIsWinAuth)
-                {
-                    connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Integrated Security=True;";
-                }
-
-
-                //sqlcommand1.Parameters.AddWithValue("@ARN", dt.Rows[i]["ARN"].ToString());
-                //sqlcommand1.Parameters.AddWithValue("@RESPONSECODE", list[0].respInfo_respCode);
-                //sqlcommand1.Parameters.AddWithValue("@RESPONSEDESCRIPTION", list[0].respInfo_respDesc);
-
-                /*
-                SqlConnection conn0 = null;
-                conn0 = new SqlConnection(connstr);
-                SqlCommand sqlcommand0 = new SqlCommand("dbo.usp_ws_loads_staging_truncate_staging", conn0);
-
-                conn0.Open();
-                int rowsAffected = sqlcommand0.ExecuteNonQuery();
-                conn0.Close();
-                */
-                conn = new SqlConnection(connstr);
-                conn.Open();
-
-                sqlDA = new SqlDataAdapter();
-                sqlDA.SelectCommand = new SqlCommand("dbo.usp_NewLI_Rerun_GetList", conn);
-
-                ds = new DataSet("ds");
-                sqlDA.Fill(ds);
-                dt = ds.Tables[0];
-                if (dt.Rows.Count > 0)
-                {
-                    for (int i = 0; i < dt.Rows.Count; i++)
-                    {
-                        HLBBWS.AppWS ws = new AppWS();
-                        List<HLBBWS.AppWS.structureLOADS> list = new List<HLBBWS.AppWS.structureLOADS>();
-
-                        string DP_GetDataFromLOADS_error = "";
-
-                        list = ws.DP_NewLI_GetDataFromLOADS(dt.Rows[i]["ARN"].ToString());
-                        //list = ws.DP_GetDataFromLOADS(dt.Rows[i]["ARN"].ToString());
-
-                        if (list.Count > 0)
-                        {
-                            if (list[0].respInfo_respCode == "00")
-                            {
-                                //SqlDataAdapter sqlDA2 = null;
-                                //sqlDA2 = new SqlDataAdapter();
-                                //sqlDA2.SelectCommand = new SqlCommand("dbo.loads_staging_insert_test", conn);            
+            //    string connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Persist Security Info=True;User ID=" + strID + ";Password=" + strPassword;
+            //    if (blnIsWinAuth)
+            //    {
+            //        connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Integrated Security=True;";
+            //    }
 
 
-                                SqlConnection conn2 = null;
-                                conn2 = new SqlConnection(connstr);
+            //    //sqlcommand1.Parameters.AddWithValue("@ARN", dt.Rows[i]["ARN"].ToString());
+            //    //sqlcommand1.Parameters.AddWithValue("@RESPONSECODE", list[0].respInfo_respCode);
+            //    //sqlcommand1.Parameters.AddWithValue("@RESPONSEDESCRIPTION", list[0].respInfo_respDesc);
 
-                                //SqlCommand sqlcommand1 = new SqlCommand("dbo.usp_loads_staging_insert_test @param_ARN,@RESPONSECODE,@RESPONSEDESCRIPTION", conn2);
+            //    /*
+            //    SqlConnection conn0 = null;
+            //    conn0 = new SqlConnection(connstr);
+            //    SqlCommand sqlcommand0 = new SqlCommand("dbo.usp_ws_loads_staging_truncate_staging", conn0);
 
-                                //SqlCommand sqlcommand1 = new SqlCommand("dbo.usp_ws_loads_staging_insert @ARN  ,	@Status ,	@BranchAddr1 ,	@BranchAddr2  ,	@BranchAddr3  ,	@BranchAddrCity  ,	@BranchAddrCountry ,	@BranchAddrPostCode  ,	@BranchAddrState  ,	@BranchManagerEmailAddress  ,	@BranchManagerName  ,	@ClosingBranch ,	@DateOfLOAcceptance ,	@FinancingType  ,	@MortgateCenterCode  ,	@MortgateCenterEmail ,	@PFSalesEmailAddress ,	@PFCSalesName  ,	@SolicitorAccountNbr  ,	@SolicitorAccountType,	@SolicitorAddr1 ,	@SolicitorAddr2  ,	@SolicitorAddr3 ,	@SolicitorAddrCity  ,	@SolicitorAddrCountry  ,	@SolicitorAddrPostCode  ,	@SolicitorAddrState  ,	@SolicitorEmail  ,	@SolInternalStatus  ,	@SolicitorName  ,	@SolicitorCode  ,	@TopUpLoanIndicator  ,	@ChargorIDNumber ,	@ChargorName  ,	@CustomerAddr1  ,	@CustomerAddr2  ,	@CustomerAddr3  ,	@CustomerAddrCity  ,	@CustomerAddrCountry ,	@CustomerAddrPostCode ,	@CustomerAddrState,	@ApplicantEmail  ,	@CustomerID  ,	@ApplicantName  ,	@CustomerName  ,	@EStatementFlagIndicator ,	@GuarantorIDNumber ,	@GuarantorName ,	@DisbursementManner ,	@LoanAmount  ,	@FacilityAmount1  ,	@FacilityAmount2  ,	@FacilityAmount3  ,	@FacilityAmount4  ,	@FinancingProductName1  ,	@FinancingProductName2  ,	@FinancingProductName3  ,	@FinancingProductName4  ,	@GracePeriod  ,	@LegalFeesFinancedAmount  ,	@MRTAFinancedAmount  ,	@PurposeCode  ,	@TotalFinancingAmount  ,	@ValuationFeesFinancedAmount  ,	@BuildUpArea  ,	@DeveloperCode  ,	@DeveloperName  ,	@CollateralPurpose  ,	@LandArea  ,	@ProjectCode  ,	@ProjectName  ,	@PropertyAddress  ,	@PropertyType  ,	@ValuationRequired  ,	@TitleDetailsLO  ,	@ValuerAccountNBR  ,	@ValuerAccountType,	@ValuerAddr1  ,	@ValuerAddr2 ,	@ValuerAddr3 ,	@ValuerAddrCity  ,	@ValuerAddrCountry  ,	@ValuerAddrPostCode,	@ValuerAddrState,	@ValuerCode ,	@ValuerEmail,	@ValuerName ,	@VerbalIndicativeValue ,	@RESPONSECODE,	@RESPONSEDESCRIPTION", conn2);
-                                //SqlCommand sqlcommand1 = new SqlCommand("dbo.usp_ws_loads_staging_insert2 @ARN  ,	@Status ,	@BranchAddr1 ,	@BranchAddr2  ,	@BranchAddr3  ,	@BranchAddrCity  ,	@BranchAddrCountry ,	@BranchAddrPostCode  ,	@BranchAddrState  ,	@BranchManagerEmailAddress  ,	@BranchManagerName  ,	@ClosingBranch ,	@DateOfLOAcceptance ,	@FinancingType  ,	@MortgateCenterCode  ,	@MortgateCenterEmail ,	@PFSalesEmailAddress ,	@PFCSalesName  ,	@SolicitorAccountNbr  ,	@SolicitorAccountType,	@SolicitorAddr1 ,	@SolicitorAddr2  ,	@SolicitorAddr3 ,	@SolicitorAddrCity  ,	@SolicitorAddrCountry  ,	@SolicitorAddrPostCode  ,	@SolicitorAddrState  ,	@SolicitorEmail  ,	@SolInternalStatus  ,	@SolicitorName  ,	@SolicitorCode  ,	@TopUpLoanIndicator  ,	@ChargorIDNumber ,	@ChargorName  ,	@CustomerAddr1  ,	@CustomerAddr2  ,	@CustomerAddr3  ,	@CustomerAddrCity  ,	@CustomerAddrCountry ,	@CustomerAddrPostCode ,	@CustomerAddrState,	@ApplicantEmail  ,	@CustomerID  ,	@ApplicantName  ,	@CustomerName  ,	@EStatementFlagIndicator ,	@GuarantorIDNumber ,	@GuarantorName ,	@DisbursementManner ,	@LoanAmount  ,	@FacilityAmount1  ,	@FacilityAmount2  ,	@FacilityAmount3  ,	@FacilityAmount4  ,	@FinancingProductName1  ,	@FinancingProductName2  ,	@FinancingProductName3  ,	@FinancingProductName4  ,	@GracePeriod  ,	@LegalFeesFinancedAmount  ,	@MRTAFinancedAmount  ,	@PurposeCode  ,	@TotalFinancingAmount  ,	@ValuationFeesFinancedAmount  ,	@BuildUpArea  ,	@DeveloperCode  ,	@DeveloperName  ,	@CollateralPurpose  ,	@LandArea  ,	@ProjectCode  ,	@ProjectName  ,	@PropertyAddress  ,	@PropertyType  ,	@ValuationRequired  ,	@TitleDetailsLO  ,	@ValuerAccountNBR  ,	@ValuerAccountType,	@ValuerAddr1  ,	@ValuerAddr2 ,	@ValuerAddr3 ,	@ValuerAddrCity  ,	@ValuerAddrCountry  ,	@ValuerAddrPostCode,	@ValuerAddrState,	@ValuerCode ,	@ValuerEmail,	@ValuerName ,	@VerbalIndicativeValue ,	@RESPONSECODE,	@RESPONSEDESCRIPTION, @priApplicantId, @valuerFaxNbr, @valuerTelNbr, @solicitorFaxNbr, @solicitorTelNbr", conn2);
-                                SqlCommand sqlcommand1 = new SqlCommand("dbo.usp_ws_loads_staging_insert @ARN  ,	@Status ,	@BranchAddr1 ,	@BranchAddr2  ,	@BranchAddr3  ,	@BranchAddrCity  ,	@BranchAddrCountry ,	@BranchAddrPostCode  ,	@BranchAddrState  ,	@BranchManagerEmailAddress  ,	@BranchManagerName  ,	@ClosingBranch ,	@DateOfLOAcceptance ,	@FinancingType  ,	@MortgateCenterCode  ,	@MortgateCenterEmail ,	@PFSalesEmailAddress ,	@PFCSalesName  ,	@SolicitorAccountNbr  ,	@SolicitorAccountType,	@SolicitorAddr1 ,	@SolicitorAddr2  ,	@SolicitorAddr3 ,	@SolicitorAddrCity  ,	@SolicitorAddrCountry  ,	@SolicitorAddrPostCode  ,	@SolicitorAddrState  ,	@SolicitorEmail  ,	@SolInternalStatus  ,	@SolicitorName  ,	@SolicitorCode  ,	@TopUpLoanIndicator  ,	@ChargorIDNumber ,	@ChargorName  ,	@CustomerAddr1  ,	@CustomerAddr2  ,	@CustomerAddr3  ,	@CustomerAddrCity  ,	@CustomerAddrCountry ,	@CustomerAddrPostCode ,	@CustomerAddrState,	@ApplicantEmail  ,	@CustomerID  ,	@ApplicantName  ,	@CustomerName  ,	@EStatementFlagIndicator ,	@GuarantorIDNumber ,	@GuarantorName ,	@DisbursementManner ,	@LoanAmount  ,	@FacilityAmount1  ,	@FacilityAmount2  ,	@FacilityAmount3  ,	@FacilityAmount4  ,	@FinancingProductName1  ,	@FinancingProductName2  ,	@FinancingProductName3  ,	@FinancingProductName4  ,	@GracePeriod  ,	@LegalFeesFinancedAmount  ,	@MRTAFinancedAmount  ,	@PurposeCode  ,	@TotalFinancingAmount  ,	@ValuationFeesFinancedAmount  ,	@BuildUpArea  ,	@DeveloperCode  ,	@DeveloperName  ,	@CollateralPurpose  ,	@LandArea  ,	@ProjectCode  ,	@ProjectName  ,	@PropertyAddress  ,	@PropertyType  ,	@ValuationRequired  ,	@TitleDetailsLO  ,	@ValuerAccountNBR  ,	@ValuerAccountType,	@ValuerAddr1  ,	@ValuerAddr2 ,	@ValuerAddr3 ,	@ValuerAddrCity  ,	@ValuerAddrCountry  ,	@ValuerAddrPostCode,	@ValuerAddrState,	@ValuerCode ,	@ValuerEmail,	@ValuerName ,	@VerbalIndicativeValue ,	@RESPONSECODE,	@RESPONSEDESCRIPTION, @priApplicantId, @valuerFaxNbr, @valuerTelNbr, @solicitorFaxNbr, @solicitorTelNbr,@phaseCode,@phaseName ,@unitParcelNo ,@spaValue,@category ", conn2);
+            //    conn0.Open();
+            //    int rowsAffected = sqlcommand0.ExecuteNonQuery();
+            //    conn0.Close();
+            //    */
+            //    conn = new SqlConnection(connstr);
+            //    conn.Open();
 
-                                sqlcommand1.Parameters.AddWithValue("@ARN", dt.Rows[i]["ARN"].ToString());
-                                sqlcommand1.Parameters.AddWithValue("@Status", list[0].loanApplicationInfo_appStatus);
-                                sqlcommand1.Parameters.AddWithValue("@BranchAddr1", list[0].loanApplicationInfo_branchAddr1);
-                                sqlcommand1.Parameters.AddWithValue("@BranchAddr2", list[0].loanApplicationInfo_branchAddr2);
-                                sqlcommand1.Parameters.AddWithValue("@BranchAddr3", list[0].loanApplicationInfo_branchAddr3);
-                                sqlcommand1.Parameters.AddWithValue("@BranchAddrCity", list[0].loanApplicationInfo_branchAddrCity);
-                                sqlcommand1.Parameters.AddWithValue("@BranchAddrCountry", list[0].loanApplicationInfo_branchAddrCountry);
-                                sqlcommand1.Parameters.AddWithValue("@BranchAddrPostCode", list[0].loanApplicationInfo_branchAddrPostcode);
-                                sqlcommand1.Parameters.AddWithValue("@BranchAddrState", list[0].loanApplicationInfo_branchAddrState);
-                                sqlcommand1.Parameters.AddWithValue("@BranchManagerEmailAddress", list[0].loanApplicationInfo_branchManagerEmail);
-                                sqlcommand1.Parameters.AddWithValue("@BranchManagerName", list[0].loanApplicationInfo_branchManagerName);
-                                sqlcommand1.Parameters.AddWithValue("@ClosingBranch", list[0].loanApplicationInfo_closingBranch);
-                                sqlcommand1.Parameters.AddWithValue("@DateOfLOAcceptance", list[0].loanApplicationInfo_loAcceptanceDt);
+            //    sqlDA = new SqlDataAdapter();
+            //    sqlDA.SelectCommand = new SqlCommand("dbo.usp_NewLI_Rerun_GetList", conn);
 
-                                // sqlcommand1.Parameters.AddWithValue("@FinancingType", list[0].collaterals_financingType);
-                                sqlcommand1.Parameters.AddWithValue("@FinancingType", list[0].loanApplicationInfo_lendingType);
-                                sqlcommand1.Parameters.AddWithValue("@MortgateCenterCode", list[0].loanApplicationInfo_mortgageCenterCode);
-                                sqlcommand1.Parameters.AddWithValue("@MortgateCenterEmail", list[0].loanApplicationInfo_mortgageCenterEmail);
-                                sqlcommand1.Parameters.AddWithValue("@PFSalesEmailAddress", list[0].loanApplicationInfo_salesEmail);
-                                sqlcommand1.Parameters.AddWithValue("@PFCSalesName", list[0].loanApplicationInfo_salesName);
-                                sqlcommand1.Parameters.AddWithValue("@SolicitorAccountNbr", list[0].loanApplicationInfo_solicitorNBR);
-                                sqlcommand1.Parameters.AddWithValue("@SolicitorAccountType", list[0].loanApplicationInfo_solicitorAccountType);
-                                sqlcommand1.Parameters.AddWithValue("@SolicitorAddr1", list[0].loanApplicationInfo_solicitorAddr1);
-                                sqlcommand1.Parameters.AddWithValue("@SolicitorAddr2", list[0].loanApplicationInfo_solicitorAddr2);
-                                //sqlcommand1.Parameters.AddWithValue("@SolicitorAddr3", list[0].loanApptPersonnelInfo_applicantAddr3);
-                                sqlcommand1.Parameters.AddWithValue("@SolicitorAddr3", list[0].loanApplicationInfo_solicitorAddr3);
+            //    ds = new DataSet("ds");
+            //    sqlDA.Fill(ds);
+            //    dt = ds.Tables[0];
+            //    if (dt.Rows.Count > 0)
+            //    {
+            //        for (int i = 0; i < dt.Rows.Count; i++)
+            //        {
+            //            HLBBWS.AppWS ws = new AppWS();
+            //            List<HLBBWS.AppWS.structureLOADS> list = new List<HLBBWS.AppWS.structureLOADS>();
 
-                                //sqlcommand1.Parameters.AddWithValue("@SolicitorAddrCity", list[0].loanApptPersonnelInfo_applicantAddrCity);
-                                sqlcommand1.Parameters.AddWithValue("@SolicitorAddrCity", list[0].loanApplicationInfo_solicitorCity);
-                                sqlcommand1.Parameters.AddWithValue("@SolicitorAddrCountry", list[0].loanApplicationInfo_solicitorCountry);
-                                sqlcommand1.Parameters.AddWithValue("@SolicitorAddrPostCode", list[0].loanApplicationInfo_solicitorPostcode);
-                                sqlcommand1.Parameters.AddWithValue("@SolicitorAddrState", list[0].loanApplicationInfo_solicitorState);
-                                sqlcommand1.Parameters.AddWithValue("@SolicitorEmail", list[0].loanApplicationInfo_solicitorEmail);
-                                sqlcommand1.Parameters.AddWithValue("@SolInternalStatus", list[0].loanApplicationInfo_solicitorIntStatus);
-                                sqlcommand1.Parameters.AddWithValue("@SolicitorName", list[0].loanApplicationInfo_solicitorName);
-                                sqlcommand1.Parameters.AddWithValue("@SolicitorCode", list[0].loanApplicationInfo_solicitorCode);
-                                sqlcommand1.Parameters.AddWithValue("@TopUpLoanIndicator", list[0].loanApplicationInfo_topupLoanInd);
-                                sqlcommand1.Parameters.AddWithValue("@ChargorIDNumber", list[0].loanApptPersonnelInfo_chargorIDs);
+            //            string DP_GetDataFromLOADS_error = "";
 
-                                sqlcommand1.Parameters.AddWithValue("@ChargorName", list[0].loanApptPersonnelInfo_chargorNames);
-                                sqlcommand1.Parameters.AddWithValue("@CustomerAddr1", list[0].loanApptPersonnelInfo_applicantAddr1);
-                                sqlcommand1.Parameters.AddWithValue("@CustomerAddr2", list[0].loanApptPersonnelInfo_applicantAddr2);
-                                sqlcommand1.Parameters.AddWithValue("@CustomerAddr3", list[0].loanApptPersonnelInfo_applicantAddr3);
-                                sqlcommand1.Parameters.AddWithValue("@CustomerAddrCity", list[0].loanApptPersonnelInfo_applicantAddrCity);
-                                sqlcommand1.Parameters.AddWithValue("@CustomerAddrCountry", list[0].loanApptPersonnelInfo_applicantAddrCountry);
-                                sqlcommand1.Parameters.AddWithValue("@CustomerAddrPostCode", list[0].loanApptPersonnelInfo_applicantAddrPostcode);
-                                sqlcommand1.Parameters.AddWithValue("@CustomerAddrState", list[0].loanApptPersonnelInfo_applicantAddrState);
-                                sqlcommand1.Parameters.AddWithValue("@ApplicantEmail ", list[0].loanApptPersonnelInfo_applicantEmails);
+            //            list = ws.DP_NewLI_GetDataFromLOADS(dt.Rows[i]["ARN"].ToString());
+            //            //list = ws.DP_GetDataFromLOADS(dt.Rows[i]["ARN"].ToString());
 
-                                sqlcommand1.Parameters.AddWithValue("@CustomerID", list[0].loanApptPersonnelInfo_applicantIDs);
-                                sqlcommand1.Parameters.AddWithValue("@ApplicantName", list[0].loanApptPersonnelInfo_priApplicantName);
-                                sqlcommand1.Parameters.AddWithValue("@CustomerName", list[0].loanApptPersonnelInfo_applicantNamesCombine);
-                                sqlcommand1.Parameters.AddWithValue("@EStatementFlagIndicator", list[0].loanApptPersonnelInfo_eStatementFlagInd);
-                                sqlcommand1.Parameters.AddWithValue("@GuarantorIDNumber", list[0].loanApptPersonnelInfo_guarantorIDs);
-                                sqlcommand1.Parameters.AddWithValue("@GuarantorName", list[0].loanApptPersonnelInfo_guarantorNames);
-                                sqlcommand1.Parameters.AddWithValue("@DisbursementManner", list[0].facilities_disbursementManner);
-                                sqlcommand1.Parameters.AddWithValue("@LoanAmount", list[0].facilities_totFinancingAmount);
-                                sqlcommand1.Parameters.AddWithValue("@FacilityAmount1", list[0].facilities_facilityAmount1);
-                                sqlcommand1.Parameters.AddWithValue("@FacilityAmount2", list[0].facilities_facilityAmount2);
-                                sqlcommand1.Parameters.AddWithValue("@FacilityAmount3", list[0].facilities_facilityAmount3);
-                                sqlcommand1.Parameters.AddWithValue("@FacilityAmount4", list[0].facilities_facilityAmount4);
-
-                                sqlcommand1.Parameters.AddWithValue("@FinancingProductName1", list[0].facilities_productName1);
-                                sqlcommand1.Parameters.AddWithValue("@FinancingProductName2", list[0].facilities_productName2);
-                                sqlcommand1.Parameters.AddWithValue("@FinancingProductName3", list[0].facilities_productName3);
-                                sqlcommand1.Parameters.AddWithValue("@FinancingProductName4", list[0].facilities_productName4);
-                                sqlcommand1.Parameters.AddWithValue("@GracePeriod", list[0].facilities_gracePeriod);
-                                sqlcommand1.Parameters.AddWithValue("@LegalFeesFinancedAmount", list[0].facilities_totFeesAmount);
-                                sqlcommand1.Parameters.AddWithValue("@MRTAFinancedAmount", list[0].facilities_totInsAmount);
-                                sqlcommand1.Parameters.AddWithValue("@PurposeCode", list[0].facilities_purposeCode);
-                                sqlcommand1.Parameters.AddWithValue("@TotalFinancingAmount", list[0].facilities_totFinancingAmountIncFlvm);
-                                sqlcommand1.Parameters.AddWithValue("@ValuationFeesFinancedAmount", list[0].facilities_totValuationFees);
-                                sqlcommand1.Parameters.AddWithValue("@BuildUpArea", list[0].collaterals_buildUpArea);
-                                sqlcommand1.Parameters.AddWithValue("@DeveloperCode", list[0].collaterals_developerCode);
-
-                                sqlcommand1.Parameters.AddWithValue("@DeveloperName", list[0].collaterals_developerName);
-                                sqlcommand1.Parameters.AddWithValue("@CollateralPurpose", list[0].collaterals_financingType);
-                                sqlcommand1.Parameters.AddWithValue("@LandArea", list[0].collaterals_landArea);
-                                sqlcommand1.Parameters.AddWithValue("@ProjectCode", list[0].collaterals_projectCode);
-                                sqlcommand1.Parameters.AddWithValue("@ProjectName", list[0].collaterals_projectName);
-                                sqlcommand1.Parameters.AddWithValue("@PropertyAddress", list[0].collaterals_propertyAddress);
-                                sqlcommand1.Parameters.AddWithValue("@PropertyType", list[0].collaterals_propertyType);
-                                sqlcommand1.Parameters.AddWithValue("@ValuationRequired", list[0].collaterals_requiredValReportInd);
-                                sqlcommand1.Parameters.AddWithValue("@TitleDetailsLO", list[0].collaterals_titleDetails);
-                                sqlcommand1.Parameters.AddWithValue("@ValuerAccountNBR", list[0].collaterals_valuerAccountNbr);
-                                sqlcommand1.Parameters.AddWithValue("@ValuerAccountType", list[0].collaterals_valuerAccountType);
-                                sqlcommand1.Parameters.AddWithValue("@ValuerAddr1", list[0].collaterals_valuerAddr1);
-                                sqlcommand1.Parameters.AddWithValue("@ValuerAddr2", list[0].collaterals_valuerAddr2);
-                                sqlcommand1.Parameters.AddWithValue("@ValuerAddr3", list[0].collaterals_valuerAddr3);
-
-                                sqlcommand1.Parameters.AddWithValue("@ValuerAddrCity", list[0].collaterals_valuerCity);
-                                sqlcommand1.Parameters.AddWithValue("@ValuerAddrCountry", list[0].collaterals_valuerCountry);
-                                sqlcommand1.Parameters.AddWithValue("@ValuerAddrPostCode", list[0].collaterals_valuerPostcode);
-                                sqlcommand1.Parameters.AddWithValue("@ValuerAddrState", list[0].collaterals_valuerState);
-                                sqlcommand1.Parameters.AddWithValue("@ValuerCode", list[0].collaterals_valuerCode);
-                                sqlcommand1.Parameters.AddWithValue("@ValuerEmail", list[0].collaterals_valuerEmail);
-                                sqlcommand1.Parameters.AddWithValue("@ValuerName", list[0].collaterals_valuerName);
-                                sqlcommand1.Parameters.AddWithValue("@VerbalIndicativeValue", list[0].collaterals_verbalIndicativeValue);
-                                sqlcommand1.Parameters.AddWithValue("@RESPONSECODE", list[0].respInfo_respCode);
-                                sqlcommand1.Parameters.AddWithValue("@RESPONSEDESCRIPTION", list[0].respInfo_respDesc);
-
-                                sqlcommand1.Parameters.AddWithValue("@priApplicantId", list[0].loanApptPersonnelInfo_priApplicantId);
-                                sqlcommand1.Parameters.AddWithValue("@valuerFaxNbr", list[0].collaterals_valuerFaxNbr);
-                                sqlcommand1.Parameters.AddWithValue("@valuerTelNbr", list[0].collaterals_valuerTelNbr);
-                                sqlcommand1.Parameters.AddWithValue("@solicitorFaxNbr", list[0].loanApplicationInfo_solicitorFaxNbr);
-                                sqlcommand1.Parameters.AddWithValue("@solicitorTelNbr", list[0].loanApplicationInfo_solicitorTelNbr);
-
-                                //dev portal new fields 
-                                sqlcommand1.Parameters.AddWithValue("@phaseCode", list[0].loanApplicationInfo_phaseCode);
-                                sqlcommand1.Parameters.AddWithValue("@phaseName", list[0].loanApplicationInfo_phaseName);
-                                sqlcommand1.Parameters.AddWithValue("@unitParcelNo", list[0].loanApplicationInfo_unitParcelNo);
-                                sqlcommand1.Parameters.AddWithValue("@spaValue", list[0].loanApplicationInfo_spaValue);
-                                sqlcommand1.Parameters.AddWithValue("@category", list[0].loanApplicationInfo_category);
-
-                                //sqlcommand1.Parameters.Add("@param_ARN", SqlDbType.NVarChar);
-                                //sqlcommand1.Parameters["@param_ARN"].Value = dt.Rows[i]["ARN"].ToString();
-
-                                //sqlcommand1.Parameters.Add("@RESPONSECODE", SqlDbType.NVarChar);
-                                //sqlcommand1.Parameters["@RESPONSECODE"].Value = list[0].respInfo_respCode.ToString();
-
-                                //sqlcommand1.Parameters.Add("@RESPONSEDESCRIPTION", SqlDbType.NVarChar);
-                                //sqlcommand1.Parameters["@RESPONSEDESCRIPTION"].Value = list[0].respInfo_respDesc.ToString();
+            //            if (list.Count > 0)
+            //            {
+            //                if (list[0].respInfo_respCode == "00")
+            //                {
+            //                    //SqlDataAdapter sqlDA2 = null;
+            //                    //sqlDA2 = new SqlDataAdapter();
+            //                    //sqlDA2.SelectCommand = new SqlCommand("dbo.loads_staging_insert_test", conn);            
 
 
-                                conn2.Open();
-                                int rowsAffected2 = sqlcommand1.ExecuteNonQuery();
-                                conn2.Close();
-                            }
-                        }
-                    }
-                    //sqlcommand2.Parameters.AddWithValue("@ARN", dt.Rows[i]["ARN"].ToString());
-                    //sqlcommand1.Parameters.AddWithValue("@RESPONSECODE", list[0].respInfo_respCode);
-                    //sqlcommand1.Parameters.AddWithValue("@RESPONSEDESCRIPTION", list[0].respInfo_respDesc);
+            //                    SqlConnection conn2 = null;
+            //                    conn2 = new SqlConnection(connstr);
 
-                    SqlConnection conn3 = null;
-                    conn3 = new SqlConnection(connstr);
-                    SqlCommand sqlcommand2 = new SqlCommand("dbo.usp_ws_loads_staging_complete2", conn3);
-                    conn3.Open();
-                    int rowsAffected3 = sqlcommand2.ExecuteNonQuery();
-                    conn3.Close();
-                }
-                conn.Close();
+            //                    //SqlCommand sqlcommand1 = new SqlCommand("dbo.usp_loads_staging_insert_test @param_ARN,@RESPONSECODE,@RESPONSEDESCRIPTION", conn2);
 
-            }
-            catch (Exception ex)
-            {
-                error = "DP_NewLI_Rerun failed with exception: " + ex.Message.ToString();
-                string errorDetail;
-                errorDetail = "Input Param: N/A";
-                LogErrorToDB("DP_NewLI_Rerun", "Exception", error, errorDetail);
+            //                    //SqlCommand sqlcommand1 = new SqlCommand("dbo.usp_ws_loads_staging_insert @ARN  ,	@Status ,	@BranchAddr1 ,	@BranchAddr2  ,	@BranchAddr3  ,	@BranchAddrCity  ,	@BranchAddrCountry ,	@BranchAddrPostCode  ,	@BranchAddrState  ,	@BranchManagerEmailAddress  ,	@BranchManagerName  ,	@ClosingBranch ,	@DateOfLOAcceptance ,	@FinancingType  ,	@MortgateCenterCode  ,	@MortgateCenterEmail ,	@PFSalesEmailAddress ,	@PFCSalesName  ,	@SolicitorAccountNbr  ,	@SolicitorAccountType,	@SolicitorAddr1 ,	@SolicitorAddr2  ,	@SolicitorAddr3 ,	@SolicitorAddrCity  ,	@SolicitorAddrCountry  ,	@SolicitorAddrPostCode  ,	@SolicitorAddrState  ,	@SolicitorEmail  ,	@SolInternalStatus  ,	@SolicitorName  ,	@SolicitorCode  ,	@TopUpLoanIndicator  ,	@ChargorIDNumber ,	@ChargorName  ,	@CustomerAddr1  ,	@CustomerAddr2  ,	@CustomerAddr3  ,	@CustomerAddrCity  ,	@CustomerAddrCountry ,	@CustomerAddrPostCode ,	@CustomerAddrState,	@ApplicantEmail  ,	@CustomerID  ,	@ApplicantName  ,	@CustomerName  ,	@EStatementFlagIndicator ,	@GuarantorIDNumber ,	@GuarantorName ,	@DisbursementManner ,	@LoanAmount  ,	@FacilityAmount1  ,	@FacilityAmount2  ,	@FacilityAmount3  ,	@FacilityAmount4  ,	@FinancingProductName1  ,	@FinancingProductName2  ,	@FinancingProductName3  ,	@FinancingProductName4  ,	@GracePeriod  ,	@LegalFeesFinancedAmount  ,	@MRTAFinancedAmount  ,	@PurposeCode  ,	@TotalFinancingAmount  ,	@ValuationFeesFinancedAmount  ,	@BuildUpArea  ,	@DeveloperCode  ,	@DeveloperName  ,	@CollateralPurpose  ,	@LandArea  ,	@ProjectCode  ,	@ProjectName  ,	@PropertyAddress  ,	@PropertyType  ,	@ValuationRequired  ,	@TitleDetailsLO  ,	@ValuerAccountNBR  ,	@ValuerAccountType,	@ValuerAddr1  ,	@ValuerAddr2 ,	@ValuerAddr3 ,	@ValuerAddrCity  ,	@ValuerAddrCountry  ,	@ValuerAddrPostCode,	@ValuerAddrState,	@ValuerCode ,	@ValuerEmail,	@ValuerName ,	@VerbalIndicativeValue ,	@RESPONSECODE,	@RESPONSEDESCRIPTION", conn2);
+            //                    //SqlCommand sqlcommand1 = new SqlCommand("dbo.usp_ws_loads_staging_insert2 @ARN  ,	@Status ,	@BranchAddr1 ,	@BranchAddr2  ,	@BranchAddr3  ,	@BranchAddrCity  ,	@BranchAddrCountry ,	@BranchAddrPostCode  ,	@BranchAddrState  ,	@BranchManagerEmailAddress  ,	@BranchManagerName  ,	@ClosingBranch ,	@DateOfLOAcceptance ,	@FinancingType  ,	@MortgateCenterCode  ,	@MortgateCenterEmail ,	@PFSalesEmailAddress ,	@PFCSalesName  ,	@SolicitorAccountNbr  ,	@SolicitorAccountType,	@SolicitorAddr1 ,	@SolicitorAddr2  ,	@SolicitorAddr3 ,	@SolicitorAddrCity  ,	@SolicitorAddrCountry  ,	@SolicitorAddrPostCode  ,	@SolicitorAddrState  ,	@SolicitorEmail  ,	@SolInternalStatus  ,	@SolicitorName  ,	@SolicitorCode  ,	@TopUpLoanIndicator  ,	@ChargorIDNumber ,	@ChargorName  ,	@CustomerAddr1  ,	@CustomerAddr2  ,	@CustomerAddr3  ,	@CustomerAddrCity  ,	@CustomerAddrCountry ,	@CustomerAddrPostCode ,	@CustomerAddrState,	@ApplicantEmail  ,	@CustomerID  ,	@ApplicantName  ,	@CustomerName  ,	@EStatementFlagIndicator ,	@GuarantorIDNumber ,	@GuarantorName ,	@DisbursementManner ,	@LoanAmount  ,	@FacilityAmount1  ,	@FacilityAmount2  ,	@FacilityAmount3  ,	@FacilityAmount4  ,	@FinancingProductName1  ,	@FinancingProductName2  ,	@FinancingProductName3  ,	@FinancingProductName4  ,	@GracePeriod  ,	@LegalFeesFinancedAmount  ,	@MRTAFinancedAmount  ,	@PurposeCode  ,	@TotalFinancingAmount  ,	@ValuationFeesFinancedAmount  ,	@BuildUpArea  ,	@DeveloperCode  ,	@DeveloperName  ,	@CollateralPurpose  ,	@LandArea  ,	@ProjectCode  ,	@ProjectName  ,	@PropertyAddress  ,	@PropertyType  ,	@ValuationRequired  ,	@TitleDetailsLO  ,	@ValuerAccountNBR  ,	@ValuerAccountType,	@ValuerAddr1  ,	@ValuerAddr2 ,	@ValuerAddr3 ,	@ValuerAddrCity  ,	@ValuerAddrCountry  ,	@ValuerAddrPostCode,	@ValuerAddrState,	@ValuerCode ,	@ValuerEmail,	@ValuerName ,	@VerbalIndicativeValue ,	@RESPONSECODE,	@RESPONSEDESCRIPTION, @priApplicantId, @valuerFaxNbr, @valuerTelNbr, @solicitorFaxNbr, @solicitorTelNbr", conn2);
+            //                    SqlCommand sqlcommand1 = new SqlCommand("dbo.usp_ws_loads_staging_insert @ARN  ,	@Status ,	@BranchAddr1 ,	@BranchAddr2  ,	@BranchAddr3  ,	@BranchAddrCity  ,	@BranchAddrCountry ,	@BranchAddrPostCode  ,	@BranchAddrState  ,	@BranchManagerEmailAddress  ,	@BranchManagerName  ,	@ClosingBranch ,	@DateOfLOAcceptance ,	@FinancingType  ,	@MortgateCenterCode  ,	@MortgateCenterEmail ,	@PFSalesEmailAddress ,	@PFCSalesName  ,	@SolicitorAccountNbr  ,	@SolicitorAccountType,	@SolicitorAddr1 ,	@SolicitorAddr2  ,	@SolicitorAddr3 ,	@SolicitorAddrCity  ,	@SolicitorAddrCountry  ,	@SolicitorAddrPostCode  ,	@SolicitorAddrState  ,	@SolicitorEmail  ,	@SolInternalStatus  ,	@SolicitorName  ,	@SolicitorCode  ,	@TopUpLoanIndicator  ,	@ChargorIDNumber ,	@ChargorName  ,	@CustomerAddr1  ,	@CustomerAddr2  ,	@CustomerAddr3  ,	@CustomerAddrCity  ,	@CustomerAddrCountry ,	@CustomerAddrPostCode ,	@CustomerAddrState,	@ApplicantEmail  ,	@CustomerID  ,	@ApplicantName  ,	@CustomerName  ,	@EStatementFlagIndicator ,	@GuarantorIDNumber ,	@GuarantorName ,	@DisbursementManner ,	@LoanAmount  ,	@FacilityAmount1  ,	@FacilityAmount2  ,	@FacilityAmount3  ,	@FacilityAmount4  ,	@FinancingProductName1  ,	@FinancingProductName2  ,	@FinancingProductName3  ,	@FinancingProductName4  ,	@GracePeriod  ,	@LegalFeesFinancedAmount  ,	@MRTAFinancedAmount  ,	@PurposeCode  ,	@TotalFinancingAmount  ,	@ValuationFeesFinancedAmount  ,	@BuildUpArea  ,	@DeveloperCode  ,	@DeveloperName  ,	@CollateralPurpose  ,	@LandArea  ,	@ProjectCode  ,	@ProjectName  ,	@PropertyAddress  ,	@PropertyType  ,	@ValuationRequired  ,	@TitleDetailsLO  ,	@ValuerAccountNBR  ,	@ValuerAccountType,	@ValuerAddr1  ,	@ValuerAddr2 ,	@ValuerAddr3 ,	@ValuerAddrCity  ,	@ValuerAddrCountry  ,	@ValuerAddrPostCode,	@ValuerAddrState,	@ValuerCode ,	@ValuerEmail,	@ValuerName ,	@VerbalIndicativeValue ,	@RESPONSECODE,	@RESPONSEDESCRIPTION, @priApplicantId, @valuerFaxNbr, @valuerTelNbr, @solicitorFaxNbr, @solicitorTelNbr,@phaseCode,@phaseName ,@unitParcelNo ,@spaValue,@category ", conn2);
+
+            //                    sqlcommand1.Parameters.AddWithValue("@ARN", dt.Rows[i]["ARN"].ToString());
+            //                    sqlcommand1.Parameters.AddWithValue("@Status", list[0].loanApplicationInfo_appStatus);
+            //                    sqlcommand1.Parameters.AddWithValue("@BranchAddr1", list[0].loanApplicationInfo_branchAddr1);
+            //                    sqlcommand1.Parameters.AddWithValue("@BranchAddr2", list[0].loanApplicationInfo_branchAddr2);
+            //                    sqlcommand1.Parameters.AddWithValue("@BranchAddr3", list[0].loanApplicationInfo_branchAddr3);
+            //                    sqlcommand1.Parameters.AddWithValue("@BranchAddrCity", list[0].loanApplicationInfo_branchAddrCity);
+            //                    sqlcommand1.Parameters.AddWithValue("@BranchAddrCountry", list[0].loanApplicationInfo_branchAddrCountry);
+            //                    sqlcommand1.Parameters.AddWithValue("@BranchAddrPostCode", list[0].loanApplicationInfo_branchAddrPostcode);
+            //                    sqlcommand1.Parameters.AddWithValue("@BranchAddrState", list[0].loanApplicationInfo_branchAddrState);
+            //                    sqlcommand1.Parameters.AddWithValue("@BranchManagerEmailAddress", list[0].loanApplicationInfo_branchManagerEmail);
+            //                    sqlcommand1.Parameters.AddWithValue("@BranchManagerName", list[0].loanApplicationInfo_branchManagerName);
+            //                    sqlcommand1.Parameters.AddWithValue("@ClosingBranch", list[0].loanApplicationInfo_closingBranch);
+            //                    sqlcommand1.Parameters.AddWithValue("@DateOfLOAcceptance", list[0].loanApplicationInfo_loAcceptanceDt);
+
+            //                    // sqlcommand1.Parameters.AddWithValue("@FinancingType", list[0].collaterals_financingType);
+            //                    sqlcommand1.Parameters.AddWithValue("@FinancingType", list[0].loanApplicationInfo_lendingType);
+            //                    sqlcommand1.Parameters.AddWithValue("@MortgateCenterCode", list[0].loanApplicationInfo_mortgageCenterCode);
+            //                    sqlcommand1.Parameters.AddWithValue("@MortgateCenterEmail", list[0].loanApplicationInfo_mortgageCenterEmail);
+            //                    sqlcommand1.Parameters.AddWithValue("@PFSalesEmailAddress", list[0].loanApplicationInfo_salesEmail);
+            //                    sqlcommand1.Parameters.AddWithValue("@PFCSalesName", list[0].loanApplicationInfo_salesName);
+            //                    sqlcommand1.Parameters.AddWithValue("@SolicitorAccountNbr", list[0].loanApplicationInfo_solicitorNBR);
+            //                    sqlcommand1.Parameters.AddWithValue("@SolicitorAccountType", list[0].loanApplicationInfo_solicitorAccountType);
+            //                    sqlcommand1.Parameters.AddWithValue("@SolicitorAddr1", list[0].loanApplicationInfo_solicitorAddr1);
+            //                    sqlcommand1.Parameters.AddWithValue("@SolicitorAddr2", list[0].loanApplicationInfo_solicitorAddr2);
+            //                    //sqlcommand1.Parameters.AddWithValue("@SolicitorAddr3", list[0].loanApptPersonnelInfo_applicantAddr3);
+            //                    sqlcommand1.Parameters.AddWithValue("@SolicitorAddr3", list[0].loanApplicationInfo_solicitorAddr3);
+
+            //                    //sqlcommand1.Parameters.AddWithValue("@SolicitorAddrCity", list[0].loanApptPersonnelInfo_applicantAddrCity);
+            //                    sqlcommand1.Parameters.AddWithValue("@SolicitorAddrCity", list[0].loanApplicationInfo_solicitorCity);
+            //                    sqlcommand1.Parameters.AddWithValue("@SolicitorAddrCountry", list[0].loanApplicationInfo_solicitorCountry);
+            //                    sqlcommand1.Parameters.AddWithValue("@SolicitorAddrPostCode", list[0].loanApplicationInfo_solicitorPostcode);
+            //                    sqlcommand1.Parameters.AddWithValue("@SolicitorAddrState", list[0].loanApplicationInfo_solicitorState);
+            //                    sqlcommand1.Parameters.AddWithValue("@SolicitorEmail", list[0].loanApplicationInfo_solicitorEmail);
+            //                    sqlcommand1.Parameters.AddWithValue("@SolInternalStatus", list[0].loanApplicationInfo_solicitorIntStatus);
+            //                    sqlcommand1.Parameters.AddWithValue("@SolicitorName", list[0].loanApplicationInfo_solicitorName);
+            //                    sqlcommand1.Parameters.AddWithValue("@SolicitorCode", list[0].loanApplicationInfo_solicitorCode);
+            //                    sqlcommand1.Parameters.AddWithValue("@TopUpLoanIndicator", list[0].loanApplicationInfo_topupLoanInd);
+            //                    sqlcommand1.Parameters.AddWithValue("@ChargorIDNumber", list[0].loanApptPersonnelInfo_chargorIDs);
+
+            //                    sqlcommand1.Parameters.AddWithValue("@ChargorName", list[0].loanApptPersonnelInfo_chargorNames);
+            //                    sqlcommand1.Parameters.AddWithValue("@CustomerAddr1", list[0].loanApptPersonnelInfo_applicantAddr1);
+            //                    sqlcommand1.Parameters.AddWithValue("@CustomerAddr2", list[0].loanApptPersonnelInfo_applicantAddr2);
+            //                    sqlcommand1.Parameters.AddWithValue("@CustomerAddr3", list[0].loanApptPersonnelInfo_applicantAddr3);
+            //                    sqlcommand1.Parameters.AddWithValue("@CustomerAddrCity", list[0].loanApptPersonnelInfo_applicantAddrCity);
+            //                    sqlcommand1.Parameters.AddWithValue("@CustomerAddrCountry", list[0].loanApptPersonnelInfo_applicantAddrCountry);
+            //                    sqlcommand1.Parameters.AddWithValue("@CustomerAddrPostCode", list[0].loanApptPersonnelInfo_applicantAddrPostcode);
+            //                    sqlcommand1.Parameters.AddWithValue("@CustomerAddrState", list[0].loanApptPersonnelInfo_applicantAddrState);
+            //                    sqlcommand1.Parameters.AddWithValue("@ApplicantEmail ", list[0].loanApptPersonnelInfo_applicantEmails);
+
+            //                    sqlcommand1.Parameters.AddWithValue("@CustomerID", list[0].loanApptPersonnelInfo_applicantIDs);
+            //                    sqlcommand1.Parameters.AddWithValue("@ApplicantName", list[0].loanApptPersonnelInfo_priApplicantName);
+            //                    sqlcommand1.Parameters.AddWithValue("@CustomerName", list[0].loanApptPersonnelInfo_applicantNamesCombine);
+            //                    sqlcommand1.Parameters.AddWithValue("@EStatementFlagIndicator", list[0].loanApptPersonnelInfo_eStatementFlagInd);
+            //                    sqlcommand1.Parameters.AddWithValue("@GuarantorIDNumber", list[0].loanApptPersonnelInfo_guarantorIDs);
+            //                    sqlcommand1.Parameters.AddWithValue("@GuarantorName", list[0].loanApptPersonnelInfo_guarantorNames);
+            //                    sqlcommand1.Parameters.AddWithValue("@DisbursementManner", list[0].facilities_disbursementManner);
+            //                    sqlcommand1.Parameters.AddWithValue("@LoanAmount", list[0].facilities_totFinancingAmount);
+            //                    sqlcommand1.Parameters.AddWithValue("@FacilityAmount1", list[0].facilities_facilityAmount1);
+            //                    sqlcommand1.Parameters.AddWithValue("@FacilityAmount2", list[0].facilities_facilityAmount2);
+            //                    sqlcommand1.Parameters.AddWithValue("@FacilityAmount3", list[0].facilities_facilityAmount3);
+            //                    sqlcommand1.Parameters.AddWithValue("@FacilityAmount4", list[0].facilities_facilityAmount4);
+
+            //                    sqlcommand1.Parameters.AddWithValue("@FinancingProductName1", list[0].facilities_productName1);
+            //                    sqlcommand1.Parameters.AddWithValue("@FinancingProductName2", list[0].facilities_productName2);
+            //                    sqlcommand1.Parameters.AddWithValue("@FinancingProductName3", list[0].facilities_productName3);
+            //                    sqlcommand1.Parameters.AddWithValue("@FinancingProductName4", list[0].facilities_productName4);
+            //                    sqlcommand1.Parameters.AddWithValue("@GracePeriod", list[0].facilities_gracePeriod);
+            //                    sqlcommand1.Parameters.AddWithValue("@LegalFeesFinancedAmount", list[0].facilities_totFeesAmount);
+            //                    sqlcommand1.Parameters.AddWithValue("@MRTAFinancedAmount", list[0].facilities_totInsAmount);
+            //                    sqlcommand1.Parameters.AddWithValue("@PurposeCode", list[0].facilities_purposeCode);
+            //                    sqlcommand1.Parameters.AddWithValue("@TotalFinancingAmount", list[0].facilities_totFinancingAmountIncFlvm);
+            //                    sqlcommand1.Parameters.AddWithValue("@ValuationFeesFinancedAmount", list[0].facilities_totValuationFees);
+            //                    sqlcommand1.Parameters.AddWithValue("@BuildUpArea", list[0].collaterals_buildUpArea);
+            //                    sqlcommand1.Parameters.AddWithValue("@DeveloperCode", list[0].collaterals_developerCode);
+
+            //                    sqlcommand1.Parameters.AddWithValue("@DeveloperName", list[0].collaterals_developerName);
+            //                    sqlcommand1.Parameters.AddWithValue("@CollateralPurpose", list[0].collaterals_financingType);
+            //                    sqlcommand1.Parameters.AddWithValue("@LandArea", list[0].collaterals_landArea);
+            //                    sqlcommand1.Parameters.AddWithValue("@ProjectCode", list[0].collaterals_projectCode);
+            //                    sqlcommand1.Parameters.AddWithValue("@ProjectName", list[0].collaterals_projectName);
+            //                    sqlcommand1.Parameters.AddWithValue("@PropertyAddress", list[0].collaterals_propertyAddress);
+            //                    sqlcommand1.Parameters.AddWithValue("@PropertyType", list[0].collaterals_propertyType);
+            //                    sqlcommand1.Parameters.AddWithValue("@ValuationRequired", list[0].collaterals_requiredValReportInd);
+            //                    sqlcommand1.Parameters.AddWithValue("@TitleDetailsLO", list[0].collaterals_titleDetails);
+            //                    sqlcommand1.Parameters.AddWithValue("@ValuerAccountNBR", list[0].collaterals_valuerAccountNbr);
+            //                    sqlcommand1.Parameters.AddWithValue("@ValuerAccountType", list[0].collaterals_valuerAccountType);
+            //                    sqlcommand1.Parameters.AddWithValue("@ValuerAddr1", list[0].collaterals_valuerAddr1);
+            //                    sqlcommand1.Parameters.AddWithValue("@ValuerAddr2", list[0].collaterals_valuerAddr2);
+            //                    sqlcommand1.Parameters.AddWithValue("@ValuerAddr3", list[0].collaterals_valuerAddr3);
+
+            //                    sqlcommand1.Parameters.AddWithValue("@ValuerAddrCity", list[0].collaterals_valuerCity);
+            //                    sqlcommand1.Parameters.AddWithValue("@ValuerAddrCountry", list[0].collaterals_valuerCountry);
+            //                    sqlcommand1.Parameters.AddWithValue("@ValuerAddrPostCode", list[0].collaterals_valuerPostcode);
+            //                    sqlcommand1.Parameters.AddWithValue("@ValuerAddrState", list[0].collaterals_valuerState);
+            //                    sqlcommand1.Parameters.AddWithValue("@ValuerCode", list[0].collaterals_valuerCode);
+            //                    sqlcommand1.Parameters.AddWithValue("@ValuerEmail", list[0].collaterals_valuerEmail);
+            //                    sqlcommand1.Parameters.AddWithValue("@ValuerName", list[0].collaterals_valuerName);
+            //                    sqlcommand1.Parameters.AddWithValue("@VerbalIndicativeValue", list[0].collaterals_verbalIndicativeValue);
+            //                    sqlcommand1.Parameters.AddWithValue("@RESPONSECODE", list[0].respInfo_respCode);
+            //                    sqlcommand1.Parameters.AddWithValue("@RESPONSEDESCRIPTION", list[0].respInfo_respDesc);
+
+            //                    sqlcommand1.Parameters.AddWithValue("@priApplicantId", list[0].loanApptPersonnelInfo_priApplicantId);
+            //                    sqlcommand1.Parameters.AddWithValue("@valuerFaxNbr", list[0].collaterals_valuerFaxNbr);
+            //                    sqlcommand1.Parameters.AddWithValue("@valuerTelNbr", list[0].collaterals_valuerTelNbr);
+            //                    sqlcommand1.Parameters.AddWithValue("@solicitorFaxNbr", list[0].loanApplicationInfo_solicitorFaxNbr);
+            //                    sqlcommand1.Parameters.AddWithValue("@solicitorTelNbr", list[0].loanApplicationInfo_solicitorTelNbr);
+
+            //                    //dev portal new fields 
+            //                    sqlcommand1.Parameters.AddWithValue("@phaseCode", list[0].loanApplicationInfo_phaseCode);
+            //                    sqlcommand1.Parameters.AddWithValue("@phaseName", list[0].loanApplicationInfo_phaseName);
+            //                    sqlcommand1.Parameters.AddWithValue("@unitParcelNo", list[0].loanApplicationInfo_unitParcelNo);
+            //                    sqlcommand1.Parameters.AddWithValue("@spaValue", list[0].loanApplicationInfo_spaValue);
+            //                    sqlcommand1.Parameters.AddWithValue("@category", list[0].loanApplicationInfo_category);
+
+            //                    //sqlcommand1.Parameters.Add("@param_ARN", SqlDbType.NVarChar);
+            //                    //sqlcommand1.Parameters["@param_ARN"].Value = dt.Rows[i]["ARN"].ToString();
+
+            //                    //sqlcommand1.Parameters.Add("@RESPONSECODE", SqlDbType.NVarChar);
+            //                    //sqlcommand1.Parameters["@RESPONSECODE"].Value = list[0].respInfo_respCode.ToString();
+
+            //                    //sqlcommand1.Parameters.Add("@RESPONSEDESCRIPTION", SqlDbType.NVarChar);
+            //                    //sqlcommand1.Parameters["@RESPONSEDESCRIPTION"].Value = list[0].respInfo_respDesc.ToString();
 
 
-            }
+            //                    conn2.Open();
+            //                    int rowsAffected2 = sqlcommand1.ExecuteNonQuery();
+            //                    conn2.Close();
+            //                }
+            //            }
+            //        }
+            //        //sqlcommand2.Parameters.AddWithValue("@ARN", dt.Rows[i]["ARN"].ToString());
+            //        //sqlcommand1.Parameters.AddWithValue("@RESPONSECODE", list[0].respInfo_respCode);
+            //        //sqlcommand1.Parameters.AddWithValue("@RESPONSEDESCRIPTION", list[0].respInfo_respDesc);
+
+            //        SqlConnection conn3 = null;
+            //        conn3 = new SqlConnection(connstr);
+            //        SqlCommand sqlcommand2 = new SqlCommand("dbo.usp_ws_loads_staging_complete2", conn3);
+            //        conn3.Open();
+            //        int rowsAffected3 = sqlcommand2.ExecuteNonQuery();
+            //        conn3.Close();
+            //    }
+            //    conn.Close();
+
+            //}
+            //catch (Exception ex)
+            //{
+            //    error = "DP_NewLI_Rerun failed with exception: " + ex.Message.ToString();
+            //    string errorDetail;
+            //    errorDetail = "Input Param: N/A";
+            //    LogErrorToDB("DP_NewLI_Rerun", "Exception", error, errorDetail);
+
+
+            //}
         }
 
         // Mortgage-MG API
@@ -5643,110 +9468,7 @@ namespace HLBBWS
             return randomBytes;
         }
 
-        // Mortgage-MG API
-        [WebMethod]
-        public void DP_ExportSolicitorSubmissionOtherDocumentsToEDMS(string solicitorcode, string strProfile, string strFolderName, string strARN, string strDocType, string strCategory, string strIDNumber, string Name, ref string error)
-        {
-            error = "";
-            //ExportFileResponseData response = new ExportFileResponseData();
-            DataSet ds = null;
-            DataTable dt = null;
-            SqlConnection conn = null;
-            SqlDataAdapter sqlDA = null;
-
-            //System.ServiceModel.BasicHttpBinding binding = null;
-            //EDMS_WSSDK.WSSDKSoapClient client = null;
-
-            try
-            {
-
-                string strDataSource = clsGlobal.MG_SQL_DATA_SOURCE;
-                string strDBName = clsGlobal.MG_SQL_DB_NAME;
-                string strID = clsGlobal.MG_SQL_ID;
-                string strPassword = clsGlobal.MG_SQL_PASSWORD;
-                bool blnIsWinAuth = clsGlobal.MG_SQL_IS_WIN_AUTH;
-
-                string connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Persist Security Info=True;User ID=" + strID + ";Password=" + strPassword;
-                if (blnIsWinAuth)
-                {
-                    connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Integrated Security=True;";
-                }
-                conn = new SqlConnection(connstr);
-                conn.Open();
-
-                sqlDA = new SqlDataAdapter();
-                sqlDA.SelectCommand = new SqlCommand("usp_ws_getSolicitorOtherDocumentsFromARN @arn, @solicitorcode", conn);
-                //SqlCommand command = new SqlCommand(commandText, connection);
-                sqlDA.SelectCommand.Parameters.AddWithValue("@arn", strARN);
-                sqlDA.SelectCommand.Parameters.AddWithValue("@solicitorcode", solicitorcode);
-
-                ds = new DataSet("ds");
-                sqlDA.Fill(ds);
-                dt = ds.Tables[0];
-
-                conn.Close();
-
-                //Specify the binding to be used for the client.
-                //binding = new System.ServiceModel.BasicHttpBinding();
-                //client = new EDMS_WSSDK.WSSDKSoapClient("WSSDKSoap", clsGlobal.EDMS_HOST_URL);
-                if (dt.Rows.Count > 0)
-                {
-                    string outputARN;
-                    string outputSolicitorCode;
-                    string outputAttachmentID;
-                    string outputAttachment;
-                    string outputAttachmentName;
-                    string outputImage;
-                    string outputImageName;
-                    string outputCustomerID;
-                    string outputCustomerName;
-
-                    for (int i = 0; i < dt.Rows.Count; i++)
-                    {
-                        outputARN = dt.Rows[i]["ARN"].ToString();
-                        outputSolicitorCode = dt.Rows[i]["SolicitorCode"].ToString();
-                        outputAttachmentID = dt.Rows[i]["AttachmentID"].ToString();
-                        outputAttachment = dt.Rows[i]["Attachment"].ToString();
-                        outputAttachmentName = dt.Rows[i]["AttachmentName"].ToString();
-                        outputImageName = dt.Rows[i]["ImageName"].ToString();
-                        outputImage = dt.Rows[i]["Image"].ToString();
-                        outputCustomerID = dt.Rows[i]["CustomerID"].ToString();
-                        outputCustomerName = dt.Rows[i]["CustomerName"].ToString();
-                        string DP_ExportK2FileToEDMS_error = "";
-                        ExportFileResponseData response = DP_ExportK2FileToEDMS(strProfile, strFolderName, outputImage, outputImageName, strARN, strDocType, strCategory, strIDNumber, Name, ref DP_ExportK2FileToEDMS_error);
-
-                    }
-
-                }
-            }
-            catch (Exception ex)
-            {
-                error = "DP_ExportSolicitorSubmissionOtherDocumentsToEDMS failed with exception: " + ex.Message.ToString();
-                string errorDetail;
-                errorDetail = "Input Param: " + solicitorcode.ToString() + "," + strProfile.ToString() + "," + strFolderName.ToString() + "," + strARN.ToString() + "," + strDocType.ToString() + "," + strCategory.ToString() + "," + strIDNumber.ToString() + "," + Name.ToString();
-                LogErrorToDB("DP_ExportSolicitorSubmissionOtherDocumentsToEDMS", "Exception", error, errorDetail);
-                //clsLog.WriteSystemLog(clsLog.MessageType.Error, "ExportSolicitorSubmissionOtherDocumentsToEDMS()", ex.Message + Environment.NewLine + ex.StackTrace);
-            }
-            /*
-            finally
-            {
-                if (conn != null)
-                {
-                    if (conn.State != ConnectionState.Closed)
-                    {
-                        conn.Close();
-                    }
-                    conn = null;
-                }
-
-                ds = null;
-                dt = null;
-                sqlDA = null;
-
-            }
-            */
-        }
-
+        
         [WebMethod]
         public void DP_SaveFile()
         {
@@ -5798,8 +9520,9 @@ namespace HLBBWS
             File.WriteAllBytes(@"c:\temp\testing.pdf", byteFileContent);
         }
 
+        
         [WebMethod]
-        public void DP_NewSolicitor_Attachment(ref string error)
+        public void DP_NewSolicitor_AttachmentV2(ref string error)
         {
             error = "";
 
@@ -5817,11 +9540,13 @@ namespace HLBBWS
                 string strPassword = clsGlobal.MG_SQL_PASSWORD;
                 bool blnIsWinAuth = clsGlobal.MG_SQL_IS_WIN_AUTH;
 
+                /*
                 string strDataSource2 = clsGlobal.MG_SQL_DATA_SOURCE2;
                 string strDBName2 = clsGlobal.MG_SQL_DB_NAME2;
                 string strID2 = clsGlobal.MG_SQL_ID2;
                 string strPassword2 = clsGlobal.MG_SQL_PASSWORD2;
                 bool blnIsWinAuth2 = clsGlobal.MG_SQL_IS_WIN_AUTH2;
+                */
 
                 string connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Persist Security Info=True;User ID=" + strID + ";Password=" + strPassword;
                 if (blnIsWinAuth)
@@ -5829,11 +9554,13 @@ namespace HLBBWS
                     connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Integrated Security=True;";
                 }
 
+                /*
                 string connstr2 = @"Data Source=" + strDataSource2 + ";Initial Catalog=" + strDBName2 + ";Persist Security Info=True;User ID=" + strID2 + ";Password=" + strPassword2;
                 if (blnIsWinAuth2)
                 {
                     connstr2 = @"Data Source=" + strDataSource2 + ";Initial Catalog=" + strDBName2 + ";Integrated Security=True;";
                 }
+                */
 
                 SqlConnection connPRE = null;
                 SqlDataAdapter sqlDAPRE = null;
@@ -5854,217 +9581,137 @@ namespace HLBBWS
                     fireeye_flag = dtPRE.Rows[0]["fireeye_flag"].ToString();
                 }
 
-                if (fireeye_flag == "1")
+                conn = new SqlConnection(connstr);
+
+                sqlDA = new SqlDataAdapter();
+                sqlDA.SelectCommand = new SqlCommand("dbo.[Sol2_DocSubmission_ws_AVJob_FindCase]", conn);
+
+                string arn;
+                int NoOfAttachment;
+
+                ds = new DataSet("ds");
+                sqlDA.Fill(ds);
+
+                if (ds.Tables.Count > 0)
                 {
-                    conn = new SqlConnection(connstr);
-
-                    sqlDA = new SqlDataAdapter();
-                    sqlDA.SelectCommand = new SqlCommand("dbo.[usp_ws_SQLSolicitorDPSubmission_ListUploadedARN]", conn);
-
-                    string arn;
-                    ds = new DataSet("ds");
-                    sqlDA.Fill(ds);
-
-                    if (ds.Tables.Count > 0)
+                    dt = ds.Tables[0];
+                    for (int i = 0; i < dt.Rows.Count; i++)
                     {
-                        dt = ds.Tables[0];
-                        for (int i = 0; i < dt.Rows.Count; i++)
+                        arn = dt.Rows[i]["ARN"].ToString();
+                        NoOfAttachment = Convert.ToInt32(dt.Rows[i]["NoOfAttachment"].ToString());
+
+                        // get lisf of attachments
+                        string WF = "SolicitorDPSubmission";
+
+                        SqlConnection conn1 = null;
+                        conn1 = new SqlConnection(connstr);
+                        SqlDataAdapter sqlDA1 = new SqlDataAdapter();
+                        sqlDA1.SelectCommand = new SqlCommand("dbo.[Sol2_DocSubmission_ws_AVJob_ListAttachment] @ARN", conn1);
+                        sqlDA1.SelectCommand.Parameters.AddWithValue("@arn", arn);
+
+                        DataSet ds1 = null;
+                        DataTable dt1 = null;
+
+                        ds1 = new DataSet("ds");
+
+                        sqlDA1.Fill(ds1);
+
+                        dt1 = ds1.Tables[0];
+                        for (int dd = 0; dd < dt1.Rows.Count; dd++)
                         {
-                            arn = dt.Rows[i]["ARN"].ToString();
-                            // start validate arn 
-                            SqlConnection conn1 = null;
-                            conn1 = new SqlConnection(connstr2);
-                            SqlDataAdapter sqlDA1 = new SqlDataAdapter();
-                            sqlDA1.SelectCommand = new SqlCommand("dbo.[usp_ws_SolicitorSubmission_CheckARN] @ARN", conn1);
-                            sqlDA1.SelectCommand.Parameters.AddWithValue("@arn", arn);
 
-                            DataSet ds1 = null;
-                            DataTable dt1 = null;
+                            string k2attachment = dt1.Rows[dd]["K2Attachment"].ToString();
+                            string AttachmentFileName = dt1.Rows[dd]["AttachmentFileName"].ToString();
+                            string AttachmentContent = dt1.Rows[dd]["AttachmentContent"].ToString();
+                            string AttachmentFileType = dt1.Rows[dd]["AttachmentFileType"].ToString();
+                            string AttachmentChecksum = dt1.Rows[dd]["AttachmentChecksum"].ToString();
 
-                            ds1 = new DataSet("ds");
-
-                            sqlDA1.Fill(ds1);
-
-                            if (ds1.Tables.Count > 0)
+                            // upload to attachment staging 
+                            if (fireeye_flag == "1")
                             {
-                                /*
-                                SqlConnection conn2 = null;
-                                conn2 = new SqlConnection(connstr);
-                                SqlDataAdapter sqlDA2 = new SqlDataAdapter();
-                                sqlDA2.SelectCommand = new SqlCommand("dbo.[usp_SQLSolicitorDPSubmission_SelectAttachments] @ARN", conn2);
-                                sqlDA2.SelectCommand.Parameters.AddWithValue("@arn", arn);
-
-                                //SqlCommand sqlcommand0 = new SqlCommand("dbo.usp_SQLSolicitorDPSubmission_SelectAttachments @ARN", conn1);
-                                //sqlcommand0.Parameters.AddWithValue("@ARN", arn);
-
-                                DataSet ds2 = null;
-                                DataTable dt2 = null;
-
-                                ds2 = new DataSet("ds");
-                                sqlDA2.Fill(ds2);
-
-                                if (ds2.Tables.Count > 0)
-                                {
-                                    dt2 = ds2.Tables[0];
-                                    for (int j = 0; j < dt2.Rows.Count; j++)
-                                    {
-                                        SqlConnection conn3 = null;
-                                        conn3 = new SqlConnection(connstr2);
-
-                                        SqlCommand sqlcommand1 = new SqlCommand("dbo.usp_solicitorattachment_upload @ARN, @attachmentfilename, @attachmentcontent, @attachmentfiletype, @attachmentuploaddate ", conn3);
-
-                                        sqlcommand1.Parameters.AddWithValue("@ARN", arn);
-                                        sqlcommand1.Parameters.AddWithValue("@attachmentfilename", dt2.Rows[j]["attachmentfilename"].ToString());
-                                        sqlcommand1.Parameters.AddWithValue("@attachmentcontent", dt2.Rows[j]["attachmentcontent"].ToString());
-                                        sqlcommand1.Parameters.AddWithValue("@attachmentfiletype", dt2.Rows[j]["attachmentfiletype"].ToString());
-                                        sqlcommand1.Parameters.AddWithValue("@attachmentuploaddate", dt2.Rows[j]["attachmentuploaddate"]);
-
-                                        conn3.Open();
-                                        int rowsAffected2 = sqlcommand1.ExecuteNonQuery();
-                                        conn3.Close();
-
-                                    }
-                                }
-                                conn2.Close();
-                                */
-                                SqlConnection conn4 = null;
-                                conn4 = new SqlConnection(connstr2);
-
-                                SqlCommand sqlcommand2 = new SqlCommand("dbo.usp_ws_solicitorattachment_create_master_data @ARN ", conn4);
-                                sqlcommand2.Parameters.AddWithValue("@ARN", arn);
-
-                                conn4.Open();
-                                int rowsAffected3 = sqlcommand2.ExecuteNonQuery();
-                                conn4.Close();
+                                AV_UploadFileToAttachmentStaging(WF, arn, k2attachment, ref error);
                             }
-                            // end validate arn 
-                            conn1.Close();
+                            else
+                            {
+                                // fireeye flag is set to off, directly save attachment to eDMS
 
+                                // start get edms settings 
+                                SqlConnection connx = new SqlConnection(connstr);
+
+                                SqlDataAdapter sqlDAx = new SqlDataAdapter();
+                                sqlDAx.SelectCommand = new SqlCommand("dbo.[usp_ws_getEDMS_Solicitor_Setting] @error output", connx);
+                                sqlDAx.SelectCommand.Parameters.AddWithValue("@error", "");
+
+                                DataSet dsx = new DataSet("ds");
+                                DataTable dtx = null;
+
+                                sqlDAx.Fill(dsx);
+                                dtx = dsx.Tables[0];
+
+                                var EDMSDocType = dtx.Rows[0]["EDMSDocType"];
+                                var ProfileName = dtx.Rows[0]["ProfileName"];
+                                var LoginUser = dtx.Rows[0]["LoginUser"];
+                                var DefaultFileName = dtx.Rows[0]["DefaultFileName"];
+                                var EDMSUploadFolder = dtx.Rows[0]["EDMSUploadFolder"];
+                                var Category = dtx.Rows[0]["Category"];
+                                connx.Close();
+
+                                // start get customer name and id for the selected arn 
+                                SqlConnection conny = new SqlConnection(connstr);
+
+                                SqlDataAdapter sqlDAy = new SqlDataAdapter();
+                                sqlDAy.SelectCommand = new SqlCommand("dbo.[usp_ws_getCustomerInfo_forARN] @arn, @error output", conny);
+                                sqlDAy.SelectCommand.Parameters.AddWithValue("@arn", arn);
+                                sqlDAy.SelectCommand.Parameters.AddWithValue("@error", "");
+
+                                DataSet dsy = new DataSet("ds");
+                                DataTable dty = null;
+
+                                sqlDAy.Fill(dsy);
+                                dty = dsy.Tables[0];
+                                var CustomerID = dty.Rows[0]["CustomerID"].ToString();
+                                if (CustomerID.ToString() == "")
+                                {
+                                    CustomerID = "N/A";
+                                }
+                                var CustomerName = dty.Rows[0]["CustomerName"].ToString();
+                                if (CustomerName.ToString() == "")
+                                {
+                                    CustomerName = "N/A";
+                                }
+                                conny.Close();
+
+                                string DP_ExportK2FileToEDMS_error = "";
+                                ExportFileResponseData response = DP_ExportK2FileToEDMS(ProfileName.ToString(), EDMSUploadFolder.ToString(), AttachmentContent.ToString(), AttachmentFileName.ToString(), arn.ToString(), EDMSDocType.ToString(), Category.ToString(), CustomerID.ToString(), CustomerName.ToString(), ref DP_ExportK2FileToEDMS_error);
+
+                            }
                         }
 
-                    }
-                    conn.Close();
-                }
-                else
-                {
-                    // fireeye flag is set to off, directly save attachment to eDMS
+                        //update AV start scan date 
+                        SqlConnection connUpdateAVScanStartDate = new SqlConnection(connstr);
 
-                    // start get edms settings 
-                    SqlConnection connx = new SqlConnection(connstr);
+                        SqlDataAdapter sqlDAUpdateAVScanStartDate = new SqlDataAdapter();
+                        sqlDAUpdateAVScanStartDate.SelectCommand = new SqlCommand("dbo.[Sol2_DocSubmission_ws_AVJob_AV_UpdateAVScanStartDate] @arn", connUpdateAVScanStartDate);
+                        sqlDAUpdateAVScanStartDate.SelectCommand.Parameters.AddWithValue("@arn", arn);
 
-                    SqlDataAdapter sqlDAx = new SqlDataAdapter();
-                    sqlDAx.SelectCommand = new SqlCommand("dbo.[usp_ws_getEDMS_Solicitor_Setting] @error output", connx);
-                    sqlDAx.SelectCommand.Parameters.AddWithValue("@error", "");
+                        DataSet dsUpdateAVScanStartDate = new DataSet("ds");
 
-                    DataSet dsx = new DataSet("ds");
-                    DataTable dtx = null;
+                        sqlDAUpdateAVScanStartDate.Fill(dsUpdateAVScanStartDate);
 
-                    sqlDAx.Fill(dsx);
-                    dtx = dsx.Tables[0];
-
-                    var EDMSDocType = dtx.Rows[0]["EDMSDocType"];
-                    var ProfileName = dtx.Rows[0]["ProfileName"];
-                    var LoginUser = dtx.Rows[0]["LoginUser"];
-                    var DefaultFileName = dtx.Rows[0]["DefaultFileName"];
-                    var EDMSUploadFolder = dtx.Rows[0]["EDMSUploadFolder"];
-                    var Category = dtx.Rows[0]["Category"];
-                    connx.Close();
-                    // end get edms settings
-
-
-                    // start get all arn from staging
-                    SqlConnection connALPHA = new SqlConnection(connstr);
-
-                    SqlDataAdapter sqlDAALPHA = new SqlDataAdapter();
-                    sqlDAALPHA.SelectCommand = new SqlCommand("dbo.[usp_ws_SolicitorSubmission_getallARNInStaging]", connALPHA);
-                    //sqlDAALPHA.SelectCommand.Parameters.AddWithValue("@error", "");
-
-                    DataSet dsAPLHA = new DataSet("ds");
-                    DataTable dtALPHA = null;
-
-                    sqlDAALPHA.Fill(dsAPLHA);
-                    dtALPHA = dsAPLHA.Tables[0];
-
-                    if (dsAPLHA.Tables.Count > 0)
-                    {
-                        dtALPHA = dsAPLHA.Tables[0];
-
-                        for (int s = 0; s < dtALPHA.Rows.Count; s++)
+                        if (fireeye_flag == "1")
                         {
-                            var arn = dtALPHA.Rows[s]["arn"];
+                            // create master data 
+                            AV_CreateMasterData(WF, arn, ref error);
 
-                            // start get customer name and id for the selected arn 
-                            SqlConnection conny = new SqlConnection(connstr);
 
-                            SqlDataAdapter sqlDAy = new SqlDataAdapter();
-                            sqlDAy.SelectCommand = new SqlCommand("dbo.[usp_ws_getCustomerInfo_forARN] @arn, @error output", conny);
-                            sqlDAy.SelectCommand.Parameters.AddWithValue("@arn", arn);
-                            sqlDAy.SelectCommand.Parameters.AddWithValue("@error", "");
-
-                            DataSet dsy = new DataSet("ds");
-                            DataTable dty = null;
-
-                            sqlDAy.Fill(dsy);
-                            dty = dsy.Tables[0];
-                            var CustomerID = dty.Rows[0]["CustomerID"].ToString();
-                            if (CustomerID.ToString() == "")
-                            {
-                                CustomerID = "N/A";
-                            }
-                            var CustomerName = dty.Rows[0]["CustomerName"].ToString();
-                            if (CustomerName.ToString() == "")
-                            {
-                                CustomerName = "N/A";
-                            }
-                            conny.Close();
-                            // end get customer name and id for the selected arn 
-
-                            // start get attachment detail 
-                            SqlConnection conn1 = null;
-                            conn1 = new SqlConnection(connstr);
-                            SqlDataAdapter sqlDA1 = new SqlDataAdapter();
-                            
-                            sqlDA1.SelectCommand = new SqlCommand("dbo.[usp_ws_list_SolicitorDocumentationSubmissionAttachmentInStaging] @ARN", conn1);
-                            sqlDA1.SelectCommand.Parameters.AddWithValue("@arn", arn);
-                            
-
-                            DataSet ds1 = null;
-                            DataTable dt1 = null;
-
-                            ds1 = new DataSet("ds");
-
-                            sqlDA1.Fill(ds1);
-
-                            if (ds1.Tables.Count > 0)
-                            {
-                                dt1 = ds1.Tables[0];
-
-                                for (int j = 0; j < dt1.Rows.Count; j++)
-                                {
-                                    var filename_original = dt1.Rows[j]["ItemFileName"];
-                                    var filename_new = dt1.Rows[j]["ItemFileName"];
-                                    var filecontent = dt1.Rows[j]["ItemContent"];
-                                    //byte[] byteFileContent = Convert.FromBase64String(filecontent);
-                                    var filetype = dt1.Rows[j]["ItemFileType"];
-                                    // var attachmentuploaddate = dt1.Rows[j]["attachmentuploaddate"];
-                                    //var fe_failed_description = dt1.Rows[j]["fe_failed_description"];
-                                    //var fe_failed_code = dt1.Rows[j]["fe_failed_code"];
-                                    //var d_result = dt1.Rows[j]["result"];
-
-                                    string DP_ExportK2FileToEDMS_error = "";
-                                    //ExportFileResponseData response = DP_ExportK2FileToEDMS(ProfileName.ToString(), EDMSUploadFolder.ToString(), filecontent.ToString(), filename_original + "." + filetype, arn.ToString(), EDMSDocType.ToString(), Category.ToString(), CustomerID.ToString(), CustomerName.ToString(), ref DP_ExportK2FileToEDMS_error);
-                                    ExportFileResponseData response = DP_ExportK2FileToEDMS(ProfileName.ToString(), EDMSUploadFolder.ToString(), filecontent.ToString(), filename_original.ToString(), arn.ToString(), EDMSDocType.ToString(), Category.ToString(), CustomerID.ToString(), CustomerName.ToString(), ref DP_ExportK2FileToEDMS_error);
-
-                                }
-                            }
-                            conn1.Close();
-                            // end get attachment detail 
-
+                        }
+                        else
+                        {
                             // start move arn from staging to main usp_SQLSolicitorDPSubmission_Main_MoveToMain
                             SqlConnection connz = new SqlConnection(connstr);
 
                             SqlDataAdapter sqlDAz = new SqlDataAdapter();
-                            sqlDAz.SelectCommand = new SqlCommand("dbo.[usp_ws_SQLSolicitorDPSubmission_Main_MoveToMain] @arn, @error output", connz);
+                            sqlDAz.SelectCommand = new SqlCommand("dbo.[Sol2_DocSubmission_ws_MoveToMainV2] @arn, @error output", connz);
                             sqlDAz.SelectCommand.Parameters.AddWithValue("@arn", arn);
                             sqlDAz.SelectCommand.Parameters.AddWithValue("@error", "");
 
@@ -6072,37 +9719,21 @@ namespace HLBBWS
                             DataTable dtz = null;
                             //dtz = dsz.Tables[0];
                             sqlDAz.Fill(dsz);
-                            connz.Close();
-                            // start move arn from staging to main 
-
-                            // start delete staging data in temp db 
-                            SqlConnection connmeta = new SqlConnection(connstr);
-
-                            SqlDataAdapter sqlDAmeta = new SqlDataAdapter();
-                            sqlDAmeta.SelectCommand = new SqlCommand("dbo.[usp_ws_deleterecords] @arn, @workflow, @error output", connmeta);
-                            sqlDAmeta.SelectCommand.Parameters.AddWithValue("@arn", arn);
-                            sqlDAmeta.SelectCommand.Parameters.AddWithValue("@workflow", "SolicitorDPSubmission");
-                            sqlDAmeta.SelectCommand.Parameters.AddWithValue("@error", "");
-
-                            DataSet dsmeta = new DataSet("ds");
-                            //DataTable dtz = null;
-                            //dtz = dsz.Tables[0];
-                            sqlDAmeta.Fill(dsmeta);
-                            connmeta.Close();
-                            // start  delete staging data in temp db 
+                            connz.Close();                         
                         }
                     }
-                    // end start get all arn in staging 
+
                 }
+                conn.Close();
 
 
             }
             catch (Exception ex)
             {
-                error = "DP_NewSolicitor_Attachment failed with exception: " + ex.Message.ToString();
+                error = "DP_NewSolicitor_AttachmentV2 failed with exception: " + ex.Message.ToString();
                 string errorDetail;
                 errorDetail = "Input Param: N/A";
-                LogErrorToDB("DP_NewSolicitor_Attachment", "Exception", error, errorDetail);
+                LogErrorToDB("DP_NewSolicitor_AttachmentV2", "Exception", error, errorDetail);
             }
         }
 
@@ -6893,6 +10524,1270 @@ namespace HLBBWS
                 LogErrorToDB("DP_ProjectNotificationOfPaymentPDFFormToEDMS", "Exception", error, errorDetail);
             }
         }
+
+        [WebMethod]
+        public void Sol2_NotificationOfPayment_LegalFee_ProcessEDMSEmail(ref string error)
+        {
+            error = "";
+
+            try
+            {
+                // log the result in db
+                DataSet ds = null;
+                DataTable dt = null;
+                SqlConnection conn = null;
+                SqlDataAdapter sqlDA = null;
+
+                string strDataSource = clsGlobal.MG_SQL_DATA_SOURCE;
+                string strDBName = clsGlobal.MG_SQL_DB_NAME;
+                string strID = clsGlobal.MG_SQL_ID;
+                string strPassword = clsGlobal.MG_SQL_PASSWORD;
+                bool blnIsWinAuth = clsGlobal.MG_SQL_IS_WIN_AUTH;
+
+                string strDataSource2 = clsGlobal.MG_SQL_DATA_SOURCE2;
+                string strDBName2 = clsGlobal.MG_SQL_DB_NAME2;
+                string strID2 = clsGlobal.MG_SQL_ID2;
+                string strPassword2 = clsGlobal.MG_SQL_PASSWORD2;
+                bool blnIsWinAuth2 = clsGlobal.MG_SQL_IS_WIN_AUTH2;
+
+                string connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Persist Security Info=True;User ID=" + strID + ";Password=" + strPassword;
+                if (blnIsWinAuth)
+                {
+                    connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Integrated Security=True;";
+                }
+
+                string connstr2 = @"Data Source=" + strDataSource2 + ";Initial Catalog=" + strDBName2 + ";Persist Security Info=True;User ID=" + strID2 + ";Password=" + strPassword2;
+                if (blnIsWinAuth2)
+                {
+                    connstr2 = @"Data Source=" + strDataSource2 + ";Initial Catalog=" + strDBName2 + ";Integrated Security=True;";
+                }
+
+                // start get edms settings 
+                SqlConnection connx = new SqlConnection(connstr);
+
+                SqlDataAdapter sqlDAx = new SqlDataAdapter();
+               // sqlDAx.SelectCommand = new SqlCommand("dbo.[aa_ws_getEDMS_SolicitorDisbursement_Setting] @error output", connx);
+                sqlDAx.SelectCommand = new SqlCommand("dbo.sol2_ws_getEDMS_NOP_Setting @error output", connx);
+                
+                sqlDAx.SelectCommand.Parameters.AddWithValue("@error", "");
+
+                DataSet dsx = new DataSet("ds");
+                DataTable dtx = null;
+
+                sqlDAx.Fill(dsx);
+                dtx = dsx.Tables[0];
+
+                var EDMSDocType = dtx.Rows[0]["EDMSDocType"];
+                var ProfileName = dtx.Rows[0]["ProfileName"];
+                var LoginUser = dtx.Rows[0]["LoginUser"];
+                var DefaultFileName = dtx.Rows[0]["DefaultFileName"];
+                var EDMSUploadFolder = dtx.Rows[0]["EDMSUploadFolder"];
+                var Category = dtx.Rows[0]["Category"];
+                connx.Close();
+                // end get edms settings
+
+                // start get master list in staging 
+                SqlConnection connMasterList = null;
+                connMasterList = new SqlConnection(connstr);
+                SqlDataAdapter sqlDAMasterList = new SqlDataAdapter();
+
+                sqlDAMasterList.SelectCommand = new SqlCommand("dbo.sol2_NotificationOfPayment_LegalFee_ProcessEDMSEmail_ListRecord ", connMasterList);
+
+                DataSet dsMasterList = null;
+                DataTable dtMasterList = null;
+
+                dsMasterList = new DataSet("ds");
+
+                sqlDAMasterList.Fill(dsMasterList);
+
+                if (dsMasterList.Tables.Count > 0)
+                {
+                    dtMasterList = dsMasterList.Tables[0];
+
+                    for (int j = 0; j < dtMasterList.Rows.Count; j++)
+                    {
+                        string arn = dtMasterList.Rows[j]["arn"].ToString();
+                        string runningid = dtMasterList.Rows[j]["RunningID"].ToString();
+                        string pdfid = dtMasterList.Rows[j]["ProcessPDFID"].ToString();
+                        string receiveremail = dtMasterList.Rows[j]["receiveremail"].ToString();
+                        string EmailBody = dtMasterList.Rows[j]["EmailBody"].ToString();
+                        string EmailHeader = dtMasterList.Rows[j]["EmailHeader"].ToString();
+                       
+                        
+                        // start get attachment detail 
+
+                        var filename_original = "";
+                        var filename_new = "";
+                        var filecontent = "";
+                        var filetype = "";
+
+                        SqlConnection conn1 = null;
+                        conn1 = new SqlConnection(connstr);
+                        SqlDataAdapter sqlDA1 = new SqlDataAdapter();
+
+                        sqlDA1.SelectCommand = new SqlCommand("dbo.[usp_ws_select_SolicitorDocumentationSubmissionPFDFFormData] @pdfid", conn1);
+                        sqlDA1.SelectCommand.Parameters.AddWithValue("@pdfid", pdfid);
+
+                        DataSet ds1 = null;
+                        DataTable dt1 = null;
+
+                        ds1 = new DataSet("ds");
+
+                        sqlDA1.Fill(ds1);
+
+                        if (ds1.Tables.Count > 0)
+                        {
+                            dt1 = ds1.Tables[0];
+
+                            for (int jj = 0; jj < dt1.Rows.Count; jj++)
+                            {
+                                filename_original = dt1.Rows[jj]["ItemFileName"].ToString();
+                                filename_new = dt1.Rows[jj]["ItemFileName"].ToString();
+                                filecontent = dt1.Rows[jj]["ItemContent"].ToString();
+                                filetype = dt1.Rows[jj]["ItemFileType"].ToString();
+                                                            
+                            }
+                        }
+                        conn1.Close();
+                        // end get attachment detail 
+
+                        // start get customer name and id for the selected arn 
+                        SqlConnection conny = new SqlConnection(connstr);
+
+                        SqlDataAdapter sqlDAy = new SqlDataAdapter();
+                        sqlDAy.SelectCommand = new SqlCommand("dbo.[usp_ws_getCustomerInfo_forARN] @arn, @error output", conny);
+                        sqlDAy.SelectCommand.Parameters.AddWithValue("@arn", arn);
+                        sqlDAy.SelectCommand.Parameters.AddWithValue("@error", "");
+
+                        DataSet dsy = new DataSet("ds");
+                        DataTable dty = null;
+
+                        sqlDAy.Fill(dsy);
+                        dty = dsy.Tables[0];
+                        var CustomerID = dty.Rows[0]["CustomerID"].ToString();
+                        if (CustomerID.ToString() == "")
+                        {
+                            CustomerID = "N/A";
+                        }
+                        var CustomerName = dty.Rows[0]["CustomerName"].ToString();
+                        if (CustomerName.ToString() == "")
+                        {
+                            CustomerName = "N/A";
+                        }
+                        conny.Close();
+
+                        string DP_ExportK2FileToEDMS_error = "";
+
+                        ExportFileResponseData response = DP_ExportK2FileToEDMS(ProfileName.ToString(), EDMSUploadFolder.ToString(), filecontent.ToString(), filename_original.ToString(), arn.ToString(), EDMSDocType.ToString(), Category.ToString(), CustomerID.ToString(), CustomerName.ToString(), ref DP_ExportK2FileToEDMS_error);
+
+                        SqlConnection connEDMS_EMAIL_PRE = new SqlConnection(connstr);
+                        SqlDataAdapter sqlDEDMS_EMAIL_PRE;
+
+                        sqlDEDMS_EMAIL_PRE = new SqlDataAdapter();
+                        sqlDEDMS_EMAIL_PRE.SelectCommand = new SqlCommand("dbo.sol2_NotificationOfPayment_LegalFee_ProcessEDMSEmail_CheckEmailFlag @Flag output", connEDMS_EMAIL_PRE);
+
+
+                        sqlDEDMS_EMAIL_PRE.SelectCommand.Parameters.Add("@Flag", SqlDbType.Int);
+                        sqlDEDMS_EMAIL_PRE.SelectCommand.Parameters["@Flag"].Direction = ParameterDirection.Output;
+
+                        DataSet dsAlpha = new DataSet("ds");
+                        sqlDEDMS_EMAIL_PRE.Fill(dsAlpha);
+
+                        int Flag = (int)sqlDEDMS_EMAIL_PRE.SelectCommand.Parameters["@Flag"].Value;
+
+                        if (Flag == 1)
+                        {
+                           
+                            SqlConnection connEDMS_EMAIL_2 = new SqlConnection(connstr);
+                            SqlDataAdapter sqlDEDMS_EMAIL_2;
+
+                            sqlDEDMS_EMAIL_2 = new SqlDataAdapter();
+                            sqlDEDMS_EMAIL_2.SelectCommand = new SqlCommand("dbo.usp_getK2PDFFileContent @id", connEDMS_EMAIL_2);
+                            sqlDEDMS_EMAIL_2.SelectCommand.Parameters.AddWithValue("id", pdfid);
+
+                            // DataSet dsAlpha = new DataSet("ds");
+                            sqlDEDMS_EMAIL_2.Fill(dsAlpha);
+
+
+                            string filename = dsAlpha.Tables[0].Rows[0]["PDFFileName"].ToString();
+                            string file = dsAlpha.Tables[0].Rows[0]["PDF"].ToString();
+
+                            string EncryptedFile = DP_SetNotificationOfPaymentPassword(arn, file);
+
+                            if (receiveremail != "")
+                            {
+                                //SendMailWFParser_WithAttachment(ReceiverEmail, EmailHeader, EmailBody, EncryptedFile, filename);
+
+                                //SendMail(ReceiverEmail, EmailHeader, EmailBody, EncryptedFile, filename);
+
+                                //Infobip enhancement 
+                                SendMailV2("SendToSolicitor-NotificationOfPayment", "CreditApplicationNumber", arn, EmailHeader, EmailBody, receiveremail, 1, 1, filename, EncryptedFile);
+                            }
+
+                            /*
+                            SqlConnection connEDMS_EMAIL_LOG = new SqlConnection(connstr);
+                            SqlDataAdapter sqlDEDMS_EMAIL_LOG;
+
+                            sqlDEDMS_EMAIL_LOG = new SqlDataAdapter();
+                            sqlDEDMS_EMAIL_LOG.SelectCommand = new SqlCommand("dbo.ddProject_NOP_Email_Log @DevCode, @ProjectCode , @PhaseCode, @ProcessingDate", connEDMS_EMAIL);
+                            sqlDEDMS_EMAIL_LOG.SelectCommand.Parameters.AddWithValue("DevCode", Devcode);
+                            sqlDEDMS_EMAIL_LOG.SelectCommand.Parameters.AddWithValue("ProjectCode", ProjectCode);
+                            sqlDEDMS_EMAIL_LOG.SelectCommand.Parameters.AddWithValue("PhaseCode", PhaseCode);
+                            sqlDEDMS_EMAIL_LOG.SelectCommand.Parameters.AddWithValue("ProcessingDate", DisCheckerApprovedDate);
+
+                            sqlDEDMS_EMAIL_LOG.Fill(dsAlpha);
+                            */
+                        }
+
+                        // start move record to completed 
+
+                        SqlConnection connMoveToMain = new SqlConnection(connstr);
+
+                        SqlDataAdapter sqlDAMoveToMain = new SqlDataAdapter();
+                        sqlDAMoveToMain.SelectCommand = new SqlCommand("dbo.sol2_NotificationOfPayment_LegalFee_UpdateProcessEmailEndInfo @runningid", connMoveToMain);
+                        sqlDAMoveToMain.SelectCommand.Parameters.AddWithValue("@runningid", runningid);
+                       
+                        DataSet dsMoveToMain = new DataSet("ds");
+                        //DataTable dtARN = null;
+
+                        sqlDAMoveToMain.Fill(dsMoveToMain);
+
+                      
+
+                    }
+                }
+             
+
+
+
+            }
+            catch (Exception ex)
+            {
+                error = "Sol2_NotificationOfPayment_LegalFee_ProcessEDMSEmail failed with exception: " + ex.Message.ToString();
+                string errorDetail;
+                errorDetail = "Input Param: N/A";
+                LogErrorToDB("Sol2_NotificationOfPayment_LegalFee_ProcessEDMSEmail", "Exception", error, errorDetail);
+            }
+        }
+
+        [WebMethod]
+        public void Sol2_NotificationOfPayment_ValuationFee_ProcessEDMSEmail(ref string error)
+        {
+            error = "";
+
+            try
+            {
+                // log the result in db
+                DataSet ds = null;
+                DataTable dt = null;
+                SqlConnection conn = null;
+                SqlDataAdapter sqlDA = null;
+
+                string strDataSource = clsGlobal.MG_SQL_DATA_SOURCE;
+                string strDBName = clsGlobal.MG_SQL_DB_NAME;
+                string strID = clsGlobal.MG_SQL_ID;
+                string strPassword = clsGlobal.MG_SQL_PASSWORD;
+                bool blnIsWinAuth = clsGlobal.MG_SQL_IS_WIN_AUTH;
+
+                string strDataSource2 = clsGlobal.MG_SQL_DATA_SOURCE2;
+                string strDBName2 = clsGlobal.MG_SQL_DB_NAME2;
+                string strID2 = clsGlobal.MG_SQL_ID2;
+                string strPassword2 = clsGlobal.MG_SQL_PASSWORD2;
+                bool blnIsWinAuth2 = clsGlobal.MG_SQL_IS_WIN_AUTH2;
+
+                string connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Persist Security Info=True;User ID=" + strID + ";Password=" + strPassword;
+                if (blnIsWinAuth)
+                {
+                    connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Integrated Security=True;";
+                }
+
+                string connstr2 = @"Data Source=" + strDataSource2 + ";Initial Catalog=" + strDBName2 + ";Persist Security Info=True;User ID=" + strID2 + ";Password=" + strPassword2;
+                if (blnIsWinAuth2)
+                {
+                    connstr2 = @"Data Source=" + strDataSource2 + ";Initial Catalog=" + strDBName2 + ";Integrated Security=True;";
+                }
+
+                // start get edms settings 
+                SqlConnection connx = new SqlConnection(connstr);
+
+                SqlDataAdapter sqlDAx = new SqlDataAdapter();
+                sqlDAx.SelectCommand = new SqlCommand("dbo.sol2_ws_getEDMS_NOP_Setting @error output", connx);
+                sqlDAx.SelectCommand.Parameters.AddWithValue("@error", "");
+
+                DataSet dsx = new DataSet("ds");
+                DataTable dtx = null;
+
+                sqlDAx.Fill(dsx);
+                dtx = dsx.Tables[0];
+
+                var EDMSDocType = dtx.Rows[0]["EDMSDocType"];
+                var ProfileName = dtx.Rows[0]["ProfileName"];
+                var LoginUser = dtx.Rows[0]["LoginUser"];
+                var DefaultFileName = dtx.Rows[0]["DefaultFileName"];
+                var EDMSUploadFolder = dtx.Rows[0]["EDMSUploadFolder"];
+                var Category = dtx.Rows[0]["Category"];
+                connx.Close();
+                // end get edms settings
+
+                // start get master list in staging 
+                SqlConnection connMasterList = null;
+                connMasterList = new SqlConnection(connstr);
+                SqlDataAdapter sqlDAMasterList = new SqlDataAdapter();
+
+                sqlDAMasterList.SelectCommand = new SqlCommand("dbo.sol2_NotificationOfPayment_ValuationFee_ProcessEDMSEmail_ListRecord ", connMasterList);
+
+                DataSet dsMasterList = null;
+                DataTable dtMasterList = null;
+
+                dsMasterList = new DataSet("ds");
+
+                sqlDAMasterList.Fill(dsMasterList);
+
+                if (dsMasterList.Tables.Count > 0)
+                {
+                    dtMasterList = dsMasterList.Tables[0];
+
+                    for (int j = 0; j < dtMasterList.Rows.Count; j++)
+                    {
+                        string arn = dtMasterList.Rows[j]["arn"].ToString();
+                        string runningid = dtMasterList.Rows[j]["RunningID"].ToString();
+                        string pdfid = dtMasterList.Rows[j]["ProcessPDFID"].ToString();
+                        string receiveremail = dtMasterList.Rows[j]["receiveremail"].ToString();
+                        string EmailBody = dtMasterList.Rows[j]["EmailBody"].ToString();
+                        string EmailHeader = dtMasterList.Rows[j]["EmailHeader"].ToString();
+
+
+                        // start get attachment detail 
+
+                        var filename_original = "";
+                        var filename_new = "";
+                        var filecontent = "";
+                        var filetype = "";
+
+                        SqlConnection conn1 = null;
+                        conn1 = new SqlConnection(connstr);
+                        SqlDataAdapter sqlDA1 = new SqlDataAdapter();
+
+                        sqlDA1.SelectCommand = new SqlCommand("dbo.[usp_ws_select_SolicitorDocumentationSubmissionPFDFFormData] @pdfid", conn1);
+                        sqlDA1.SelectCommand.Parameters.AddWithValue("@pdfid", pdfid);
+
+                        DataSet ds1 = null;
+                        DataTable dt1 = null;
+
+                        ds1 = new DataSet("ds");
+
+                        sqlDA1.Fill(ds1);
+
+                        if (ds1.Tables.Count > 0)
+                        {
+                            dt1 = ds1.Tables[0];
+
+                            for (int jj = 0; jj < dt1.Rows.Count; jj++)
+                            {
+                                filename_original = dt1.Rows[jj]["ItemFileName"].ToString();
+                                filename_new = dt1.Rows[jj]["ItemFileName"].ToString();
+                                filecontent = dt1.Rows[jj]["ItemContent"].ToString();
+                                filetype = dt1.Rows[jj]["ItemFileType"].ToString();
+
+                            }
+                        }
+                        conn1.Close();
+                        // end get attachment detail 
+
+                        // start get customer name and id for the selected arn 
+                        SqlConnection conny = new SqlConnection(connstr);
+
+                        SqlDataAdapter sqlDAy = new SqlDataAdapter();
+                        sqlDAy.SelectCommand = new SqlCommand("dbo.[usp_ws_getCustomerInfo_forARN] @arn, @error output", conny);
+                        sqlDAy.SelectCommand.Parameters.AddWithValue("@arn", arn);
+                        sqlDAy.SelectCommand.Parameters.AddWithValue("@error", "");
+
+                        DataSet dsy = new DataSet("ds");
+                        DataTable dty = null;
+
+                        sqlDAy.Fill(dsy);
+                        dty = dsy.Tables[0];
+                        var CustomerID = dty.Rows[0]["CustomerID"].ToString();
+                        if (CustomerID.ToString() == "")
+                        {
+                            CustomerID = "N/A";
+                        }
+                        var CustomerName = dty.Rows[0]["CustomerName"].ToString();
+                        if (CustomerName.ToString() == "")
+                        {
+                            CustomerName = "N/A";
+                        }
+                        conny.Close();
+
+                        string DP_ExportK2FileToEDMS_error = "";
+
+                        ExportFileResponseData response = DP_ExportK2FileToEDMS(ProfileName.ToString(), EDMSUploadFolder.ToString(), filecontent.ToString(), filename_original.ToString(), arn.ToString(), EDMSDocType.ToString(), Category.ToString(), CustomerID.ToString(), CustomerName.ToString(), ref DP_ExportK2FileToEDMS_error);
+
+                        SqlConnection connEDMS_EMAIL_PRE = new SqlConnection(connstr);
+                        SqlDataAdapter sqlDEDMS_EMAIL_PRE;
+
+                        sqlDEDMS_EMAIL_PRE = new SqlDataAdapter();
+                        sqlDEDMS_EMAIL_PRE.SelectCommand = new SqlCommand("dbo.sol2_NotificationOfPayment_ValuationFee_ProcessEDMSEmail_CheckEmailFlag @Flag output", connEDMS_EMAIL_PRE);
+
+
+                        sqlDEDMS_EMAIL_PRE.SelectCommand.Parameters.Add("@Flag", SqlDbType.Int);
+                        sqlDEDMS_EMAIL_PRE.SelectCommand.Parameters["@Flag"].Direction = ParameterDirection.Output;
+
+                        DataSet dsAlpha = new DataSet("ds");
+                        sqlDEDMS_EMAIL_PRE.Fill(dsAlpha);
+
+                        int Flag = (int)sqlDEDMS_EMAIL_PRE.SelectCommand.Parameters["@Flag"].Value;
+
+                        if (Flag == 1)
+                        {
+
+                            SqlConnection connEDMS_EMAIL_2 = new SqlConnection(connstr);
+                            SqlDataAdapter sqlDEDMS_EMAIL_2;
+
+                            sqlDEDMS_EMAIL_2 = new SqlDataAdapter();
+                            sqlDEDMS_EMAIL_2.SelectCommand = new SqlCommand("dbo.usp_getK2PDFFileContent @id", connEDMS_EMAIL_2);
+                            sqlDEDMS_EMAIL_2.SelectCommand.Parameters.AddWithValue("id", pdfid);
+
+                            // DataSet dsAlpha = new DataSet("ds");
+                            sqlDEDMS_EMAIL_2.Fill(dsAlpha);
+
+
+                            string filename = dsAlpha.Tables[0].Rows[0]["PDFFileName"].ToString();
+                            string file = dsAlpha.Tables[0].Rows[0]["PDF"].ToString();
+
+                            string EncryptedFile = Sol2_NotificationOfPayment_ValuationFee_GeneratePDFPassword(arn, file);
+
+                            if (receiveremail != "")
+                            {
+                                //SendMailWFParser_WithAttachment(ReceiverEmail, EmailHeader, EmailBody, EncryptedFile, filename);
+
+                                //SendMail(ReceiverEmail, EmailHeader, EmailBody, EncryptedFile, filename);
+
+                                //Infobip enhancement 
+                                SendMailV2("SendToValuer-NotificationOfPayment", "CreditApplicationNumber", arn, EmailHeader, EmailBody, receiveremail, 1, 1, filename, EncryptedFile);
+                            }
+
+                            /*
+                            SqlConnection connEDMS_EMAIL_LOG = new SqlConnection(connstr);
+                            SqlDataAdapter sqlDEDMS_EMAIL_LOG;
+
+                            sqlDEDMS_EMAIL_LOG = new SqlDataAdapter();
+                            sqlDEDMS_EMAIL_LOG.SelectCommand = new SqlCommand("dbo.ddProject_NOP_Email_Log @DevCode, @ProjectCode , @PhaseCode, @ProcessingDate", connEDMS_EMAIL);
+                            sqlDEDMS_EMAIL_LOG.SelectCommand.Parameters.AddWithValue("DevCode", Devcode);
+                            sqlDEDMS_EMAIL_LOG.SelectCommand.Parameters.AddWithValue("ProjectCode", ProjectCode);
+                            sqlDEDMS_EMAIL_LOG.SelectCommand.Parameters.AddWithValue("PhaseCode", PhaseCode);
+                            sqlDEDMS_EMAIL_LOG.SelectCommand.Parameters.AddWithValue("ProcessingDate", DisCheckerApprovedDate);
+
+                            sqlDEDMS_EMAIL_LOG.Fill(dsAlpha);
+                            */
+                        }
+
+                        // start move record to completed 
+
+                        SqlConnection connMoveToMain = new SqlConnection(connstr);
+
+                        SqlDataAdapter sqlDAMoveToMain = new SqlDataAdapter();
+                        sqlDAMoveToMain.SelectCommand = new SqlCommand("dbo.sol2_NotificationOfPayment_ValuationFee_ProcessEDMSEmail_UpdateEndRecord @runningid", connMoveToMain);
+                        sqlDAMoveToMain.SelectCommand.Parameters.AddWithValue("@runningid", runningid);
+
+                        DataSet dsMoveToMain = new DataSet("ds");
+                        //DataTable dtARN = null;
+
+                        sqlDAMoveToMain.Fill(dsMoveToMain);
+
+
+
+                    }
+                }
+
+
+
+
+            }
+            catch (Exception ex)
+            {
+                error = "Sol2_NotificationOfPayment_ValuationFee_ProcessEDMSEmail failed with exception: " + ex.Message.ToString();
+                string errorDetail;
+                errorDetail = "Input Param: N/A";
+                LogErrorToDB("Sol2_NotificationOfPayment_ValuationFee_ProcessEDMSEmail", "Exception", error, errorDetail);
+            }
+        }
+
+        [WebMethod]
+        public void Sol2_NotificationOfPayment_NonFLVM_LS_ProcessEDMSEmail(ref string error)
+        {
+            error = "";
+
+            try
+            {
+                // log the result in db
+                DataSet ds = null;
+                DataTable dt = null;
+                SqlConnection conn = null;
+                SqlDataAdapter sqlDA = null;
+
+                string strDataSource = clsGlobal.MG_SQL_DATA_SOURCE;
+                string strDBName = clsGlobal.MG_SQL_DB_NAME;
+                string strID = clsGlobal.MG_SQL_ID;
+                string strPassword = clsGlobal.MG_SQL_PASSWORD;
+                bool blnIsWinAuth = clsGlobal.MG_SQL_IS_WIN_AUTH;
+
+                string strDataSource2 = clsGlobal.MG_SQL_DATA_SOURCE2;
+                string strDBName2 = clsGlobal.MG_SQL_DB_NAME2;
+                string strID2 = clsGlobal.MG_SQL_ID2;
+                string strPassword2 = clsGlobal.MG_SQL_PASSWORD2;
+                bool blnIsWinAuth2 = clsGlobal.MG_SQL_IS_WIN_AUTH2;
+
+                string connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Persist Security Info=True;User ID=" + strID + ";Password=" + strPassword;
+                if (blnIsWinAuth)
+                {
+                    connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Integrated Security=True;";
+                }
+
+                string connstr2 = @"Data Source=" + strDataSource2 + ";Initial Catalog=" + strDBName2 + ";Persist Security Info=True;User ID=" + strID2 + ";Password=" + strPassword2;
+                if (blnIsWinAuth2)
+                {
+                    connstr2 = @"Data Source=" + strDataSource2 + ";Initial Catalog=" + strDBName2 + ";Integrated Security=True;";
+                }
+
+                // start get edms settings 
+                SqlConnection connx = new SqlConnection(connstr);
+
+                SqlDataAdapter sqlDAx = new SqlDataAdapter();
+                sqlDAx.SelectCommand = new SqlCommand("dbo.[aa_ws_getEDMS_SolicitorDisbursement_Setting] @error output", connx);
+                sqlDAx.SelectCommand.Parameters.AddWithValue("@error", "");
+
+                DataSet dsx = new DataSet("ds");
+                DataTable dtx = null;
+
+                sqlDAx.Fill(dsx);
+                dtx = dsx.Tables[0];
+
+                var EDMSDocType = dtx.Rows[0]["EDMSDocType"];
+                var ProfileName = dtx.Rows[0]["ProfileName"];
+                var LoginUser = dtx.Rows[0]["LoginUser"];
+                var DefaultFileName = dtx.Rows[0]["DefaultFileName"];
+                var EDMSUploadFolder = dtx.Rows[0]["EDMSUploadFolder"];
+                var Category = dtx.Rows[0]["Category"];
+                connx.Close();
+                // end get edms settings
+
+
+                SqlConnection connEDMS_EMAIL_PRE = new SqlConnection(connstr);
+                SqlDataAdapter sqlDEDMS_EMAIL_PRE;
+
+                sqlDEDMS_EMAIL_PRE = new SqlDataAdapter();
+                sqlDEDMS_EMAIL_PRE.SelectCommand = new SqlCommand("dbo.sol2_NotificationOfPayment_NOPToSolicitor_ProcessEDMSEmail_CheckEmailFlag @Flag output", connEDMS_EMAIL_PRE);
+
+
+                sqlDEDMS_EMAIL_PRE.SelectCommand.Parameters.Add("@Flag", SqlDbType.Int);
+                sqlDEDMS_EMAIL_PRE.SelectCommand.Parameters["@Flag"].Direction = ParameterDirection.Output;
+
+                DataSet dsAlpha = new DataSet("ds");
+                sqlDEDMS_EMAIL_PRE.Fill(dsAlpha);
+
+                int Flag = (int)sqlDEDMS_EMAIL_PRE.SelectCommand.Parameters["@Flag"].Value;
+
+                // start get master list in staging 
+                SqlConnection connMasterList = null;
+                connMasterList = new SqlConnection(connstr);
+                SqlDataAdapter sqlDAMasterList = new SqlDataAdapter();
+
+                sqlDAMasterList.SelectCommand = new SqlCommand("dbo.sol2_NotificationOfPayment_NonFLVM_LS_ProcessEDMS_ListRecordGroupBySolEmail ", connMasterList);
+
+                DataSet dsMasterList = null;
+                DataTable dtMasterList = null;
+
+                dsMasterList = new DataSet("ds");
+
+                sqlDAMasterList.Fill(dsMasterList);
+
+                if (dsMasterList.Tables.Count > 0)
+                {
+                    dtMasterList = dsMasterList.Tables[0];
+
+                    for (int j = 0; j < dtMasterList.Rows.Count; j++)
+                    {
+                        //string arn = dtMasterList.Rows[j]["arn"].ToString();
+                        //string runningid = dtMasterList.Rows[j]["RunningID"].ToString();
+                        //string pdfid = dtMasterList.Rows[j]["ProcessPDFID"].ToString();
+                        string receiveremail = dtMasterList.Rows[j]["receiveremail"].ToString();
+                        string EmailBody = dtMasterList.Rows[j]["EmailBody"].ToString();
+                        string EmailHeader = dtMasterList.Rows[j]["EmailHeader"].ToString();
+                        
+                        var filename_original = "";
+                        var filename_new = "";
+                        var filecontent = "";
+                        var filetype = "";
+
+                        var concadinatedfilename = "";
+                        var concadinatedfilecontent = "";
+
+                        // find NOP by sol email 
+                        SqlConnection connSolEmail = null;
+                        connSolEmail = new SqlConnection(connstr);
+                        SqlDataAdapter sqlDASolEmail = new SqlDataAdapter();
+
+                        sqlDASolEmail.SelectCommand = new SqlCommand("dbo.sol2_NotificationOfPayment_NonFLVM_LS_ProcessEDMS_ListRecordBySolEmail @SolEmail", connSolEmail);
+                        sqlDASolEmail.SelectCommand.Parameters.AddWithValue("@SolEmail", receiveremail);
+
+                        DataSet dsSolEmail = null;
+                        DataTable dtSOlEmail = null;
+
+                        dsSolEmail = new DataSet("ds");
+
+                        sqlDASolEmail.Fill(dsSolEmail);
+
+                        if (dsSolEmail.Tables.Count > 0)
+                        {
+                            dtSOlEmail = dsSolEmail.Tables[0];
+
+                            for (int jj = 0; jj < dtSOlEmail.Rows.Count; jj++)
+                            {
+                                string arn = dtSOlEmail.Rows[jj]["arn"].ToString();
+                                string runningid = dtSOlEmail.Rows[jj]["RunningID"].ToString();
+                                string pdfid = dtSOlEmail.Rows[jj]["ProcessPDFID"].ToString();
+
+
+                                SqlConnection conn1 = null;
+                                conn1 = new SqlConnection(connstr);
+                                SqlDataAdapter sqlDA1 = new SqlDataAdapter();
+
+                                sqlDA1.SelectCommand = new SqlCommand("dbo.[usp_ws_select_SolicitorDocumentationSubmissionPFDFFormData] @pdfid", conn1);
+                                sqlDA1.SelectCommand.Parameters.AddWithValue("@pdfid", pdfid);
+
+                                DataSet ds1 = null;
+                                DataTable dt1 = null;
+
+                                ds1 = new DataSet("ds");
+
+                                sqlDA1.Fill(ds1);
+
+                                if (ds1.Tables.Count > 0)
+                                {
+                                    dt1 = ds1.Tables[0];
+
+                                    for (int jjk = 0; jjk < dt1.Rows.Count; jjk++)
+                                    {
+                                        filename_original = dt1.Rows[jjk]["ItemFileName"].ToString();
+                                        filename_new = dt1.Rows[jjk]["ItemFileName"].ToString();
+                                        filecontent = dt1.Rows[jjk]["ItemContent"].ToString();
+                                        filetype = dt1.Rows[jjk]["ItemFileType"].ToString();
+
+                                    }
+                                }
+                                conn1.Close();
+                                // end get attachment detail 
+
+                                // start get customer name and id for the selected arn 
+                                SqlConnection conny = new SqlConnection(connstr);
+
+                                SqlDataAdapter sqlDAy = new SqlDataAdapter();
+                                sqlDAy.SelectCommand = new SqlCommand("dbo.[usp_ws_getCustomerInfo_forARN] @arn, @error output", conny);
+                                sqlDAy.SelectCommand.Parameters.AddWithValue("@arn", arn);
+                                sqlDAy.SelectCommand.Parameters.AddWithValue("@error", "");
+
+                                DataSet dsy = new DataSet("ds");
+                                DataTable dty = null;
+
+                                sqlDAy.Fill(dsy);
+                                dty = dsy.Tables[0];
+                                var CustomerID = dty.Rows[0]["CustomerID"].ToString();
+                                if (CustomerID.ToString() == "")
+                                {
+                                    CustomerID = "N/A";
+                                }
+                                var CustomerName = dty.Rows[0]["CustomerName"].ToString();
+                                if (CustomerName.ToString() == "")
+                                {
+                                    CustomerName = "N/A";
+                                }
+                                conny.Close();
+
+                                string DP_ExportK2FileToEDMS_error = "";
+
+                                ExportFileResponseData response = DP_ExportK2FileToEDMS(ProfileName.ToString(), EDMSUploadFolder.ToString(), filecontent.ToString(), filename_original.ToString(), arn.ToString(), EDMSDocType.ToString(), Category.ToString(), CustomerID.ToString(), CustomerName.ToString(), ref DP_ExportK2FileToEDMS_error);
+
+                                if (Flag == 1)
+                                {
+
+                                    SqlConnection connEDMS_EMAIL_2 = new SqlConnection(connstr);
+                                    SqlDataAdapter sqlDEDMS_EMAIL_2;
+
+                                    sqlDEDMS_EMAIL_2 = new SqlDataAdapter();
+                                    sqlDEDMS_EMAIL_2.SelectCommand = new SqlCommand("dbo.usp_getK2PDFFileContent @id", connEDMS_EMAIL_2);
+                                    sqlDEDMS_EMAIL_2.SelectCommand.Parameters.AddWithValue("id", pdfid);
+
+                                    // DataSet dsAlpha = new DataSet("ds");
+                                    sqlDEDMS_EMAIL_2.Fill(dsAlpha);
+
+                                    string filename = dsAlpha.Tables[0].Rows[0]["PDFFileName"].ToString();
+                                    string file = dsAlpha.Tables[0].Rows[0]["PDF"].ToString();
+
+                                    string EncryptedFile = DP_SetNotificationOfPaymentPassword(arn, file);
+
+                                    if (concadinatedfilename == "")
+                                    {
+                                        concadinatedfilename =  filename;
+                                    }
+                                    else
+                                    {
+                                        concadinatedfilename = concadinatedfilename + "," + filename;
+                                    }
+
+                                    if (concadinatedfilecontent == "")
+                                    {
+                                        concadinatedfilecontent =  EncryptedFile;
+                                    }
+                                    else
+                                    {
+                                        concadinatedfilecontent = concadinatedfilecontent + "," + EncryptedFile;
+                                    }
+                                    
+                                }
+                            }
+                        }
+                        connSolEmail.Close();
+
+                        if (Flag == 1)
+                        {
+                            if (receiveremail != "")
+                            {
+                                //SendMailWFParser_WithAttachment(ReceiverEmail, EmailHeader, EmailBody, EncryptedFile, filename);
+
+                                //SendMail(ReceiverEmail, EmailHeader, EmailBody, EncryptedFile, filename);
+
+                                //Infobip enhancement 
+                                SendMailV2("SendToSolicitor-NotificationOfPayment", "SolicitorEmail", receiveremail, EmailHeader, EmailBody, receiveremail, 1, 1, concadinatedfilename, concadinatedfilecontent);
+                            }
+                        }
+                        // start move record to completed 
+
+                        SqlConnection connMoveToMain = new SqlConnection(connstr);
+
+                        SqlDataAdapter sqlDAMoveToMain = new SqlDataAdapter();
+                        sqlDAMoveToMain.SelectCommand = new SqlCommand("dbo.sol2_NotificationOfPayment_NonFLVM_LS_UpdateProcessEmailEndInfoBySolEmail @solemail", connMoveToMain);
+                        sqlDAMoveToMain.SelectCommand.Parameters.AddWithValue("@solemail", receiveremail);
+
+                        DataSet dsMoveToMain = new DataSet("ds");
+                        //DataTable dtARN = null;
+
+                        sqlDAMoveToMain.Fill(dsMoveToMain);
+                                  
+                    }
+                }
+
+
+
+
+            }
+            catch (Exception ex)
+            {
+                error = "Sol2_NotificationOfPayment_NonFLVM_LS_ProcessEDMSEmail failed with exception: " + ex.Message.ToString();
+                string errorDetail;
+                errorDetail = "Input Param: N/A";
+                LogErrorToDB("Sol2_NotificationOfPayment_NonFLVM_LS_ProcessEDMSEmail", "Exception", error, errorDetail);
+            }
+        }
+
+        [WebMethod]
+        public void Sol2_NotificationOfPayment_NonFLVM_PR_ProcessEDMSEmail(ref string error)
+        {
+            error = "";
+
+            try
+            {
+                // log the result in db
+                DataSet ds = null;
+                DataTable dt = null;
+                SqlConnection conn = null;
+                SqlDataAdapter sqlDA = null;
+
+                string strDataSource = clsGlobal.MG_SQL_DATA_SOURCE;
+                string strDBName = clsGlobal.MG_SQL_DB_NAME;
+                string strID = clsGlobal.MG_SQL_ID;
+                string strPassword = clsGlobal.MG_SQL_PASSWORD;
+                bool blnIsWinAuth = clsGlobal.MG_SQL_IS_WIN_AUTH;
+
+                string strDataSource2 = clsGlobal.MG_SQL_DATA_SOURCE2;
+                string strDBName2 = clsGlobal.MG_SQL_DB_NAME2;
+                string strID2 = clsGlobal.MG_SQL_ID2;
+                string strPassword2 = clsGlobal.MG_SQL_PASSWORD2;
+                bool blnIsWinAuth2 = clsGlobal.MG_SQL_IS_WIN_AUTH2;
+
+                string connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Persist Security Info=True;User ID=" + strID + ";Password=" + strPassword;
+                if (blnIsWinAuth)
+                {
+                    connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Integrated Security=True;";
+                }
+
+                string connstr2 = @"Data Source=" + strDataSource2 + ";Initial Catalog=" + strDBName2 + ";Persist Security Info=True;User ID=" + strID2 + ";Password=" + strPassword2;
+                if (blnIsWinAuth2)
+                {
+                    connstr2 = @"Data Source=" + strDataSource2 + ";Initial Catalog=" + strDBName2 + ";Integrated Security=True;";
+                }
+
+                // start get edms settings 
+                SqlConnection connx = new SqlConnection(connstr);
+
+                SqlDataAdapter sqlDAx = new SqlDataAdapter();
+                sqlDAx.SelectCommand = new SqlCommand("dbo.[aa_ws_getEDMS_SolicitorDisbursement_Setting] @error output", connx);
+                sqlDAx.SelectCommand.Parameters.AddWithValue("@error", "");
+
+                DataSet dsx = new DataSet("ds");
+                DataTable dtx = null;
+
+                sqlDAx.Fill(dsx);
+                dtx = dsx.Tables[0];
+
+                var EDMSDocType = dtx.Rows[0]["EDMSDocType"];
+                var ProfileName = dtx.Rows[0]["ProfileName"];
+                var LoginUser = dtx.Rows[0]["LoginUser"];
+                var DefaultFileName = dtx.Rows[0]["DefaultFileName"];
+                var EDMSUploadFolder = dtx.Rows[0]["EDMSUploadFolder"];
+                var Category = dtx.Rows[0]["Category"];
+                connx.Close();
+                // end get edms settings
+
+                
+                SqlConnection connEDMS_EMAIL_PRE = new SqlConnection(connstr);
+                SqlDataAdapter sqlDEDMS_EMAIL_PRE;
+
+                sqlDEDMS_EMAIL_PRE = new SqlDataAdapter();
+                sqlDEDMS_EMAIL_PRE.SelectCommand = new SqlCommand("dbo.sol2_NotificationOfPayment_NOPToSolicitor_ProcessEDMSEmail_CheckEmailFlag @Flag output", connEDMS_EMAIL_PRE);
+
+
+                sqlDEDMS_EMAIL_PRE.SelectCommand.Parameters.Add("@Flag", SqlDbType.Int);
+                sqlDEDMS_EMAIL_PRE.SelectCommand.Parameters["@Flag"].Direction = ParameterDirection.Output;
+
+                DataSet dsAlpha = new DataSet("ds");
+                sqlDEDMS_EMAIL_PRE.Fill(dsAlpha);
+
+                int Flag = (int)sqlDEDMS_EMAIL_PRE.SelectCommand.Parameters["@Flag"].Value;
+                
+                //int Flag = 0;
+
+               // start get master list in staging 
+               SqlConnection connMasterList = null;
+                connMasterList = new SqlConnection(connstr);
+                SqlDataAdapter sqlDAMasterList = new SqlDataAdapter();
+
+                sqlDAMasterList.SelectCommand = new SqlCommand("dbo.sol2_NotificationOfPayment_NonFLVM_PR_ProcessEDMS_ListRecordGroupBySolEmail ", connMasterList);
+
+                DataSet dsMasterList = null;
+                DataTable dtMasterList = null;
+
+                dsMasterList = new DataSet("ds");
+
+                sqlDAMasterList.Fill(dsMasterList);
+
+                if (dsMasterList.Tables.Count > 0)
+                {
+                    dtMasterList = dsMasterList.Tables[0];
+
+                    for (int j = 0; j < dtMasterList.Rows.Count; j++)
+                    {
+                        //string arn = dtMasterList.Rows[j]["arn"].ToString();
+                        //string runningid = dtMasterList.Rows[j]["RunningID"].ToString();
+                        //string pdfid = dtMasterList.Rows[j]["ProcessPDFID"].ToString();
+                        string receiveremail = dtMasterList.Rows[j]["receiveremail"].ToString();
+                        string EmailBody = dtMasterList.Rows[j]["EmailBody"].ToString();
+                        string EmailHeader = dtMasterList.Rows[j]["EmailHeader"].ToString();
+
+                        var filename_original = "";
+                        var filename_new = "";
+                        var filecontent = "";
+                        var filetype = "";
+
+                        var concadinatedfilename = "";
+                        var concadinatedfilecontent = "";
+
+                        // find NOP by sol email 
+                        SqlConnection connSolEmail = null;
+                        connSolEmail = new SqlConnection(connstr);
+                        SqlDataAdapter sqlDASolEmail = new SqlDataAdapter();
+
+                        sqlDASolEmail.SelectCommand = new SqlCommand("dbo.sol2_NotificationOfPayment_NonFLVM_PR_ProcessEDMS_ListRecordBySolEmail @SolEmail", connSolEmail);
+                        sqlDASolEmail.SelectCommand.Parameters.AddWithValue("@SolEmail", receiveremail);
+
+                        DataSet dsSolEmail = null;
+                        DataTable dtSOlEmail = null;
+
+                        dsSolEmail = new DataSet("ds");
+
+                        sqlDASolEmail.Fill(dsSolEmail);
+
+                        if (dsSolEmail.Tables.Count > 0)
+                        {
+                            dtSOlEmail = dsSolEmail.Tables[0];
+
+                            for (int jj = 0; jj < dtSOlEmail.Rows.Count; jj++)
+                            {
+                                string arn = dtSOlEmail.Rows[jj]["arn"].ToString();
+                                string runningid = dtSOlEmail.Rows[jj]["RunningID"].ToString();
+                                string pdfid = dtSOlEmail.Rows[jj]["ProcessPDFID"].ToString();
+
+
+                                SqlConnection conn1 = null;
+                                conn1 = new SqlConnection(connstr);
+                                SqlDataAdapter sqlDA1 = new SqlDataAdapter();
+
+                                sqlDA1.SelectCommand = new SqlCommand("dbo.[usp_ws_select_SolicitorDocumentationSubmissionPFDFFormData] @pdfid", conn1);
+                                sqlDA1.SelectCommand.Parameters.AddWithValue("@pdfid", pdfid);
+
+                                DataSet ds1 = null;
+                                DataTable dt1 = null;
+
+                                ds1 = new DataSet("ds");
+
+                                sqlDA1.Fill(ds1);
+
+                                if (ds1.Tables.Count > 0)
+                                {
+                                    dt1 = ds1.Tables[0];
+                                    
+                                    for (int jjj = 0; jjj < dt1.Rows.Count; jjj++)
+                                    {
+                                        filename_original = dt1.Rows[jjj]["ItemFileName"].ToString();
+                                        filename_new = dt1.Rows[jjj]["ItemFileName"].ToString();
+                                        filecontent = dt1.Rows[jjj]["ItemContent"].ToString();
+                                        filetype = dt1.Rows[jjj]["ItemFileType"].ToString();
+
+                                    }
+                                }
+                                conn1.Close();
+                                // end get attachment detail 
+
+                                // start get customer name and id for the selected arn 
+                                SqlConnection conny = new SqlConnection(connstr);
+
+                                SqlDataAdapter sqlDAy = new SqlDataAdapter();
+                                sqlDAy.SelectCommand = new SqlCommand("dbo.[usp_ws_getCustomerInfo_forARN] @arn, @error output", conny);
+                                sqlDAy.SelectCommand.Parameters.AddWithValue("@arn", arn);
+                                sqlDAy.SelectCommand.Parameters.AddWithValue("@error", "");
+
+                                DataSet dsy = new DataSet("ds");
+                                DataTable dty = null;
+
+                                sqlDAy.Fill(dsy);
+                                dty = dsy.Tables[0];
+                                var CustomerID = dty.Rows[0]["CustomerID"].ToString();
+                                if (CustomerID.ToString() == "")
+                                {
+                                    CustomerID = "N/A";
+                                }
+                                var CustomerName = dty.Rows[0]["CustomerName"].ToString();
+                                if (CustomerName.ToString() == "")
+                                {
+                                    CustomerName = "N/A";
+                                }
+                                conny.Close();
+
+                                string DP_ExportK2FileToEDMS_error = "";
+
+                                ExportFileResponseData response = DP_ExportK2FileToEDMS(ProfileName.ToString(), EDMSUploadFolder.ToString(), filecontent.ToString(), filename_original.ToString(), arn.ToString(), EDMSDocType.ToString(), Category.ToString(), CustomerID.ToString(), CustomerName.ToString(), ref DP_ExportK2FileToEDMS_error);
+
+                                if (Flag == 1)
+                                {
+
+                                    SqlConnection connEDMS_EMAIL_2 = new SqlConnection(connstr);
+                                    SqlDataAdapter sqlDEDMS_EMAIL_2;
+
+                                    sqlDEDMS_EMAIL_2 = new SqlDataAdapter();
+                                    sqlDEDMS_EMAIL_2.SelectCommand = new SqlCommand("dbo.usp_getK2PDFFileContent @id", connEDMS_EMAIL_2);
+                                    sqlDEDMS_EMAIL_2.SelectCommand.Parameters.AddWithValue("id", pdfid);
+
+                                    DataSet dsAlphaEDMS_EMAIL_2 = new DataSet("ds");
+                                    sqlDEDMS_EMAIL_2.Fill(dsAlphaEDMS_EMAIL_2);
+
+                                    string filename = dsAlphaEDMS_EMAIL_2.Tables[0].Rows[0]["PDFFileName"].ToString();
+                                    string file = dsAlphaEDMS_EMAIL_2.Tables[0].Rows[0]["PDF"].ToString();
+
+                                    string EncryptedFile = DP_SetNotificationOfPaymentPassword(arn, file);
+
+                                    if (concadinatedfilename == "")
+                                    {
+                                        concadinatedfilename = filename;
+                                    }
+                                    else
+                                    {
+                                        concadinatedfilename = concadinatedfilename + "," + filename;
+                                    }
+
+                                    if (concadinatedfilecontent == "")
+                                    {
+                                        concadinatedfilecontent = EncryptedFile;
+                                    }
+                                    else
+                                    {
+                                        concadinatedfilecontent = concadinatedfilecontent + "," + EncryptedFile;
+                                    }
+                                }
+                            }
+                        }
+                        connSolEmail.Close();
+
+                        if (Flag == 1)
+                        {
+                            if (receiveremail != "")
+                            {
+                                //SendMailWFParser_WithAttachment(ReceiverEmail, EmailHeader, EmailBody, EncryptedFile, filename);
+
+                                //SendMail(ReceiverEmail, EmailHeader, EmailBody, EncryptedFile, filename);
+
+                                //Infobip enhancement 
+                                SendMailV2("SendToSolicitor-NotificationOfPayment", "SolicitorEmail", receiveremail, EmailHeader, EmailBody, receiveremail, 1, 1, concadinatedfilename, concadinatedfilecontent);
+                            }
+                        }
+                        // start move record to completed 
+
+                        SqlConnection connMoveToMain = new SqlConnection(connstr);
+
+                        SqlDataAdapter sqlDAMoveToMain = new SqlDataAdapter();
+                        sqlDAMoveToMain.SelectCommand = new SqlCommand("dbo.sol2_NotificationOfPayment_NonFLVM_PR_UpdateProcessEmailEndInfoBySolEmail @solemail", connMoveToMain);
+                        sqlDAMoveToMain.SelectCommand.Parameters.AddWithValue("@solemail", receiveremail);
+
+                        DataSet dsMoveToMain = new DataSet("ds");
+                        //DataTable dtARN = null;
+
+                        sqlDAMoveToMain.Fill(dsMoveToMain);
+
+                    }
+                }
+
+
+
+
+            }
+            catch (Exception ex)
+            {
+                error = "Sol2_NotificationOfPayment_NonFLVM_PR_ProcessEDMSEmail failed with exception: " + ex.Message.ToString();
+                string errorDetail;
+                errorDetail = "Input Param: N/A";
+                LogErrorToDB("Sol2_NotificationOfPayment_NonFLVM_PR_ProcessEDMSEmail", "Exception", error, errorDetail);
+            }
+        }
+
+        [WebMethod]
+        public void Sol2_PendingPhysicalDocReceivedEmailLog_Doc(ref string error)
+        {
+            error = "";
+
+            try
+            {
+                DataSet ds = null;
+                DataTable dt = null;
+                SqlConnection conn = null;
+                SqlDataAdapter sqlDA = null;
+
+                string strDataSource = clsGlobal.MG_SQL_DATA_SOURCE;
+                string strDBName = clsGlobal.MG_SQL_DB_NAME;
+                string strID = clsGlobal.MG_SQL_ID;
+                string strPassword = clsGlobal.MG_SQL_PASSWORD;
+                bool blnIsWinAuth = clsGlobal.MG_SQL_IS_WIN_AUTH;
+
+                string strDataSource2 = clsGlobal.MG_SQL_DATA_SOURCE2;
+                string strDBName2 = clsGlobal.MG_SQL_DB_NAME2;
+                string strID2 = clsGlobal.MG_SQL_ID2;
+                string strPassword2 = clsGlobal.MG_SQL_PASSWORD2;
+                bool blnIsWinAuth2 = clsGlobal.MG_SQL_IS_WIN_AUTH2;
+
+                string connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Persist Security Info=True;User ID=" + strID + ";Password=" + strPassword;
+                if (blnIsWinAuth)
+                {
+                    connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Integrated Security=True;";
+                }
+
+                string connstr2 = @"Data Source=" + strDataSource2 + ";Initial Catalog=" + strDBName2 + ";Persist Security Info=True;User ID=" + strID2 + ";Password=" + strPassword2;
+                if (blnIsWinAuth2)
+                {
+                    connstr2 = @"Data Source=" + strDataSource2 + ";Initial Catalog=" + strDBName2 + ";Integrated Security=True;";
+                }
+
+                SqlConnection connx = new SqlConnection(connstr);
+
+                SqlDataAdapter sqlDAx = new SqlDataAdapter();
+                sqlDAx.SelectCommand = new SqlCommand("dbo.Sol2_PendingPhysicalDocReceivedEmailLog_Doc_S1", connx);
+               // sqlDAx.SelectCommand.Parameters.AddWithValue("@error", "");
+
+                DataSet dsx = new DataSet("ds");
+                DataTable dtx = null;
+
+                sqlDAx.Fill(dsx);
+                //dtx = dsx.Tables[0];
+
+                //var EDMSDocType = dtx.Rows[0]["EDMSDocType"];
+                //var ProfileName = dtx.Rows[0]["ProfileName"];
+                //var LoginUser = dtx.Rows[0]["LoginUser"];
+                //var DefaultFileName = dtx.Rows[0]["DefaultFileName"];
+                //var EDMSUploadFolder = dtx.Rows[0]["EDMSUploadFolder"];
+                //var Category = dtx.Rows[0]["Category"];
+                connx.Close();
+                // end get edms settings
+
+               
+                SqlConnection connMasterList = null;
+                connMasterList = new SqlConnection(connstr);
+                SqlDataAdapter sqlDAMasterList = new SqlDataAdapter();
+
+                sqlDAMasterList.SelectCommand = new SqlCommand("dbo.Sol2_PendingPhysicalDocReceivedEmailLog_Doc_S2_GetList ", connMasterList);
+
+                DataSet dsMasterList = null;
+                DataTable dtMasterList = null;
+
+                dsMasterList = new DataSet("ds");
+
+                sqlDAMasterList.Fill(dsMasterList);
+
+                if (dsMasterList.Tables.Count > 0)
+                {
+                    dtMasterList = dsMasterList.Tables[0];
+
+                    for (int j = 0; j < dtMasterList.Rows.Count; j++)
+                    {
+                        string arn = dtMasterList.Rows[j]["arn"].ToString();
+                        string SurrogateID = dtMasterList.Rows[j]["SurrogateID"].ToString();
+                        string receiveremail = dtMasterList.Rows[j]["EmailReceiver"].ToString();
+                        string EmailBody = dtMasterList.Rows[j]["EmailContent"].ToString();
+                        string EmailHeader = dtMasterList.Rows[j]["EmailHeader"].ToString();
+                       
+                        SendMailV2("SendToSolicitor-PendingPhysicalDoc_Doc", "ARN", arn, EmailHeader, EmailBody, receiveremail, 0, 1, null, null);
+
+
+                        SqlConnection connMoveToMain = new SqlConnection(connstr);
+
+                        SqlDataAdapter sqlDAMoveToMain = new SqlDataAdapter();
+                        sqlDAMoveToMain.SelectCommand = new SqlCommand("dbo.Sol2_PendingPhysicalDocReceivedEmailLog_Doc_S2_UpdateRecord @SurrogateID", connMoveToMain);
+                        sqlDAMoveToMain.SelectCommand.Parameters.AddWithValue("@SurrogateID", SurrogateID);
+
+                        DataSet dsMoveToMain = new DataSet("ds");
+                        //DataTable dtARN = null;
+
+                        sqlDAMoveToMain.Fill(dsMoveToMain);
+
+                    }
+                }
+
+            }
+            catch (Exception ex)
+            {
+                error = "Sol2_PendingPhysicalDocReceivedEmailLog_Doc failed with exception: " + ex.Message.ToString();
+                string errorDetail;
+                errorDetail = "Input Param: N/A";
+                LogErrorToDB("Sol2_PendingPhysicalDocReceivedEmailLog_Doc", "Exception", error, errorDetail);
+            }
+        }
+
+        [WebMethod]
+        public void Sol2_PendingPhysicalDocReceivedEmailLog_Dis(ref string error)
+        {
+            error = "";
+
+            try
+            {
+                DataSet ds = null;
+                DataTable dt = null;
+                SqlConnection conn = null;
+                SqlDataAdapter sqlDA = null;
+
+                string strDataSource = clsGlobal.MG_SQL_DATA_SOURCE;
+                string strDBName = clsGlobal.MG_SQL_DB_NAME;
+                string strID = clsGlobal.MG_SQL_ID;
+                string strPassword = clsGlobal.MG_SQL_PASSWORD;
+                bool blnIsWinAuth = clsGlobal.MG_SQL_IS_WIN_AUTH;
+
+                string strDataSource2 = clsGlobal.MG_SQL_DATA_SOURCE2;
+                string strDBName2 = clsGlobal.MG_SQL_DB_NAME2;
+                string strID2 = clsGlobal.MG_SQL_ID2;
+                string strPassword2 = clsGlobal.MG_SQL_PASSWORD2;
+                bool blnIsWinAuth2 = clsGlobal.MG_SQL_IS_WIN_AUTH2;
+
+                string connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Persist Security Info=True;User ID=" + strID + ";Password=" + strPassword;
+                if (blnIsWinAuth)
+                {
+                    connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Integrated Security=True;";
+                }
+
+                string connstr2 = @"Data Source=" + strDataSource2 + ";Initial Catalog=" + strDBName2 + ";Persist Security Info=True;User ID=" + strID2 + ";Password=" + strPassword2;
+                if (blnIsWinAuth2)
+                {
+                    connstr2 = @"Data Source=" + strDataSource2 + ";Initial Catalog=" + strDBName2 + ";Integrated Security=True;";
+                }
+
+                SqlConnection connx = new SqlConnection(connstr);
+
+                SqlDataAdapter sqlDAx = new SqlDataAdapter();
+                sqlDAx.SelectCommand = new SqlCommand("dbo.Sol2_PendingPhysicalDocReceivedEmailLog_Dis_S1", connx);
+                // sqlDAx.SelectCommand.Parameters.AddWithValue("@error", "");
+
+                DataSet dsx = new DataSet("ds");
+                DataTable dtx = null;
+
+                sqlDAx.Fill(dsx);
+                //dtx = dsx.Tables[0];
+
+                //var EDMSDocType = dtx.Rows[0]["EDMSDocType"];
+                //var ProfileName = dtx.Rows[0]["ProfileName"];
+                //var LoginUser = dtx.Rows[0]["LoginUser"];
+                //var DefaultFileName = dtx.Rows[0]["DefaultFileName"];
+                //var EDMSUploadFolder = dtx.Rows[0]["EDMSUploadFolder"];
+                //var Category = dtx.Rows[0]["Category"];
+                connx.Close();
+                // end get edms settings
+
+
+                SqlConnection connMasterList = null;
+                connMasterList = new SqlConnection(connstr);
+                SqlDataAdapter sqlDAMasterList = new SqlDataAdapter();
+
+                sqlDAMasterList.SelectCommand = new SqlCommand("dbo.Sol2_PendingPhysicalDocReceivedEmailLog_Dis_S2_GetList ", connMasterList);
+
+                DataSet dsMasterList = null;
+                DataTable dtMasterList = null;
+
+                dsMasterList = new DataSet("ds");
+
+                sqlDAMasterList.Fill(dsMasterList);
+
+                if (dsMasterList.Tables.Count > 0)
+                {
+                    dtMasterList = dsMasterList.Tables[0];
+
+                    for (int j = 0; j < dtMasterList.Rows.Count; j++)
+                    {
+                        string arn = dtMasterList.Rows[j]["arn"].ToString();
+                        string SurrogateID = dtMasterList.Rows[j]["SurrogateID"].ToString();
+                        string receiveremail = dtMasterList.Rows[j]["EmailReceiver"].ToString();
+                        string EmailBody = dtMasterList.Rows[j]["EmailContent"].ToString();
+                        string EmailHeader = dtMasterList.Rows[j]["EmailHeader"].ToString();
+
+                        SendMailV2("SendToSolicitor-PendingPhysicalDoc_Dis", "ARN", arn, EmailHeader, EmailBody, receiveremail, 0, 1, null, null);
+
+
+                        SqlConnection connMoveToMain = new SqlConnection(connstr);
+
+                        SqlDataAdapter sqlDAMoveToMain = new SqlDataAdapter();
+                        sqlDAMoveToMain.SelectCommand = new SqlCommand("dbo.Sol2_PendingPhysicalDocReceivedEmailLog_Dis_S2_UpdateRecord @SurrogateID", connMoveToMain);
+                        sqlDAMoveToMain.SelectCommand.Parameters.AddWithValue("@SurrogateID", SurrogateID);
+
+                        DataSet dsMoveToMain = new DataSet("ds");
+                        //DataTable dtARN = null;
+
+                        sqlDAMoveToMain.Fill(dsMoveToMain);
+
+                    }
+                }
+
+            }
+            catch (Exception ex)
+            {
+                error = "Sol2_PendingPhysicalDocReceivedEmailLog_Dis failed with exception: " + ex.Message.ToString();
+                string errorDetail;
+                errorDetail = "Input Param: N/A";
+                LogErrorToDB("Sol2_PendingPhysicalDocReceivedEmailLog_Dis", "Exception", error, errorDetail);
+            }
+        }
+
         [WebMethod]
         public void DP_ProjectResubmitPDFFormToEDMS(string runningid, string pdfid, ref string error)
         {
@@ -7615,6 +12510,174 @@ namespace HLBBWS
         }
 
         [WebMethod]
+        public void DP_ExportSolicitorDocSubmissionPDFFormToEDMSV2(string arn, string status, string pdfid, ref string error)
+        {
+            error = "";
+
+            try
+            {
+                // log the result in db
+                DataSet ds = null;
+                DataTable dt = null;
+                SqlConnection conn = null;
+                SqlDataAdapter sqlDA = null;
+
+                string strDataSource = clsGlobal.MG_SQL_DATA_SOURCE;
+                string strDBName = clsGlobal.MG_SQL_DB_NAME;
+                string strID = clsGlobal.MG_SQL_ID;
+                string strPassword = clsGlobal.MG_SQL_PASSWORD;
+                bool blnIsWinAuth = clsGlobal.MG_SQL_IS_WIN_AUTH;
+
+                string strDataSource2 = clsGlobal.MG_SQL_DATA_SOURCE2;
+                string strDBName2 = clsGlobal.MG_SQL_DB_NAME2;
+                string strID2 = clsGlobal.MG_SQL_ID2;
+                string strPassword2 = clsGlobal.MG_SQL_PASSWORD2;
+                bool blnIsWinAuth2 = clsGlobal.MG_SQL_IS_WIN_AUTH2;
+
+                string connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Persist Security Info=True;User ID=" + strID + ";Password=" + strPassword;
+                if (blnIsWinAuth)
+                {
+                    connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Integrated Security=True;";
+                }
+
+                string connstr2 = @"Data Source=" + strDataSource2 + ";Initial Catalog=" + strDBName2 + ";Persist Security Info=True;User ID=" + strID2 + ";Password=" + strPassword2;
+                if (blnIsWinAuth2)
+                {
+                    connstr2 = @"Data Source=" + strDataSource2 + ";Initial Catalog=" + strDBName2 + ";Integrated Security=True;";
+                }            
+
+                // start get edms settings 
+                SqlConnection connx = new SqlConnection(connstr);
+
+                SqlDataAdapter sqlDAx = new SqlDataAdapter();
+                sqlDAx.SelectCommand = new SqlCommand("dbo.[usp_ws_getEDMS_Solicitor_Setting] @error output", connx);
+                sqlDAx.SelectCommand.Parameters.AddWithValue("@error", "");
+
+                DataSet dsx = new DataSet("ds");
+                DataTable dtx = null;
+
+                sqlDAx.Fill(dsx);
+                dtx = dsx.Tables[0];
+
+                var EDMSDocType = dtx.Rows[0]["EDMSDocType"];
+                var ProfileName = dtx.Rows[0]["ProfileName"];
+                var LoginUser = dtx.Rows[0]["LoginUser"];
+                var DefaultFileName = dtx.Rows[0]["DefaultFileName"];
+                var EDMSUploadFolder = dtx.Rows[0]["EDMSUploadFolder"];
+                var Category = dtx.Rows[0]["Category"];
+                connx.Close();
+                // end get edms settings               
+
+                // start get customer name and id for the selected arn 
+                SqlConnection conny = new SqlConnection(connstr);
+
+                SqlDataAdapter sqlDAy = new SqlDataAdapter();
+                sqlDAy.SelectCommand = new SqlCommand("dbo.[usp_ws_getCustomerInfo_forARN] @arn, @error output", conny);
+                sqlDAy.SelectCommand.Parameters.AddWithValue("@arn", arn);
+                sqlDAy.SelectCommand.Parameters.AddWithValue("@error", "");
+
+                DataSet dsy = new DataSet("ds");
+                DataTable dty = null;
+
+                sqlDAy.Fill(dsy);
+                dty = dsy.Tables[0];
+                var CustomerID = dty.Rows[0]["CustomerID"].ToString();
+                if (CustomerID.ToString() == "")
+                {
+                    CustomerID = "N/A";
+                }
+                var CustomerName = dty.Rows[0]["CustomerName"].ToString();
+                if (CustomerName.ToString() == "")
+                {
+                    CustomerName = "N/A";
+                }
+                conny.Close();
+                // end get customer name and id for the selected arn 
+
+                // start get attachment detail 
+                SqlConnection conn1 = null;
+                conn1 = new SqlConnection(connstr);
+                SqlDataAdapter sqlDA1 = new SqlDataAdapter();
+
+                sqlDA1.SelectCommand = new SqlCommand("dbo.[usp_ws_select_SolicitorDocumentationSubmissionPFDFFormData] @pdfid", conn1);
+                sqlDA1.SelectCommand.Parameters.AddWithValue("@pdfid", pdfid);
+
+                DataSet ds1 = null;
+                DataTable dt1 = null;
+
+                ds1 = new DataSet("ds");
+
+                sqlDA1.Fill(ds1);
+
+                if (ds1.Tables.Count > 0)
+                {
+                    dt1 = ds1.Tables[0];
+
+                    for (int j = 0; j < dt1.Rows.Count; j++)
+                    {
+                        var filename_original = dt1.Rows[j]["ItemFileName"];
+                        var filename_new = dt1.Rows[j]["ItemFileName"];
+                        var filecontent = dt1.Rows[j]["ItemContent"];
+                        //byte[] byteFileContent = Convert.FromBase64String(filecontent);
+                        var filetype = dt1.Rows[j]["ItemFileType"];
+                        // var attachmentuploaddate = dt1.Rows[j]["attachmentuploaddate"];
+                        //var fe_failed_description = dt1.Rows[j]["fe_failed_description"];
+                        //var fe_failed_code = dt1.Rows[j]["fe_failed_code"];
+                        //var d_result = dt1.Rows[j]["result"];
+
+                        string DP_ExportK2FileToEDMS_error = "";
+                        //ExportFileResponseData response = DP_ExportK2FileToEDMS(ProfileName.ToString(), EDMSUploadFolder.ToString(), filecontent.ToString(), filename_original + "." + filetype, arn.ToString(), EDMSDocType.ToString(), Category.ToString(), CustomerID.ToString(), CustomerName.ToString(), ref DP_ExportK2FileToEDMS_error);
+                        ExportFileResponseData response = DP_ExportK2FileToEDMS(ProfileName.ToString(), EDMSUploadFolder.ToString(), filecontent.ToString(), filename_original.ToString(), arn.ToString(), EDMSDocType.ToString(), Category.ToString(), CustomerID.ToString(), CustomerName.ToString(), ref DP_ExportK2FileToEDMS_error);
+
+                    }
+                }
+                conn1.Close();
+                // end get attachment detail 
+
+                // start update pdf id                 
+                SqlConnection connz = new SqlConnection(connstr);
+
+                SqlDataAdapter sqlDAz = new SqlDataAdapter();
+                sqlDAz.SelectCommand = new SqlCommand("dbo.[sol2_DocSubmission_PDFJob_UpdatePDFID] @arn, @pdfID, @WorkflowOperation", connz);
+                sqlDAz.SelectCommand.Parameters.AddWithValue("@arn", arn);
+                sqlDAz.SelectCommand.Parameters.AddWithValue("@pdfID", pdfid);
+                sqlDAz.SelectCommand.Parameters.AddWithValue("@WorkflowOperation", "DPSolicitorSubmission");
+
+                DataSet dsz = new DataSet("ds");
+                DataTable dtz = null;
+                sqlDAz.Fill(dsz);
+                connz.Close();
+                // end update pdf id 
+
+                /*
+                if (status == "UpdateInfo")
+                {
+
+                    // start move arn from staging to main usp_SQLSolicitorDPSubmission_Main_MoveToMain
+                    SqlConnection connSS = new SqlConnection(connstr);
+
+                    SqlDataAdapter sqlDASS = new SqlDataAdapter();
+                    sqlDASS.SelectCommand = new SqlCommand("dbo.[usp_ws_SQLSolicitorDPSubmission_Main_MoveToMain] @arn, @error output", connSS);
+                    sqlDASS.SelectCommand.Parameters.AddWithValue("@arn", arn);
+                    sqlDASS.SelectCommand.Parameters.AddWithValue("@error", "");
+
+                    DataSet dsSS = new DataSet("ds");
+                    //dtz = dsz.Tables[0];
+                    sqlDASS.Fill(dsSS);
+                    connSS.Close();                  
+                }
+                */
+            }
+            catch (Exception ex)
+            {
+                error = "DP_ExportSolicitorDocSubmissionPDFFormToEDMSV2 failed with exception: " + ex.Message.ToString();
+                string errorDetail;
+                errorDetail = "Input Param: " + arn;
+                LogErrorToDB("DP_ExportSolicitorDocSubmissionPDFFormToEDMSV2", "Exception", error, errorDetail);
+            }
+        }
+       
+        [WebMethod]
         public void DP_ExportValuerDocSubmissionPDFFormToEDMS(string arn, string status, string pdfid, ref string error)
         {
             error = "";
@@ -7830,6 +12893,227 @@ namespace HLBBWS
                 string errorDetail;
                 errorDetail = "Input Param: " + arn;
                 LogErrorToDB("DP_ExportValuerDocSubmissionPDFFormToEDMS", "Exception", error, errorDetail);
+            }
+        }
+
+        [WebMethod]
+        public void DP_ExportValuerDocSubmissionPDFFormToEDMSV2(string arn, string status, string pdfid, ref string error)
+        {
+            error = "";
+
+            try
+            {
+                // log the result in db
+                DataSet ds = null;
+                DataTable dt = null;
+                SqlConnection conn = null;
+                SqlDataAdapter sqlDA = null;
+
+                string strDataSource = clsGlobal.MG_SQL_DATA_SOURCE;
+                string strDBName = clsGlobal.MG_SQL_DB_NAME;
+                string strID = clsGlobal.MG_SQL_ID;
+                string strPassword = clsGlobal.MG_SQL_PASSWORD;
+                bool blnIsWinAuth = clsGlobal.MG_SQL_IS_WIN_AUTH;
+
+                string strDataSource2 = clsGlobal.MG_SQL_DATA_SOURCE2;
+                string strDBName2 = clsGlobal.MG_SQL_DB_NAME2;
+                string strID2 = clsGlobal.MG_SQL_ID2;
+                string strPassword2 = clsGlobal.MG_SQL_PASSWORD2;
+                bool blnIsWinAuth2 = clsGlobal.MG_SQL_IS_WIN_AUTH2;
+
+                string connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Persist Security Info=True;User ID=" + strID + ";Password=" + strPassword;
+                if (blnIsWinAuth)
+                {
+                    connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Integrated Security=True;";
+                }
+
+                string connstr2 = @"Data Source=" + strDataSource2 + ";Initial Catalog=" + strDBName2 + ";Persist Security Info=True;User ID=" + strID2 + ";Password=" + strPassword2;
+                if (blnIsWinAuth2)
+                {
+                    connstr2 = @"Data Source=" + strDataSource2 + ";Initial Catalog=" + strDBName2 + ";Integrated Security=True;";
+                }
+
+                /*
+                SqlConnection connPRE = null;
+                SqlDataAdapter sqlDAPRE = null;
+
+                connPRE = new SqlConnection(connstr);
+
+                sqlDAPRE = new SqlDataAdapter();
+                sqlDAPRE.SelectCommand = new SqlCommand("dbo.[usp_ws_getFireEyeFlag]", connPRE);
+
+                string fireeye_flag;
+                fireeye_flag = "";
+                DataSet dsPRE = new DataSet("ds");
+                sqlDAPRE.Fill(dsPRE);
+
+                if (dsPRE.Tables.Count > 0)
+                {
+                    DataTable dtPRE = dsPRE.Tables[0];
+                    fireeye_flag = dtPRE.Rows[0]["fireeye_flag"].ToString();
+                }
+                */
+
+                // start get edms settings 
+                SqlConnection connx = new SqlConnection(connstr);
+
+                SqlDataAdapter sqlDAx = new SqlDataAdapter();
+                sqlDAx.SelectCommand = new SqlCommand("dbo.[usp_ws_getEDMS_Valuer_Setting] @error output", connx);
+                sqlDAx.SelectCommand.Parameters.AddWithValue("@error", "");
+
+                DataSet dsx = new DataSet("ds");
+                DataTable dtx = null;
+
+                sqlDAx.Fill(dsx);
+                dtx = dsx.Tables[0];
+
+                var EDMSDocType = dtx.Rows[0]["EDMSDocType"];
+                var ProfileName = dtx.Rows[0]["ProfileName"];
+                var LoginUser = dtx.Rows[0]["LoginUser"];
+                var DefaultFileName = dtx.Rows[0]["DefaultFileName"];
+                var EDMSUploadFolder = dtx.Rows[0]["EDMSUploadFolder"];
+                var Category = dtx.Rows[0]["Category"];
+                connx.Close();
+                // end get edms settings
+
+                /*
+                // start get all arn from staging
+                SqlConnection connALPHA = new SqlConnection(connstr);
+
+                SqlDataAdapter sqlDAALPHA = new SqlDataAdapter();
+                sqlDAALPHA.SelectCommand = new SqlCommand("dbo.[usp_ws_SolicitorSubmission_getallARNInStaging]", connALPHA);
+                //sqlDAALPHA.SelectCommand.Parameters.AddWithValue("@error", "");
+
+                DataSet dsAPLHA = new DataSet("ds");
+                DataTable dtALPHA = null;
+
+                sqlDAALPHA.Fill(dsAPLHA);
+                dtALPHA = dsAPLHA.Tables[0];
+                */
+
+                // start get customer name and id for the selected arn 
+                SqlConnection conny = new SqlConnection(connstr);
+
+                SqlDataAdapter sqlDAy = new SqlDataAdapter();
+                sqlDAy.SelectCommand = new SqlCommand("dbo.[usp_ws_getCustomerInfo_forARN] @arn, @error output", conny);
+                sqlDAy.SelectCommand.Parameters.AddWithValue("@arn", arn);
+                sqlDAy.SelectCommand.Parameters.AddWithValue("@error", "");
+
+                DataSet dsy = new DataSet("ds");
+                DataTable dty = null;
+
+                sqlDAy.Fill(dsy);
+                dty = dsy.Tables[0];
+                var CustomerID = dty.Rows[0]["CustomerID"].ToString();
+                if (CustomerID.ToString() == "")
+                {
+                    CustomerID = "N/A";
+                }
+                var CustomerName = dty.Rows[0]["CustomerName"].ToString();
+                if (CustomerName.ToString() == "")
+                {
+                    CustomerName = "N/A";
+                }
+                conny.Close();
+                // end get customer name and id for the selected arn 
+
+                // start get attachment detail 
+                SqlConnection conn1 = null;
+                conn1 = new SqlConnection(connstr);
+                SqlDataAdapter sqlDA1 = new SqlDataAdapter();
+
+                sqlDA1.SelectCommand = new SqlCommand("dbo.[usp_ws_select_SolicitorDocumentationSubmissionPFDFFormData] @pdfid", conn1);
+                sqlDA1.SelectCommand.Parameters.AddWithValue("@pdfid", pdfid);
+
+
+                DataSet ds1 = null;
+                DataTable dt1 = null;
+
+                ds1 = new DataSet("ds");
+
+                sqlDA1.Fill(ds1);
+
+                if (ds1.Tables.Count > 0)
+                {
+                    dt1 = ds1.Tables[0];
+
+                    for (int j = 0; j < dt1.Rows.Count; j++)
+                    {
+                        var filename_original = dt1.Rows[j]["ItemFileName"];
+                        var filename_new = dt1.Rows[j]["ItemFileName"];
+                        var filecontent = dt1.Rows[j]["ItemContent"];
+                        //byte[] byteFileContent = Convert.FromBase64String(filecontent);
+                        var filetype = dt1.Rows[j]["ItemFileType"];
+                        // var attachmentuploaddate = dt1.Rows[j]["attachmentuploaddate"];
+                        //var fe_failed_description = dt1.Rows[j]["fe_failed_description"];
+                        //var fe_failed_code = dt1.Rows[j]["fe_failed_code"];
+                        //var d_result = dt1.Rows[j]["result"];
+
+                        string DP_ExportK2FileToEDMS_error = "";
+                        //ExportFileResponseData response = DP_ExportK2FileToEDMS(ProfileName.ToString(), EDMSUploadFolder.ToString(), filecontent.ToString(), filename_original + "." + filetype, arn.ToString(), EDMSDocType.ToString(), Category.ToString(), CustomerID.ToString(), CustomerName.ToString(), ref DP_ExportK2FileToEDMS_error);
+                        ExportFileResponseData response = DP_ExportK2FileToEDMS(ProfileName.ToString(), EDMSUploadFolder.ToString(), filecontent.ToString(), filename_original.ToString(), arn.ToString(), EDMSDocType.ToString(), Category.ToString(), CustomerID.ToString(), CustomerName.ToString(), ref DP_ExportK2FileToEDMS_error);
+
+                    }
+                }
+                conn1.Close();
+                // end get attachment detail 
+
+                // start update pdf id                 
+                SqlConnection connz = new SqlConnection(connstr);
+
+                SqlDataAdapter sqlDAz = new SqlDataAdapter();
+                sqlDAz.SelectCommand = new SqlCommand("dbo.[usp_updatePDFID_ValuerV2] @arn, @pdfID, @WorkflowOperation", connz);
+                sqlDAz.SelectCommand.Parameters.AddWithValue("@arn", arn);
+                sqlDAz.SelectCommand.Parameters.AddWithValue("@pdfID", pdfid);
+                sqlDAz.SelectCommand.Parameters.AddWithValue("@WorkflowOperation", "DPValuerSubmission");
+
+                DataSet dsz = new DataSet("ds");
+                DataTable dtz = null;
+                sqlDAz.Fill(dsz);
+                connz.Close();
+                // end update pdf id 
+
+                /*
+                if (status == "UpdateInfo" || status == "LowerOMV" || status == "Cancelled")
+                {
+
+                    // start move arn from staging to main usp_SQLSolicitorDPSubmission_Main_MoveToMain
+                    SqlConnection connSS = new SqlConnection(connstr);
+
+                    SqlDataAdapter sqlDASS = new SqlDataAdapter();
+                    sqlDASS.SelectCommand = new SqlCommand("dbo.[usp_ws_SQLValuerDPSubmission_Main_MoveToMain] @arn, @error output", connSS);
+                    sqlDASS.SelectCommand.Parameters.AddWithValue("@arn", arn);
+                    sqlDASS.SelectCommand.Parameters.AddWithValue("@error", "");
+
+                    DataSet dsSS = new DataSet("ds");
+                    //dtz = dsz.Tables[0];
+                    sqlDASS.Fill(dsSS);
+                    connSS.Close();
+                    // start move arn from staging to main 
+                    
+                    // start delete K2DBSERVER.K2.dbo.PdfFile 
+                    SqlConnection connmeta = new SqlConnection(connstr);
+
+                   SqlDataAdapter sqlDAmeta = new SqlDataAdapter();
+                   sqlDAmeta.SelectCommand = new SqlCommand("dbo.[usp_ws_DeleteK2File] @pdfid, @error output", connmeta);
+                   sqlDAmeta.SelectCommand.Parameters.AddWithValue("@pdfid", pdfid);                  
+
+                   DataSet dsmeta = new DataSet("ds");
+                   //DataTable dtz = null;
+                   //dtz = dsz.Tables[0];
+                   sqlDAmeta.Fill(dsmeta);
+                   connmeta.Close();
+                    // start  delete K2DBSERVER.K2.dbo.PdfFile
+                    
+                }
+                */
+            }
+            catch (Exception ex)
+            {
+                error = "DP_ExportValuerDocSubmissionPDFFormToEDMSV2 failed with exception: " + ex.Message.ToString();
+                string errorDetail;
+                errorDetail = "Input Param: " + arn;
+                LogErrorToDB("DP_ExportValuerDocSubmissionPDFFormToEDMSV2", "Exception", error, errorDetail);
             }
         }
 
@@ -9111,6 +14395,376 @@ namespace HLBBWS
             }
         }
 
+
+        [WebMethod]
+        public void DP_NewValuer_AttachmentV2(ref string error)
+        {
+            error = "";
+
+            try
+            {
+                // log the result in db
+                DataSet ds = null;
+                DataTable dt = null;
+                SqlConnection conn = null;
+                SqlDataAdapter sqlDA = null;
+
+                string strDataSource = clsGlobal.MG_SQL_DATA_SOURCE;
+                string strDBName = clsGlobal.MG_SQL_DB_NAME;
+                string strID = clsGlobal.MG_SQL_ID;
+                string strPassword = clsGlobal.MG_SQL_PASSWORD;
+                bool blnIsWinAuth = clsGlobal.MG_SQL_IS_WIN_AUTH;
+
+                /*
+                string strDataSource2 = clsGlobal.MG_SQL_DATA_SOURCE2;
+                string strDBName2 = clsGlobal.MG_SQL_DB_NAME2;
+                string strID2 = clsGlobal.MG_SQL_ID2;
+                string strPassword2 = clsGlobal.MG_SQL_PASSWORD2;
+                bool blnIsWinAuth2 = clsGlobal.MG_SQL_IS_WIN_AUTH2;
+                */
+
+                string connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Persist Security Info=True;User ID=" + strID + ";Password=" + strPassword;
+                if (blnIsWinAuth)
+                {
+                    connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Integrated Security=True;";
+                }
+
+                /*
+                string connstr2 = @"Data Source=" + strDataSource2 + ";Initial Catalog=" + strDBName2 + ";Persist Security Info=True;User ID=" + strID2 + ";Password=" + strPassword2;
+                if (blnIsWinAuth2)
+                {
+                    connstr2 = @"Data Source=" + strDataSource2 + ";Initial Catalog=" + strDBName2 + ";Integrated Security=True;";
+                }
+                */
+
+                SqlConnection connPRE = null;
+                SqlDataAdapter sqlDAPRE = null;
+
+                connPRE = new SqlConnection(connstr);
+
+                sqlDAPRE = new SqlDataAdapter();
+                sqlDAPRE.SelectCommand = new SqlCommand("dbo.[usp_ws_getFireEyeFlag]", connPRE);
+
+                string fireeye_flag;
+                fireeye_flag = "";
+                DataSet dsPRE = new DataSet("ds");
+                sqlDAPRE.Fill(dsPRE);
+
+                if (dsPRE.Tables.Count > 0)
+                {
+                    DataTable dtPRE = dsPRE.Tables[0];
+                    fireeye_flag = dtPRE.Rows[0]["fireeye_flag"].ToString();
+                }
+
+                conn = new SqlConnection(connstr);
+
+                sqlDA = new SqlDataAdapter();
+                sqlDA.SelectCommand = new SqlCommand("dbo.[usp_ws_SQLValuerDPSubmission_ListUploadedARNV2]", conn);
+
+                string arn;
+                int NoOfAttachment;
+
+                ds = new DataSet("ds");
+                sqlDA.Fill(ds);
+
+                if (ds.Tables.Count > 0)
+                {
+                    dt = ds.Tables[0];
+                    for (int i = 0; i < dt.Rows.Count; i++)
+                    {
+                        arn = dt.Rows[i]["ARN"].ToString();
+                        NoOfAttachment = Convert.ToInt32(dt.Rows[i]["NoOfAttachment"].ToString());
+                                                
+                        // get lisf of attachments
+                        string WF = "ValuerDPSubmission";
+
+                        SqlConnection conn1 = null;
+                        conn1 = new SqlConnection(connstr);
+                        SqlDataAdapter sqlDA1 = new SqlDataAdapter();
+                        sqlDA1.SelectCommand = new SqlCommand("dbo.[usp_ws_ValuerSubmissionV2_ListAttachment] @ARN", conn1);
+                        sqlDA1.SelectCommand.Parameters.AddWithValue("@arn", arn);
+
+                        DataSet ds1 = null;
+                        DataTable dt1 = null;
+
+                        ds1 = new DataSet("ds");
+
+                        sqlDA1.Fill(ds1);
+
+                        dt1 = ds1.Tables[0];
+                        for (int dd = 0; dd < dt1.Rows.Count; dd++)
+                        {
+                            
+                            string k2attachment = dt1.Rows[dd]["K2Attachment"].ToString();
+                            string AttachmentFileName = dt1.Rows[dd]["AttachmentFileName"].ToString();
+                            string AttachmentContent = dt1.Rows[dd]["AttachmentContent"].ToString();
+                            string AttachmentFileType = dt1.Rows[dd]["AttachmentFileType"].ToString();
+                            string AttachmentChecksum = dt1.Rows[dd]["AttachmentChecksum"].ToString();
+
+                            // upload to attachment staging 
+                            if (fireeye_flag == "1")
+                            {
+                                AV_UploadFileToAttachmentStaging(WF, arn, k2attachment, ref error);
+                            }
+                            else
+                            {
+                                // fireeye flag is set to off, directly save attachment to eDMS
+
+                                // start get edms settings 
+                                SqlConnection connx = new SqlConnection(connstr);
+
+                                SqlDataAdapter sqlDAx = new SqlDataAdapter();
+                                sqlDAx.SelectCommand = new SqlCommand("dbo.[usp_ws_getEDMS_Valuer_Setting] @error output", connx);
+                                sqlDAx.SelectCommand.Parameters.AddWithValue("@error", "");
+
+                                DataSet dsx = new DataSet("ds");
+                                DataTable dtx = null;
+
+                                sqlDAx.Fill(dsx);
+                                dtx = dsx.Tables[0];
+
+                                var EDMSDocType = dtx.Rows[0]["EDMSDocType"];
+                                var ProfileName = dtx.Rows[0]["ProfileName"];
+                                var LoginUser = dtx.Rows[0]["LoginUser"];
+                                var DefaultFileName = dtx.Rows[0]["DefaultFileName"];
+                                var EDMSUploadFolder = dtx.Rows[0]["EDMSUploadFolder"];
+                                var Category = dtx.Rows[0]["Category"];
+                                connx.Close();
+
+                                // start get customer name and id for the selected arn 
+                                SqlConnection conny = new SqlConnection(connstr);
+
+                                SqlDataAdapter sqlDAy = new SqlDataAdapter();
+                                sqlDAy.SelectCommand = new SqlCommand("dbo.[usp_ws_getCustomerInfo_forARN] @arn, @error output", conny);
+                                sqlDAy.SelectCommand.Parameters.AddWithValue("@arn", arn);
+                                sqlDAy.SelectCommand.Parameters.AddWithValue("@error", "");
+
+                                DataSet dsy = new DataSet("ds");
+                                DataTable dty = null;
+
+                                sqlDAy.Fill(dsy);
+                                dty = dsy.Tables[0];
+                                var CustomerID = dty.Rows[0]["CustomerID"].ToString();
+                                if (CustomerID.ToString() == "")
+                                {
+                                    CustomerID = "N/A";
+                                }
+                                var CustomerName = dty.Rows[0]["CustomerName"].ToString();
+                                if (CustomerName.ToString() == "")
+                                {
+                                    CustomerName = "N/A";
+                                }
+                                conny.Close();
+
+                                string DP_ExportK2FileToEDMS_error = "";
+                                ExportFileResponseData response = DP_ExportK2FileToEDMS(ProfileName.ToString(), EDMSUploadFolder.ToString(), AttachmentContent.ToString(), AttachmentFileName.ToString(), arn.ToString(), EDMSDocType.ToString(), Category.ToString(), CustomerID.ToString(), CustomerName.ToString(), ref DP_ExportK2FileToEDMS_error);
+
+                            }  
+                        }
+
+                        //update AV start scan date 
+                        SqlConnection connUpdateAVScanStartDate = new SqlConnection(connstr);
+
+                        SqlDataAdapter sqlDAUpdateAVScanStartDate = new SqlDataAdapter();
+                        sqlDAUpdateAVScanStartDate.SelectCommand = new SqlCommand("dbo.usp_ws_ValuerSubmissionV2_AV_UpdateAVScanStartDate @arn", connUpdateAVScanStartDate);
+                        sqlDAUpdateAVScanStartDate.SelectCommand.Parameters.AddWithValue("@arn", arn);
+
+                        DataSet dsUpdateAVScanStartDate = new DataSet("ds");
+
+                        sqlDAUpdateAVScanStartDate.Fill(dsUpdateAVScanStartDate);
+                        
+                        if (fireeye_flag == "1")
+                        {
+                            // create master data 
+                            AV_CreateMasterData(WF, arn, ref error);
+
+                            
+                        }
+                        else
+                        {
+                            // start move arn from staging to main usp_SQLSolicitorDPSubmission_Main_MoveToMain
+                            SqlConnection connz = new SqlConnection(connstr);
+
+                            SqlDataAdapter sqlDAz = new SqlDataAdapter();
+                            sqlDAz.SelectCommand = new SqlCommand("dbo.[usp_ws_SQLValuerDPSubmission_Main_MoveToMainV2] @arn, @error output", connz);
+                            sqlDAz.SelectCommand.Parameters.AddWithValue("@arn", arn);
+                            sqlDAz.SelectCommand.Parameters.AddWithValue("@error", "");
+
+                            DataSet dsz = new DataSet("ds");
+                            DataTable dtz = null;
+                            //dtz = dsz.Tables[0];
+                            sqlDAz.Fill(dsz);
+                            connz.Close();
+                            // start move arn from staging to main 
+                            /*
+                            // start delete staging data in temp db 
+                            SqlConnection connmeta = new SqlConnection(connstr);
+
+                            SqlDataAdapter sqlDAmeta = new SqlDataAdapter();
+                            sqlDAmeta.SelectCommand = new SqlCommand("dbo.[usp_ws_deleterecords] @arn, @workflow, @error output", connmeta);
+                            sqlDAmeta.SelectCommand.Parameters.AddWithValue("@arn", arn);
+                            sqlDAmeta.SelectCommand.Parameters.AddWithValue("@workflow", "ValuerDPSubmission");
+                            sqlDAmeta.SelectCommand.Parameters.AddWithValue("@error", "");
+
+                            DataSet dsmeta = new DataSet("ds");
+                            //DataTable dtz = null;
+                            //dtz = dsz.Tables[0];
+                            sqlDAmeta.Fill(dsmeta);
+                            connmeta.Close();
+                            // start  delete staging data in temp db 
+                            */
+                        }
+                    }
+
+                }
+                conn.Close();
+                
+
+            }
+            catch (Exception ex)
+            {
+                error = "DP_NewValuer_AttachmentV2 failed with exception: " + ex.Message.ToString();
+                string errorDetail;
+                errorDetail = "Input Param: N/A";
+                LogErrorToDB("DP_NewValuer_AttachmentV2", "Exception", error, errorDetail);
+            }
+        }
+
+        [WebMethod]
+        public void AV_UploadFileToAttachmentStaging(string WF, string folio, string attachment, ref string error)
+        {
+            error = "";
+
+            try
+            {
+                // log the result in db
+                DataSet ds = null;
+                DataTable dt = null;
+                SqlConnection conn = null;
+                SqlDataAdapter sqlDA = null;
+
+                /*
+                string strDataSource = clsGlobal.MG_SQL_DATA_SOURCE;
+                string strDBName = clsGlobal.MG_SQL_DB_NAME;
+                string strID = clsGlobal.MG_SQL_ID;
+                string strPassword = clsGlobal.MG_SQL_PASSWORD;
+                bool blnIsWinAuth = clsGlobal.MG_SQL_IS_WIN_AUTH;
+                */
+
+                string strDataSource2 = clsGlobal.MG_SQL_DATA_SOURCE2;
+                string strDBName2 = clsGlobal.MG_SQL_DB_NAME2;
+                string strID2 = clsGlobal.MG_SQL_ID2;
+                string strPassword2 = clsGlobal.MG_SQL_PASSWORD2;
+                bool blnIsWinAuth2 = clsGlobal.MG_SQL_IS_WIN_AUTH2;
+
+                /*
+                string connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Persist Security Info=True;User ID=" + strID + ";Password=" + strPassword;
+                if (blnIsWinAuth)
+                {
+                    connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Integrated Security=True;";
+                }
+                */
+
+                string connstr2 = @"Data Source=" + strDataSource2 + ";Initial Catalog=" + strDBName2 + ";Persist Security Info=True;User ID=" + strID2 + ";Password=" + strPassword2;
+                if (blnIsWinAuth2)
+                {
+                    connstr2 = @"Data Source=" + strDataSource2 + ";Initial Catalog=" + strDBName2 + ";Integrated Security=True;";
+                }
+
+                SqlConnection connPRE = null;
+                SqlDataAdapter sqlDAPRE = null;
+
+                connPRE = new SqlConnection(connstr2);
+
+                sqlDAPRE = new SqlDataAdapter();
+                sqlDAPRE.SelectCommand = new SqlCommand("dbo.[usp_ws_attachment_uploadtostagingV2] @arn, @k2attachment, @WF,@error output", connPRE);
+                sqlDAPRE.SelectCommand.Parameters.AddWithValue("@arn", folio);
+                sqlDAPRE.SelectCommand.Parameters.AddWithValue("@k2attachment", attachment);
+                sqlDAPRE.SelectCommand.Parameters.AddWithValue("@WF", WF);
+                sqlDAPRE.SelectCommand.Parameters.AddWithValue("@error", error);
+
+                //string fireeye_flag;
+                //fireeye_flag = "";
+                DataSet dsPRE = new DataSet("ds");
+                sqlDAPRE.Fill(dsPRE);
+
+            }
+            catch (Exception ex)
+            {
+                error = "AV_UploadFileToAttachmentStaging failed with exception: " + ex.Message.ToString();
+                string errorDetail;
+                errorDetail = "Input Param: N/A";
+                LogErrorToDB("AV_UploadFileToAttachmentStaging", "Exception", error, errorDetail);
+            }
+        }
+
+        [WebMethod]
+        public void AV_CreateMasterData(string WF, string folio, ref string error)
+        {
+            error = "";
+
+            try
+            {
+                // log the result in db
+                DataSet ds = null;
+                DataTable dt = null;
+                SqlConnection conn = null;
+                SqlDataAdapter sqlDA = null;
+
+                /*
+                string strDataSource = clsGlobal.MG_SQL_DATA_SOURCE;
+                string strDBName = clsGlobal.MG_SQL_DB_NAME;
+                string strID = clsGlobal.MG_SQL_ID;
+                string strPassword = clsGlobal.MG_SQL_PASSWORD;
+                bool blnIsWinAuth = clsGlobal.MG_SQL_IS_WIN_AUTH;
+                */
+
+                string strDataSource2 = clsGlobal.MG_SQL_DATA_SOURCE2;
+                string strDBName2 = clsGlobal.MG_SQL_DB_NAME2;
+                string strID2 = clsGlobal.MG_SQL_ID2;
+                string strPassword2 = clsGlobal.MG_SQL_PASSWORD2;
+                bool blnIsWinAuth2 = clsGlobal.MG_SQL_IS_WIN_AUTH2;
+
+                /*
+                string connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Persist Security Info=True;User ID=" + strID + ";Password=" + strPassword;
+                if (blnIsWinAuth)
+                {
+                    connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Integrated Security=True;";
+                }
+                */
+
+                string connstr2 = @"Data Source=" + strDataSource2 + ";Initial Catalog=" + strDBName2 + ";Persist Security Info=True;User ID=" + strID2 + ";Password=" + strPassword2;
+                if (blnIsWinAuth2)
+                {
+                    connstr2 = @"Data Source=" + strDataSource2 + ";Initial Catalog=" + strDBName2 + ";Integrated Security=True;";
+                }
+
+                SqlConnection connPRE = null;
+                SqlDataAdapter sqlDAPRE = null;
+
+                connPRE = new SqlConnection(connstr2);
+
+                sqlDAPRE = new SqlDataAdapter();
+                sqlDAPRE.SelectCommand = new SqlCommand("dbo.[usp_ws_creatematerdata] @arn, @WF,@error output", connPRE);
+                sqlDAPRE.SelectCommand.Parameters.AddWithValue("@arn", folio);
+               
+                sqlDAPRE.SelectCommand.Parameters.AddWithValue("@WF", WF);
+                sqlDAPRE.SelectCommand.Parameters.AddWithValue("@error", error);
+
+               
+                DataSet dsPRE = new DataSet("ds");
+                sqlDAPRE.Fill(dsPRE);
+
+            }
+            catch (Exception ex)
+            {
+                error = "AV_CreateMasterData failed with exception: " + ex.Message.ToString();
+                string errorDetail;
+                errorDetail = "Input Param: N/A";
+                LogErrorToDB("AV_CreateMasterData", "Exception", error, errorDetail);
+            }
+        }
+
         [WebMethod]
         public void DP_CompletedSolicitor_Attachment(ref string error)
         {
@@ -9475,6 +15129,340 @@ namespace HLBBWS
                 string errorDetail;
                 errorDetail = "Input Param: N/A";
                 LogErrorToDB("DP_CompletedSolicitor_Attachment", "Exception", error, errorDetail);
+            }
+        }
+
+        [WebMethod]
+        public void DP_CompletedSolicitor_AttachmentV2(ref string error)
+        {
+            error = "";
+
+            try
+            {
+                // log the result in db
+                DataSet ds = null;
+                DataTable dt = null;
+                SqlConnection conn = null;
+                SqlDataAdapter sqlDA = null;
+
+                string strDataSource = clsGlobal.MG_SQL_DATA_SOURCE;
+                string strDBName = clsGlobal.MG_SQL_DB_NAME;
+                string strID = clsGlobal.MG_SQL_ID;
+                string strPassword = clsGlobal.MG_SQL_PASSWORD;
+                bool blnIsWinAuth = clsGlobal.MG_SQL_IS_WIN_AUTH;
+
+                string strDataSource2 = clsGlobal.MG_SQL_DATA_SOURCE2;
+                string strDBName2 = clsGlobal.MG_SQL_DB_NAME2;
+                string strID2 = clsGlobal.MG_SQL_ID2;
+                string strPassword2 = clsGlobal.MG_SQL_PASSWORD2;
+                bool blnIsWinAuth2 = clsGlobal.MG_SQL_IS_WIN_AUTH2;
+
+                string connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Persist Security Info=True;User ID=" + strID + ";Password=" + strPassword;
+                if (blnIsWinAuth)
+                {
+                    connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Integrated Security=True;";
+                }
+
+                string connstr2 = @"Data Source=" + strDataSource2 + ";Initial Catalog=" + strDBName2 + ";Persist Security Info=True;User ID=" + strID2 + ";Password=" + strPassword2;
+                if (blnIsWinAuth2)
+                {
+                    connstr2 = @"Data Source=" + strDataSource2 + ";Initial Catalog=" + strDBName2 + ";Integrated Security=True;";
+                }
+
+                conn = new SqlConnection(connstr2);
+
+                sqlDA = new SqlDataAdapter();
+                sqlDA.SelectCommand = new SqlCommand("dbo.[usp_ws_Check_SolicitorSubmissionAttachment_Completed_ARN] @error output", conn);
+                sqlDA.SelectCommand.Parameters.AddWithValue("@error", "");
+
+                string arn;
+                string result;
+                ds = new DataSet("ds");
+                sqlDA.Fill(ds);
+
+                if (ds.Tables.Count > 0)
+                {
+                    dt = ds.Tables[0];
+                    for (int i = 0; i < dt.Rows.Count; i++)
+                    {
+                        arn = dt.Rows[i]["ARN"].ToString();
+                        result = dt.Rows[i]["result"].ToString();
+
+                        // start check if the record still in staging
+                        DataSet dsBETA = null;
+                        DataTable dtBETA = null;
+                        SqlConnection connBETA = null;
+                        SqlDataAdapter sqlDABETA = null;
+                        connBETA = new SqlConnection(connstr);
+
+                        string errorBETA = "";
+
+                        sqlDABETA = new SqlDataAdapter();
+                        sqlDABETA.SelectCommand = new SqlCommand("dbo.[usp_ws_check_SolicitorSubmissionStillInStaging] @arn, @error output", connBETA);
+                        sqlDABETA.SelectCommand.Parameters.AddWithValue("@arn", arn);
+                        sqlDABETA.SelectCommand.Parameters.AddWithValue("@error", errorBETA);
+
+                        dsBETA = new DataSet("ds");
+                        sqlDABETA.Fill(dsBETA);
+
+                        if (errorBETA == "")
+                        {
+                            // end check if the record still in staging 
+                            if (result == "passed")
+                            //if (result == "failed")
+                            {
+                                // start get edms settings 
+                                SqlConnection connx = new SqlConnection(connstr);
+
+                                SqlDataAdapter sqlDAx = new SqlDataAdapter();
+                                sqlDAx.SelectCommand = new SqlCommand("dbo.[usp_ws_getEDMS_Solicitor_Setting] @error output", connx);
+                                sqlDAx.SelectCommand.Parameters.AddWithValue("@error", "");
+
+                                DataSet dsx = new DataSet("ds");
+                                DataTable dtx = null;
+
+                                sqlDAx.Fill(dsx);
+                                dtx = dsx.Tables[0];
+
+                                var EDMSDocType = dtx.Rows[0]["EDMSDocType"];
+                                var ProfileName = dtx.Rows[0]["ProfileName"];
+                                var LoginUser = dtx.Rows[0]["LoginUser"];
+                                var DefaultFileName = dtx.Rows[0]["DefaultFileName"];
+                                var EDMSUploadFolder = dtx.Rows[0]["EDMSUploadFolder"];
+                                var Category = dtx.Rows[0]["Category"];
+                                connx.Close();
+                                // end get edms settings
+
+                                // start get customer name and id for the selected arn 
+                                SqlConnection conny = new SqlConnection(connstr);
+
+                                SqlDataAdapter sqlDAy = new SqlDataAdapter();
+                                sqlDAy.SelectCommand = new SqlCommand("dbo.[usp_ws_getCustomerInfo_forARN] @arn, @error output", conny);
+                                sqlDAy.SelectCommand.Parameters.AddWithValue("@arn", arn);
+                                sqlDAy.SelectCommand.Parameters.AddWithValue("@error", "");
+
+                                DataSet dsy = new DataSet("ds");
+                                DataTable dty = null;
+
+                                sqlDAy.Fill(dsy);
+                                dty = dsy.Tables[0];
+                                var CustomerID = dty.Rows[0]["CustomerID"].ToString();
+                                if (CustomerID.ToString() == "")
+                                {
+                                    CustomerID = "N/A";
+                                }
+
+                                var CustomerName = dty.Rows[0]["CustomerName"].ToString();
+                                if (CustomerName.ToString() == "")
+                                {
+                                    CustomerName = "N/A";
+                                }
+                                conny.Close();
+                                // end get customer name and id for the selected arn 
+
+                                // start get attachment detail 
+                                SqlConnection conn1 = null;
+                                conn1 = new SqlConnection(connstr2);
+                                SqlDataAdapter sqlDA1 = new SqlDataAdapter();
+                                sqlDA1.SelectCommand = new SqlCommand("dbo.[usp_ws_list_SolicitorSubmissionAttachment_For_Completed_ARN] @ARN, @error output", conn1);
+                                sqlDA1.SelectCommand.Parameters.AddWithValue("@arn", arn);
+                                sqlDA1.SelectCommand.Parameters.AddWithValue("@error", error);
+
+                                DataSet ds1 = null;
+                                DataTable dt1 = null;
+
+                                ds1 = new DataSet("ds");
+
+                                sqlDA1.Fill(ds1);
+
+                                if (ds1.Tables.Count > 0)
+                                {
+                                    dt1 = ds1.Tables[0];
+
+                                    for (int j = 0; j < dt1.Rows.Count; j++)
+                                    {
+                                        var filename_original = dt1.Rows[j]["filename_original"];
+                                        var filename_new = dt1.Rows[j]["filename_new"];
+                                        var filecontent = dt1.Rows[j]["filecontent"];
+                                        //byte[] byteFileContent = Convert.FromBase64String(filecontent);
+                                        var filetype = dt1.Rows[j]["filetype"];
+                                        var attachmentuploaddate = dt1.Rows[j]["attachmentuploaddate"];
+                                        var fe_failed_description = dt1.Rows[j]["fe_failed_description"];
+                                        var fe_failed_code = dt1.Rows[j]["fe_failed_code"];
+                                        var d_result = dt1.Rows[j]["result"];
+
+                                        string DP_ExportK2FileToEDMS_error = "";
+                                        ExportFileResponseData response = DP_ExportK2FileToEDMS(ProfileName.ToString(), EDMSUploadFolder.ToString(), filecontent.ToString(), filename_original + "." + filetype, arn, EDMSDocType.ToString(), Category.ToString(), CustomerID.ToString(), CustomerName.ToString(), ref DP_ExportK2FileToEDMS_error);
+
+                                    }
+                                }
+                                conn1.Close();
+                                // end get attachment detail 
+
+                                // start move arn from staging to main usp_SQLSolicitorDPSubmission_Main_MoveToMain
+                                SqlConnection connz = new SqlConnection(connstr);
+
+                                SqlDataAdapter sqlDAz = new SqlDataAdapter();
+                                sqlDAz.SelectCommand = new SqlCommand("dbo.[Sol2_DocSubmission_ws_MoveToMainV2] @arn, @error output", connz);
+                                sqlDAz.SelectCommand.Parameters.AddWithValue("@arn", arn);
+                                sqlDAz.SelectCommand.Parameters.AddWithValue("@error", "");
+
+                                DataSet dsz = new DataSet("ds");
+                                DataTable dtz = null;
+                                //dtz = dsz.Tables[0];
+                                sqlDAz.Fill(dsz);
+                                connz.Close();
+                                // start move arn from staging to main 
+                               
+
+                            }
+                            else
+                            {
+                                // start move failed record to SQLSolicitorDPSubmission_VirusLog
+                                SqlConnection conn_alpha = new SqlConnection(connstr);
+
+                                SqlDataAdapter sqlDA_alpha = new SqlDataAdapter();
+                                sqlDA_alpha.SelectCommand = new SqlCommand("dbo.[Sol2_DocSubmission_ws_MoveFailedToMainV2] @arn, @error output", conn_alpha);
+                                sqlDA_alpha.SelectCommand.Parameters.AddWithValue("@arn", arn);
+                                sqlDA_alpha.SelectCommand.Parameters.AddWithValue("@error", "");
+
+                                DataSet ds_alpha = new DataSet("ds");
+                                //DataTable dt_alpha = null;
+                                //dt_alpha = ds_alpha.Tables[0];
+                                sqlDA_alpha.Fill(ds_alpha);
+                                conn_alpha.Close();
+                                // end move failed record to SQLSolicitorDPSubmission_VirusLog
+
+                                // start get failed attachments
+                                SqlConnection conn_beta = new SqlConnection(connstr2);
+
+                                SqlDataAdapter sqlDA_beta = new SqlDataAdapter();
+                                sqlDA_beta.SelectCommand = new SqlCommand("dbo.[usp_ws_getfailedattachments] @arn, @workflow, @error output", conn_beta);
+                                sqlDA_beta.SelectCommand.Parameters.AddWithValue("@arn", arn);
+                                sqlDA_beta.SelectCommand.Parameters.AddWithValue("@workflow", "SolicitorDPSubmission");
+                                sqlDA_beta.SelectCommand.Parameters.AddWithValue("@error", "");
+
+                                DataSet ds_beta = new DataSet("ds");
+                                DataTable dt_beta = null;
+                                sqlDA_beta.Fill(ds_beta);
+
+                                if (ds_beta.Tables.Count > 0)
+                                {
+                                    dt_beta = ds_beta.Tables[0];
+
+                                    for (int beta = 0; beta < dt_beta.Rows.Count; beta++)
+                                    {
+                                        var workflow = dt_beta.Rows[beta]["workflow"];
+                                        var filename_original = dt_beta.Rows[beta]["filename_original"];
+                                        var filename_new = dt_beta.Rows[beta]["filename_new"];
+                                        var filecontent = dt_beta.Rows[beta]["filecontent"];
+                                        var filetype = dt_beta.Rows[beta]["filetype"];
+                                        var attachmentuploaddate = dt_beta.Rows[beta]["attachmentuploaddate"];
+                                        var fe_file_url = dt_beta.Rows[beta]["fe_file_url"];
+                                        var fe_fireeye_id = dt_beta.Rows[beta]["fe_fireeye_id"];
+                                        var fe_failed_description = dt_beta.Rows[beta]["fe_failed_description"];
+                                        var fe_failed_code = dt_beta.Rows[beta]["fe_failed_code"];
+                                        var VSresult = dt_beta.Rows[beta]["result"];
+                                        var VSCreatedDate = dt_beta.Rows[beta]["CreatedDate"];
+                                        var VSUpdatedDate = dt_beta.Rows[beta]["UpdatedDate"];
+
+                                        // start log detail into VS_attachment_detail
+                                        SqlConnection conn_gama = new SqlConnection(connstr);
+
+                                        SqlDataAdapter sqlDA_gama = new SqlDataAdapter();
+                                        sqlDA_gama.SelectCommand = new SqlCommand("dbo.[usp_ws_savefailedattachmentdata] @arn ,@workflow,@filename_original,@filename_new,@filecontent,@filetype,@attachmentuploaddate,@fe_file_url,@fe_fireeye_id,@fe_failed_description,@fe_failed_code,@result,@VSCreatedDate,@VSUpdatedDate, @error output", conn_gama);
+                                        sqlDA_gama.SelectCommand.Parameters.AddWithValue("@arn", arn);
+                                        sqlDA_gama.SelectCommand.Parameters.AddWithValue("@workflow", workflow);
+                                        sqlDA_gama.SelectCommand.Parameters.AddWithValue("@filename_original", filename_original);
+                                        sqlDA_gama.SelectCommand.Parameters.AddWithValue("@filename_new", filename_new);
+                                        sqlDA_gama.SelectCommand.Parameters.AddWithValue("@filecontent", filecontent);
+                                        sqlDA_gama.SelectCommand.Parameters.AddWithValue("@filetype", filetype);
+                                        sqlDA_gama.SelectCommand.Parameters.AddWithValue("@attachmentuploaddate", attachmentuploaddate);
+                                        sqlDA_gama.SelectCommand.Parameters.AddWithValue("@fe_file_url", fe_file_url);
+                                        sqlDA_gama.SelectCommand.Parameters.AddWithValue("@fe_fireeye_id", fe_fireeye_id);
+                                        sqlDA_gama.SelectCommand.Parameters.AddWithValue("@fe_failed_description", fe_failed_description);
+                                        sqlDA_gama.SelectCommand.Parameters.AddWithValue("@fe_failed_code", fe_failed_code);
+                                        sqlDA_gama.SelectCommand.Parameters.AddWithValue("@result", VSresult);
+                                        sqlDA_gama.SelectCommand.Parameters.AddWithValue("@VSCreatedDate", VSCreatedDate);
+                                        sqlDA_gama.SelectCommand.Parameters.AddWithValue("@VSUpdatedDate", VSUpdatedDate);
+                                        sqlDA_gama.SelectCommand.Parameters.AddWithValue("@error", "");
+
+                                        DataSet ds_gama = new DataSet("ds");
+                                        DataTable dt_gama = null;
+                                        //dt_gama = ds_gama.Tables[0];
+                                        sqlDA_gama.Fill(ds_gama);
+                                        conn_gama.Close();
+                                        // end log detail into VS_attachment_detail
+                                    }
+
+                                }
+                                conn_beta.Close();
+                                // end get failed attachments
+
+                                // 20200827 start direct send email from WS  
+                                SqlConnection connZeta = new SqlConnection(connstr);
+
+                                SqlDataAdapter sqlDAZeta = new SqlDataAdapter();
+                                sqlDAZeta.SelectCommand = new SqlCommand("dbo.[usp_DUMaker_Letter_AV_Solicitor_email_content_generate]", connZeta);
+
+                                DataSet dsZeta = new DataSet("ds");
+                                //DataTable dt2 = null;
+                                //dt2 = ds2.Tables[0];
+                                sqlDAZeta.Fill(dsZeta);
+                                DataTable dtZeta = null;
+
+                                if (dsZeta.Tables.Count > 0)
+                                {
+                                    dtZeta = dsZeta.Tables[0];
+
+                                    var receiveremail = dtZeta.Rows[0]["receiveremail"].ToString();
+                                    var email_header = dtZeta.Rows[0]["email_header"].ToString();
+                                    var email_body = dtZeta.Rows[0]["email_body"].ToString();
+
+                                    //SendMail(receiveremail, email_header, email_body, null,null);
+
+                                    //Infobip enhancement 
+                                    SendMailV2("SendToSolicitor-Documentation", "CRA", arn, email_header, email_body, receiveremail, 0, 1, "", "");
+
+                                }
+                                // 20200827 end direct send email from WS
+
+                              
+                            }
+
+
+                        }
+
+
+                        // start delete VS master data and detail data                         
+                        SqlConnection conn2 = new SqlConnection(connstr2);
+
+                        SqlDataAdapter sqlDA2 = new SqlDataAdapter();
+                        sqlDA2.SelectCommand = new SqlCommand("dbo.[usp_ws_deleterecords] @arn, @workflow, @error output", conn2);
+                        sqlDA2.SelectCommand.Parameters.AddWithValue("@arn", arn);
+                        sqlDA2.SelectCommand.Parameters.AddWithValue("@workflow", "SolicitorDPSubmission");
+                        sqlDA2.SelectCommand.Parameters.AddWithValue("@error", "");
+
+                        DataSet ds2 = new DataSet("ds");
+                        //DataTable dt2 = null;
+                        //dt2 = ds2.Tables[0];
+                        sqlDA2.Fill(ds2);
+                        conn2.Close();
+                        // end delete VS master data and detail data 
+
+
+                    }
+
+                }
+                conn.Close();
+
+            }
+            catch (Exception ex)
+            {
+                error = "DP_CompletedSolicitor_AttachmentV2 failed with exception: " + ex.Message.ToString();
+                string errorDetail;
+                errorDetail = "Input Param: N/A";
+                LogErrorToDB("DP_CompletedSolicitor_AttachmentV2", "Exception", error, errorDetail);
             }
         }
 
@@ -10955,6 +16943,369 @@ namespace HLBBWS
         }
 
         [WebMethod]
+        public void DP_CompletedValuer_AttachmentV2(ref string error)
+        {
+            error = "";
+
+            try
+            {
+                // log the result in db
+                DataSet ds = null;
+                DataTable dt = null;
+                SqlConnection conn = null;
+                SqlDataAdapter sqlDA = null;
+
+                string strDataSource = clsGlobal.MG_SQL_DATA_SOURCE;
+                string strDBName = clsGlobal.MG_SQL_DB_NAME;
+                string strID = clsGlobal.MG_SQL_ID;
+                string strPassword = clsGlobal.MG_SQL_PASSWORD;
+                bool blnIsWinAuth = clsGlobal.MG_SQL_IS_WIN_AUTH;
+
+                string strDataSource2 = clsGlobal.MG_SQL_DATA_SOURCE2;
+                string strDBName2 = clsGlobal.MG_SQL_DB_NAME2;
+                string strID2 = clsGlobal.MG_SQL_ID2;
+                string strPassword2 = clsGlobal.MG_SQL_PASSWORD2;
+                bool blnIsWinAuth2 = clsGlobal.MG_SQL_IS_WIN_AUTH2;
+
+                string connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Persist Security Info=True;User ID=" + strID + ";Password=" + strPassword;
+                if (blnIsWinAuth)
+                {
+                    connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Integrated Security=True;";
+                }
+
+                string connstr2 = @"Data Source=" + strDataSource2 + ";Initial Catalog=" + strDBName2 + ";Persist Security Info=True;User ID=" + strID2 + ";Password=" + strPassword2;
+                if (blnIsWinAuth2)
+                {
+                    connstr2 = @"Data Source=" + strDataSource2 + ";Initial Catalog=" + strDBName2 + ";Integrated Security=True;";
+                }
+
+                conn = new SqlConnection(connstr2);
+
+                sqlDA = new SqlDataAdapter();
+                sqlDA.SelectCommand = new SqlCommand("dbo.[usp_ws_Check_ValuerSubmissionAttachment_Completed_ARN] @error output", conn);
+                sqlDA.SelectCommand.Parameters.AddWithValue("@error", "");
+
+                string arn;
+                string result;
+                ds = new DataSet("ds");
+                sqlDA.Fill(ds);
+
+                if (ds.Tables.Count > 0)
+                {
+                    dt = ds.Tables[0];
+                    for (int i = 0; i < dt.Rows.Count; i++)
+                    {
+                        arn = dt.Rows[i]["ARN"].ToString();
+                        result = dt.Rows[i]["result"].ToString();
+
+                        // start check if the record still in staging
+                        DataSet dsBETA = null;
+                        DataTable dtBETA = null;
+                        SqlConnection connBETA = null;
+                        SqlDataAdapter sqlDABETA = null;
+                        connBETA = new SqlConnection(connstr);
+
+                        string errorBETA = "";
+
+                        sqlDABETA = new SqlDataAdapter();
+                        sqlDABETA.SelectCommand = new SqlCommand("dbo.[usp_ws_check_ValuerSubmissionStillInStaging] @arn, @error output", connBETA);
+                        sqlDABETA.SelectCommand.Parameters.AddWithValue("@arn", arn);
+                        sqlDABETA.SelectCommand.Parameters.AddWithValue("@error", errorBETA);
+
+                        dsBETA = new DataSet("ds");
+                        sqlDABETA.Fill(dsBETA);
+
+                        if (errorBETA == "")
+                        {
+                            // end check if the record still in staging 
+                            if (result == "passed")
+                            //if (result == "failed")
+                            {
+                                // start get edms settings 
+                                SqlConnection connx = new SqlConnection(connstr);
+
+                                SqlDataAdapter sqlDAx = new SqlDataAdapter();
+                                sqlDAx.SelectCommand = new SqlCommand("dbo.[usp_ws_getEDMS_Valuer_Setting] @error output", connx);
+                                sqlDAx.SelectCommand.Parameters.AddWithValue("@error", "");
+
+                                DataSet dsx = new DataSet("ds");
+                                DataTable dtx = null;
+
+                                sqlDAx.Fill(dsx);
+                                dtx = dsx.Tables[0];
+
+                                var EDMSDocType = dtx.Rows[0]["EDMSDocType"];
+                                var ProfileName = dtx.Rows[0]["ProfileName"];
+                                var LoginUser = dtx.Rows[0]["LoginUser"];
+                                var DefaultFileName = dtx.Rows[0]["DefaultFileName"];
+                                var EDMSUploadFolder = dtx.Rows[0]["EDMSUploadFolder"];
+                                var Category = dtx.Rows[0]["Category"];
+                                connx.Close();
+                                // end get edms settings
+
+                                // start get customer name and id for the selected arn 
+                                SqlConnection conny = new SqlConnection(connstr);
+
+                                SqlDataAdapter sqlDAy = new SqlDataAdapter();
+                                sqlDAy.SelectCommand = new SqlCommand("dbo.[usp_ws_getCustomerInfo_forARN] @arn, @error output", conny);
+                                sqlDAy.SelectCommand.Parameters.AddWithValue("@arn", arn);
+                                sqlDAy.SelectCommand.Parameters.AddWithValue("@error", "");
+
+                                DataSet dsy = new DataSet("ds");
+                                DataTable dty = null;
+
+                                sqlDAy.Fill(dsy);
+                                dty = dsy.Tables[0];
+                                var CustomerID = dty.Rows[0]["CustomerID"].ToString();
+                                if (CustomerID.ToString() == "")
+                                {
+                                    CustomerID = "N/A";
+                                }
+                                var CustomerName = dty.Rows[0]["CustomerName"].ToString();
+                                if (CustomerName.ToString() == "")
+                                {
+                                    CustomerName = "N/A";
+                                }
+                                conny.Close();
+                                // end get customer name and id for the selected arn 
+
+                                // start get attachment detail 
+                                SqlConnection conn1 = null;
+                                conn1 = new SqlConnection(connstr2);
+                                SqlDataAdapter sqlDA1 = new SqlDataAdapter();
+                                sqlDA1.SelectCommand = new SqlCommand("dbo.[usp_ws_list_ValuerSubmissionAttachment_For_Completed_ARN] @ARN, @error output", conn1);
+                                sqlDA1.SelectCommand.Parameters.AddWithValue("@arn", arn);
+                                sqlDA1.SelectCommand.Parameters.AddWithValue("@error", error);
+
+                                DataSet ds1 = null;
+                                DataTable dt1 = null;
+
+                                ds1 = new DataSet("ds");
+
+                                sqlDA1.Fill(ds1);
+
+                                if (ds1.Tables.Count > 0)
+                                {
+                                    dt1 = ds1.Tables[0];
+
+                                    for (int j = 0; j < dt1.Rows.Count; j++)
+                                    {
+                                        var filename_original = dt1.Rows[j]["filename_original"];
+                                        var filename_new = dt1.Rows[j]["filename_new"];
+                                        var filecontent = dt1.Rows[j]["filecontent"];
+                                        //byte[] byteFileContent = Convert.FromBase64String(filecontent);
+                                        var filetype = dt1.Rows[j]["filetype"];
+                                        var attachmentuploaddate = dt1.Rows[j]["attachmentuploaddate"];
+                                        var fe_failed_description = dt1.Rows[j]["fe_failed_description"];
+                                        var fe_failed_code = dt1.Rows[j]["fe_failed_code"];
+                                        var d_result = dt1.Rows[j]["result"];
+
+                                        string DP_ExportK2FileToEDMS_error = "";
+                                        ExportFileResponseData response = DP_ExportK2FileToEDMS(ProfileName.ToString(), EDMSUploadFolder.ToString(), filecontent.ToString(), filename_original + "." + filetype, arn, EDMSDocType.ToString(), Category.ToString(), CustomerID.ToString(), CustomerName.ToString(), ref DP_ExportK2FileToEDMS_error);
+
+                                    }
+                                }
+                                conn1.Close();
+                                // end get attachment detail 
+
+                                // start move arn from staging to main usp_SQLSolicitorDPSubmission_Main_MoveToMain
+                                SqlConnection connz = new SqlConnection(connstr);
+
+                                SqlDataAdapter sqlDAz = new SqlDataAdapter();
+                                sqlDAz.SelectCommand = new SqlCommand("dbo.[usp_ws_SQLValuerDPSubmission_Main_MoveToMainV2] @arn, @error output", connz);
+                                sqlDAz.SelectCommand.Parameters.AddWithValue("@arn", arn);
+                                sqlDAz.SelectCommand.Parameters.AddWithValue("@error", "");
+
+                                DataSet dsz = new DataSet("ds");
+                                DataTable dtz = null;
+                                //dtz = dsz.Tables[0];
+                                sqlDAz.Fill(dsz);
+                                connz.Close();
+                                // start move arn from staging to main 
+
+                                // start delete VS master data and detail data 
+                                /*
+                                SqlConnection conn2 = new SqlConnection(connstr2);
+
+                                SqlDataAdapter sqlDA2 = new SqlDataAdapter();
+                                sqlDA2.SelectCommand = new SqlCommand("dbo.[usp_deleterecords] @arn, @workflow, @error output", conn2);
+                                sqlDA2.SelectCommand.Parameters.AddWithValue("@arn", arn);
+                                sqlDA2.SelectCommand.Parameters.AddWithValue("@workflow", "SolicitorDPSubmission");
+                                sqlDA2.SelectCommand.Parameters.AddWithValue("@error", "");
+
+                                DataSet ds2 = new DataSet("ds");
+                                DataTable dt2 = null;
+                                //dt2 = ds2.Tables[0];
+                                sqlDA2.Fill(ds2);
+                                conn2.Close();
+                                */
+                                // end delete VS master data and detail data 
+
+                            }
+                            else
+                            {
+                                // start move failed record to SQLSolicitorDPSubmission_VirusLog
+                                SqlConnection conn_alpha = new SqlConnection(connstr);
+
+                                SqlDataAdapter sqlDA_alpha = new SqlDataAdapter();
+                                sqlDA_alpha.SelectCommand = new SqlCommand("dbo.[usp_ws_SQLValuerDPSubmission_MoveFailedToMainV2] @arn, @error output", conn_alpha);
+                                sqlDA_alpha.SelectCommand.Parameters.AddWithValue("@arn", arn);
+                                sqlDA_alpha.SelectCommand.Parameters.AddWithValue("@error", "");
+
+                                DataSet ds_alpha = new DataSet("ds");
+                                //DataTable dt_alpha = null;
+                                //dt_alpha = ds_alpha.Tables[0];
+                                sqlDA_alpha.Fill(ds_alpha);
+                                conn_alpha.Close();
+                                // end move failed record to SQLSolicitorDPSubmission_VirusLog
+
+                                // start get failed attachments
+                                SqlConnection conn_beta = new SqlConnection(connstr2);
+
+                                SqlDataAdapter sqlDA_beta = new SqlDataAdapter();
+                                sqlDA_beta.SelectCommand = new SqlCommand("dbo.[usp_ws_getfailedattachments] @arn, @workflow, @error output", conn_beta);
+                                sqlDA_beta.SelectCommand.Parameters.AddWithValue("@arn", arn);
+                                sqlDA_beta.SelectCommand.Parameters.AddWithValue("@workflow", "ValuerDPSubmission");
+                                sqlDA_beta.SelectCommand.Parameters.AddWithValue("@error", "");
+
+                                DataSet ds_beta = new DataSet("ds");
+                                DataTable dt_beta = null;
+                                sqlDA_beta.Fill(ds_beta);
+
+                                if (ds_beta.Tables.Count > 0)
+                                {
+                                    dt_beta = ds_beta.Tables[0];
+
+                                    for (int beta = 0; beta < dt_beta.Rows.Count; beta++)
+                                    {
+                                        var workflow = dt_beta.Rows[beta]["workflow"];
+                                        var filename_original = dt_beta.Rows[beta]["filename_original"];
+                                        var filename_new = dt_beta.Rows[beta]["filename_new"];
+                                        var filecontent = dt_beta.Rows[beta]["filecontent"];
+                                        var filetype = dt_beta.Rows[beta]["filetype"];
+                                        var attachmentuploaddate = dt_beta.Rows[beta]["attachmentuploaddate"];
+                                        var fe_file_url = dt_beta.Rows[beta]["fe_file_url"];
+                                        var fe_fireeye_id = dt_beta.Rows[beta]["fe_fireeye_id"];
+                                        var fe_failed_description = dt_beta.Rows[beta]["fe_failed_description"];
+                                        var fe_failed_code = dt_beta.Rows[beta]["fe_failed_code"];
+                                        var VSresult = dt_beta.Rows[beta]["result"];
+                                        var VSCreatedDate = dt_beta.Rows[beta]["CreatedDate"];
+                                        var VSUpdatedDate = dt_beta.Rows[beta]["UpdatedDate"];
+
+                                        // start log detail into VS_attachment_detail
+                                        SqlConnection conn_gama = new SqlConnection(connstr);
+
+                                        SqlDataAdapter sqlDA_gama = new SqlDataAdapter();
+                                        sqlDA_gama.SelectCommand = new SqlCommand("dbo.[usp_ws_savefailedattachmentdata] @arn ,@workflow,@filename_original,@filename_new,@filecontent,@filetype,@attachmentuploaddate,@fe_file_url,@fe_fireeye_id,@fe_failed_description,@fe_failed_code,@result,@VSCreatedDate,@VSUpdatedDate, @error output", conn_gama);
+                                        sqlDA_gama.SelectCommand.Parameters.AddWithValue("@arn", arn);
+                                        sqlDA_gama.SelectCommand.Parameters.AddWithValue("@workflow", workflow);
+                                        sqlDA_gama.SelectCommand.Parameters.AddWithValue("@filename_original", filename_original);
+                                        sqlDA_gama.SelectCommand.Parameters.AddWithValue("@filename_new", filename_new);
+                                        sqlDA_gama.SelectCommand.Parameters.AddWithValue("@filecontent", filecontent);
+                                        sqlDA_gama.SelectCommand.Parameters.AddWithValue("@filetype", filetype);
+                                        sqlDA_gama.SelectCommand.Parameters.AddWithValue("@attachmentuploaddate", attachmentuploaddate);
+                                        sqlDA_gama.SelectCommand.Parameters.AddWithValue("@fe_file_url", fe_file_url);
+                                        sqlDA_gama.SelectCommand.Parameters.AddWithValue("@fe_fireeye_id", fe_fireeye_id);
+                                        sqlDA_gama.SelectCommand.Parameters.AddWithValue("@fe_failed_description", fe_failed_description);
+                                        sqlDA_gama.SelectCommand.Parameters.AddWithValue("@fe_failed_code", fe_failed_code);
+                                        sqlDA_gama.SelectCommand.Parameters.AddWithValue("@result", VSresult);
+                                        sqlDA_gama.SelectCommand.Parameters.AddWithValue("@VSCreatedDate", VSCreatedDate);
+                                        sqlDA_gama.SelectCommand.Parameters.AddWithValue("@VSUpdatedDate", VSUpdatedDate);
+                                        sqlDA_gama.SelectCommand.Parameters.AddWithValue("@error", "");
+
+                                        DataSet ds_gama = new DataSet("ds");
+                                        DataTable dt_gama = null;
+                                        //dt_gama = ds_gama.Tables[0];
+                                        sqlDA_gama.Fill(ds_gama);
+                                        conn_gama.Close();
+                                        // end log detail into VS_attachment_detail
+                                    }
+
+                                }
+                                conn_beta.Close();
+                                // end get failed attachments
+
+                                // 20200827 start direct send email from WS  
+                                SqlConnection connZeta = new SqlConnection(connstr);
+
+                                SqlDataAdapter sqlDAZeta = new SqlDataAdapter();
+                                sqlDAZeta.SelectCommand = new SqlCommand("dbo.[usp_DUMaker_Letter_AV_Valuer_email_content_generate]", connZeta);
+
+                                DataSet dsZeta = new DataSet("ds");
+                                //DataTable dt2 = null;
+                                //dt2 = ds2.Tables[0];
+                                sqlDAZeta.Fill(dsZeta);
+                                DataTable dtZeta = null;
+
+                                if (dsZeta.Tables.Count > 0)
+                                {
+                                    dtZeta = dsZeta.Tables[0];
+
+                                    var receiveremail = dtZeta.Rows[0]["receiveremail"].ToString();
+                                    var email_header = dtZeta.Rows[0]["email_header"].ToString();
+                                    var email_body = dtZeta.Rows[0]["email_body"].ToString();
+
+                                    //SendMail(receiveremail, email_header, email_body, null,null);
+
+                                    //Infobip enhancement 
+                                    SendMailV2("SendToValuer-VR", "CRA", arn, email_header, email_body, receiveremail, 0, 1, "", "");
+                                }
+                                // 20200827 end direct send email from WS  
+
+                                // start delete VS master data and detail data 
+                                /*
+                                SqlConnection conn2 = new SqlConnection(connstr2);
+
+                                SqlDataAdapter sqlDA2 = new SqlDataAdapter();
+                                sqlDA2.SelectCommand = new SqlCommand("dbo.[usp_deleterecords] @arn, @workflow, @error output", conn2);
+                                sqlDA2.SelectCommand.Parameters.AddWithValue("@arn", arn);
+                                sqlDA2.SelectCommand.Parameters.AddWithValue("@workflow", "SolicitorDPSubmission");
+                                sqlDA2.SelectCommand.Parameters.AddWithValue("@error", "");
+
+                                DataSet ds2 = new DataSet("ds");
+                                DataTable dt2 = null;
+                                //dt2 = ds2.Tables[0];
+                                sqlDA2.Fill(ds2);
+                                conn2.Close();
+                                */
+                                // end delete VS master data and detail data 
+                            }
+                        }
+
+
+
+                        // start delete VS master data and detail data                         
+                        SqlConnection conn2 = new SqlConnection(connstr2);
+
+                        SqlDataAdapter sqlDA2 = new SqlDataAdapter();
+                        sqlDA2.SelectCommand = new SqlCommand("dbo.[usp_ws_deleterecords] @arn, @workflow, @error output", conn2);
+                        sqlDA2.SelectCommand.Parameters.AddWithValue("@arn", arn);
+                        sqlDA2.SelectCommand.Parameters.AddWithValue("@workflow", "ValuerDPSubmission");
+                        sqlDA2.SelectCommand.Parameters.AddWithValue("@error", "");
+
+                        DataSet ds2 = new DataSet("ds");
+                        //DataTable dt2 = null;
+                        //dt2 = ds2.Tables[0];
+                        sqlDA2.Fill(ds2);
+                        conn2.Close();
+                        // end delete VS master data and detail data 
+
+                    }
+
+                }
+                conn.Close();
+
+            }
+            catch (Exception ex)
+            {
+                error = "DP_CompletedValuer_AttachmentV2 failed with exception: " + ex.Message.ToString();
+                string errorDetail;
+                errorDetail = "Input Param: N/A";
+                LogErrorToDB("DP_CompletedValuer_AttachmentV2", "Exception", error, errorDetail);
+            }
+        }
+
+        [WebMethod]
         public void DP_SaveSolicitorAttachment(string arn, string k2fileattachment, ref string error)
         {
             error = "";
@@ -11049,7 +17400,8 @@ namespace HLBBWS
             {
                 error = "DP_SaveSolicitorAttachment failed with exception: " + ex.Message.ToString();
                 string errorDetail;
-                errorDetail = "Input Param:" + "arn:" + arn + ", k2fileattachment:" + k2fileattachment;
+              //  errorDetail = "Input Param:" + "arn:" + arn + ", k2fileattachment:" + k2fileattachment;
+                errorDetail = "Input Param:" + "arn:" + arn ;
                 LogErrorToDB("DP_SaveSolicitorAttachment", "Exception", error, errorDetail);
             }
         }
@@ -11229,7 +17581,8 @@ namespace HLBBWS
             {
                 error = "DP_SaveSolicitorDisbursementAttachment failed with exception: " + ex.Message.ToString();
                 string errorDetail;
-                errorDetail = "Input Param:" + "arn:" + arn + ", k2fileattachment:" + k2fileattachment;
+              //  errorDetail = "Input Param:" + "arn:" + arn + ", k2fileattachment:" + k2fileattachment;
+                errorDetail = "Input Param:" + "arn:" + arn ;
                 LogErrorToDB("DP_SaveSolicitorDisbursementAttachment", "Exception", error, errorDetail);
             }
         }
@@ -11384,14 +17737,48 @@ namespace HLBBWS
                 LogErrorToDB("DP_SaveSolicitorDisbursementAttachment3", "Exception", error, errorDetail);
             }
         }
+
         [WebMethod]
-        public void DP_SolicitorDPSubmissionAttachment_add_withattachment(string arn, string k2fileattachment, string solicitorcode, ref string error)
+        public void Sol2_SaveSolicitorDisbursementAttachment4(string arn, ref string error)
         {
             error = "";
 
+            int attachmentcount = 0;
+
             try
             {
-                // log the result in db
+                // step 1: get list of attachments
+                DataSet dsY = null;
+                DataTable dtY = null;
+                SqlConnection connY = null;
+                SqlDataAdapter sqlDAY = null;
+
+                string strDataSourceY = clsGlobal.MG_SQL_DATA_SOURCE2;
+                string strDBNameY = clsGlobal.MG_SQL_DB_NAME2;
+                string strIDY = clsGlobal.MG_SQL_ID2;
+                string strPasswordY = clsGlobal.MG_SQL_PASSWORD2;
+                bool blnIsWinAuthY = clsGlobal.MG_SQL_IS_WIN_AUTH2;
+
+                string connstrY = @"Data Source=" + strDataSourceY + ";Initial Catalog=" + strDBNameY + ";Persist Security Info=True;User ID=" + strIDY + ";Password=" + strPasswordY;
+                if (blnIsWinAuthY)
+                {
+                    connstrY = @"Data Source=" + strDataSourceY + ";Initial Catalog=" + strDBNameY + ";Integrated Security=True;";
+                }
+
+                connY = null;
+                sqlDAY = null;
+
+                connY = new SqlConnection(connstrY);
+
+                sqlDAY = new SqlDataAdapter();
+                sqlDAY.SelectCommand = new SqlCommand("dbo.aaa_ws_SQLSolicitorDisbursementSubmissionAttachment_SelectAll @arn", connY);
+                sqlDAY.SelectCommand.Parameters.AddWithValue("@arn", arn);
+
+                dsY = new DataSet("ds");
+                sqlDAY.Fill(dsY);
+
+                string Attachment;
+
                 DataSet ds = null;
                 DataTable dt = null;
                 SqlConnection conn = null;
@@ -11403,37 +17790,134 @@ namespace HLBBWS
                 string strPassword = clsGlobal.MG_SQL_PASSWORD;
                 bool blnIsWinAuth = clsGlobal.MG_SQL_IS_WIN_AUTH;
 
+                string strDataSource2 = clsGlobal.MG_SQL_DATA_SOURCE2;
+                string strDBName2 = clsGlobal.MG_SQL_DB_NAME2;
+                string strID2 = clsGlobal.MG_SQL_ID2;
+                string strPassword2 = clsGlobal.MG_SQL_PASSWORD2;
+                bool blnIsWinAuth2 = clsGlobal.MG_SQL_IS_WIN_AUTH2;
+
                 string connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Persist Security Info=True;User ID=" + strID + ";Password=" + strPassword;
                 if (blnIsWinAuth)
                 {
                     connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Integrated Security=True;";
                 }
 
+                string connstr2 = @"Data Source=" + strDataSource2 + ";Initial Catalog=" + strDBName2 + ";Persist Security Info=True;User ID=" + strID2 + ";Password=" + strPassword2;
+                if (blnIsWinAuth2)
+                {
+                    connstr2 = @"Data Source=" + strDataSource2 + ";Initial Catalog=" + strDBName2 + ";Integrated Security=True;";
+                }
+
                 SqlConnection connPRE = null;
                 SqlDataAdapter sqlDAPRE = null;
+                DataSet dsPRE = null;
+
+                if (dsY.Tables.Count > 0)
+                {
+                    dtY = dsY.Tables[0];
+
+                    if (dtY.Rows.Count > 0)
+                    {
+                        // step 2: loop each attachments 
+                        for (int i = 0; i < dtY.Rows.Count; i++)
+                        {
+                            attachmentcount = attachmentcount + 1;
+                            Attachment = dtY.Rows[i]["Attachment"].ToString();
+
+                            // step 3: get fireeye flag 
+                            
+                            SqlConnection connPRE0 = null;
+                            SqlDataAdapter sqlDAPRE0 = null;
+
+                            connPRE0 = new SqlConnection(connstr);
+
+                            sqlDAPRE0 = new SqlDataAdapter();
+                            sqlDAPRE0.SelectCommand = new SqlCommand("dbo.[usp_ws_getFireEyeFlag]", connPRE0);
+
+                            string fireeye_flag;
+                            fireeye_flag = "";
+                            DataSet dsPRE0 = new DataSet("ds");
+                            sqlDAPRE0.Fill(dsPRE0);
+
+                            if (dsPRE0.Tables.Count > 0)
+                            {
+                                DataTable dtPRE0 = dsPRE0.Tables[0];
+                                fireeye_flag = dtPRE0.Rows[0]["fireeye_flag"].ToString();
+                            }
+
+                            
+
+                            if (fireeye_flag == "1")
+                            {
+                                //step 4a: move attachment to VS staging 
+                                
+
+                                connPRE = new SqlConnection(connstr2);
+
+                                sqlDAPRE = new SqlDataAdapter();
+                                sqlDAPRE.SelectCommand = new SqlCommand("dbo.[aa_ws_solicitordisbursementattachment_preupload] @arn,@k2attachment, @error output", connPRE);
+                                sqlDAPRE.SelectCommand.Parameters.AddWithValue("@arn", arn);
+                                sqlDAPRE.SelectCommand.Parameters.AddWithValue("@k2attachment", Attachment);
+                                sqlDAPRE.SelectCommand.Parameters.AddWithValue("@error", "");
+
+                                 dsPRE = new DataSet("ds");
+                                sqlDAPRE.Fill(dsPRE);
+                            }
+                            else
+                            {
+                                //step 4a: move attachment to MG staging 
+                                
+                                connPRE = new SqlConnection(connstr);
+
+                                sqlDAPRE = new SqlDataAdapter();
+                                sqlDAPRE.SelectCommand = new SqlCommand("dbo.[aa_ws_SolicitorDisbursementAttachment_PreUpload] @arn,@k2attachment, @error output", connPRE);
+                                sqlDAPRE.SelectCommand.Parameters.AddWithValue("@arn", arn);
+                                sqlDAPRE.SelectCommand.Parameters.AddWithValue("@k2attachment", Attachment);
+                                sqlDAPRE.SelectCommand.Parameters.AddWithValue("@error", "");
+
+                                 dsPRE = new DataSet("ds");
+                                sqlDAPRE.Fill(dsPRE);
+                            }
+
+
+                        }
+                    }
+                }
+
+
+                // save number of attachment 
+                 connPRE = null;
+                 sqlDAPRE = null;
 
                 connPRE = new SqlConnection(connstr);
 
                 sqlDAPRE = new SqlDataAdapter();
-                sqlDAPRE.SelectCommand = new SqlCommand("dbo.usp_ws_SQLSolicitorDPSubmissionAttachment_add_withattachment @solicitoremail, @arn, @attachment", connPRE);
-                sqlDAPRE.SelectCommand.Parameters.AddWithValue("@solicitoremail", solicitorcode);
+                sqlDAPRE.SelectCommand = new SqlCommand("dbo.[sol2_ws_SolicitorDisbursementAttachment_SaveNumberOfAttachment] @arn,@NoOfAttachment, @error output", connPRE);
                 sqlDAPRE.SelectCommand.Parameters.AddWithValue("@arn", arn);
-                sqlDAPRE.SelectCommand.Parameters.AddWithValue("@attachment", k2fileattachment);
+                sqlDAPRE.SelectCommand.Parameters.AddWithValue("@NoOfAttachment", attachmentcount);
+                sqlDAPRE.SelectCommand.Parameters.AddWithValue("@error", "");
 
-                DataSet dsPRE = new DataSet("ds");
+                 dsPRE = new DataSet("ds");
                 sqlDAPRE.Fill(dsPRE);
-
             }
             catch (Exception ex)
             {
-                error = "DP_SolicitorDPSubmissionAttachment_add_withattachment failed with exception: " + ex.Message.ToString();
+                error = "Sol2_SaveSolicitorDisbursementAttachment4 failed with exception: " + ex.Message.ToString();
                 string errorDetail;
-                errorDetail = "Input Param:" + "arn:" + arn + ", solicitorcode:" + solicitorcode;
-                LogErrorToDB("DP_SolicitorDPSubmissionAttachment_add_withattachment", "Exception", error, errorDetail);
+                errorDetail = "Input Param:" + "arn:" + arn;
+                LogErrorToDB("Sol2_SaveSolicitorDisbursementAttachment4", "Exception", error, errorDetail);
             }
         }
 
         [WebMethod]
+        public void aaTest(
+            string arn = null,
+                string BalanceAdviceLetterApplicableFlag = null )
+        {
+            string error = "Sol2_SaveSolicitorDisbursementAttachment4 failed with exception: ";
+        }
+
+      [WebMethod]
         public void DP_SolDisbursementSubmission_Main
             (
                 string arn, 
@@ -11474,7 +17958,7 @@ namespace HLBBWS
                 string LF_PayeeName,
                 string LF_BilledAmount,
                 string LF_AccountNumber,
-                string LF_Bank,
+                string LF_Bank ,
                 string LF_PaymentDescription,
                 string LF_PaymentMode,
                 string UpdateInfo_Reason,
@@ -11876,618 +18360,6 @@ namespace HLBBWS
 
        
 
-        [WebMethod]
-        public void DP_SQLSolicitorDPSubmission_Main
-            (                
-                string  arn,
-               string SolicitorEmail,
-                string SolicitorCancellationReportAttachmentURL,
-                string SolicitorCancellationReportAttachment,
-                string SolicitorCancellationReportAttachmentDate,
-                string SolicitorReferenceNumber,
-                string PersonInChargeName,
-                string DocAdminFeePaid,
-                string Remarks,
-                string SolicitorCIFNumber,
-                string ExecutionDateByCustomer,
-                string SNPCompletionDateCommence,
-                string SNPCompletionDate,
-                string SNPExtendedCompletionDate,
-                string DeveloperBillingDueForPayment,
-                string DeveloperBillingDueDate,
-                string AttendingSolicitor,
-                string SolicitorDeclaration,
-                string RefCoverLetter,
-                string RefCustNRIC,
-                string RefBoardResolution,
-                string RefLandSearch,
-                string RefPrincipalSPA,
-                string RefLUToDev,
-                string RefSpecimenOfCaveator,
-                string RefDocAdminFeeForm,
-                string RefOtherDocRemark,
-                string ExeFacilitiesAgreement,
-                string ExeChargeAnnexure,
-                string ExeDeedOfAssignment,
-                string ExePowerOfAttorney,
-                string ExeLetterOfGuarantee,
-                string ExeChargeOverCashDeposit,
-                string ExeForm34,
-                string ExeEntryOfPrivateCaveat,
-                string exeF16ANLC,
-                string Status,
-                string SStatus,
-                string SStatusOthers,
-                string SolicitorRefReportAttachmentURL,
-                string SolicitorRefReportAttachment,
-                string SolicitorRefReportAttachmentDate,                
-                string Completed,
-                ref string error
-                 )
-        {
-            error = "";
-
-            try
-            {
-                // log the result in db
-                DataSet ds = null;
-                DataTable dt = null;
-                SqlConnection conn = null;
-                SqlDataAdapter sqlDA = null;
-
-                string strDataSource = clsGlobal.MG_SQL_DATA_SOURCE;
-                string strDBName = clsGlobal.MG_SQL_DB_NAME;
-                string strID = clsGlobal.MG_SQL_ID;
-                string strPassword = clsGlobal.MG_SQL_PASSWORD;
-                bool blnIsWinAuth = clsGlobal.MG_SQL_IS_WIN_AUTH;
-
-                string connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Persist Security Info=True;User ID=" + strID + ";Password=" + strPassword;
-                if (blnIsWinAuth)
-                {
-                    connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Integrated Security=True;";
-                }
-
-                SqlConnection connPRE = null;
-                SqlDataAdapter sqlDAPRE = null;
-
-                connPRE = new SqlConnection(connstr);
-
-                SqlCommand command = new SqlCommand("usp_SQLSolicitorDPSubmission_Main", connPRE);
-                command.CommandType = CommandType.StoredProcedure;
-
-                SqlParameter p_arn = new SqlParameter("@arn", SqlDbType.NVarChar,-1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_arn.Value = arn;
-                command.Parameters.Add(p_arn);
-
-                SqlParameter p_SolicitorEmail = new SqlParameter("@SolicitorEmail", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_SolicitorEmail.Value = SolicitorEmail;
-                command.Parameters.Add(p_SolicitorEmail);
-
-                SqlParameter p_SolicitorCancellationReportAttachmentURL = new SqlParameter("@SolicitorCancellationReportAttachmentURL", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_SolicitorCancellationReportAttachmentURL.Value = SolicitorCancellationReportAttachmentURL;
-                command.Parameters.Add(p_SolicitorCancellationReportAttachmentURL);
-
-                SqlParameter p_SolicitorCancellationReportAttachment = new SqlParameter("@SolicitorCancellationReportAttachment", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_SolicitorCancellationReportAttachment.Value = SolicitorCancellationReportAttachment;
-                command.Parameters.Add(p_SolicitorCancellationReportAttachment);
-
-                SqlParameter p_SolicitorCancellationReportAttachmentDate = new SqlParameter("@SolicitorCancellationReportAttachmentDate", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_SolicitorCancellationReportAttachmentDate.Value = SolicitorCancellationReportAttachmentDate;
-                command.Parameters.Add(p_SolicitorCancellationReportAttachmentDate);
-
-                SqlParameter p_SolicitorReferenceNumber = new SqlParameter("@SolicitorReferenceNumber", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_SolicitorReferenceNumber.Value = SolicitorReferenceNumber;
-                command.Parameters.Add(p_SolicitorReferenceNumber);
-
-                SqlParameter p_PersonInChargeName = new SqlParameter("@PersonInChargeName", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_PersonInChargeName.Value = PersonInChargeName;
-                command.Parameters.Add(p_PersonInChargeName);
-
-                SqlParameter p_DocAdminFeePaid = new SqlParameter("@DocAdminFeePaid", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_DocAdminFeePaid.Value = DocAdminFeePaid;
-                command.Parameters.Add(p_DocAdminFeePaid);
-
-                SqlParameter p_Remarks = new SqlParameter("@Remarks", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_Remarks.Value = Remarks;
-                command.Parameters.Add(p_Remarks);
-
-                SqlParameter p_SolicitorCIFNumber = new SqlParameter("@SolicitorCIFNumber", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_SolicitorCIFNumber.Value = SolicitorCIFNumber;
-                command.Parameters.Add(p_SolicitorCIFNumber);
-
-                SqlParameter p_ExecutionDateByCustomer = new SqlParameter("@ExecutionDateByCustomer", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_ExecutionDateByCustomer.Value = ExecutionDateByCustomer;
-                command.Parameters.Add(p_ExecutionDateByCustomer);
-
-                SqlParameter p_SNPCompletionDateCommence = new SqlParameter("@SNPCompletionDateCommence", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_SNPCompletionDateCommence.Value = SNPCompletionDateCommence;
-                command.Parameters.Add(p_SNPCompletionDateCommence);
-
-                SqlParameter p_SNPCompletionDate = new SqlParameter("@SNPCompletionDate", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_SNPCompletionDate.Value = SNPCompletionDate;
-                command.Parameters.Add(p_SNPCompletionDate);
-
-                SqlParameter p_SNPExtendedCompletionDate = new SqlParameter("@SNPExtendedCompletionDate", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_SNPExtendedCompletionDate.Value = SNPExtendedCompletionDate;
-                command.Parameters.Add(p_SNPExtendedCompletionDate);
-
-                SqlParameter p_DeveloperBillingDueForPayment = new SqlParameter("@DeveloperBillingDueForPayment", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_DeveloperBillingDueForPayment.Value = DeveloperBillingDueForPayment;
-                command.Parameters.Add(p_DeveloperBillingDueForPayment);
-
-                SqlParameter p_DeveloperBillingDueDate = new SqlParameter("@DeveloperBillingDueDate", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_DeveloperBillingDueDate.Value = DeveloperBillingDueDate;
-                command.Parameters.Add(p_DeveloperBillingDueDate);
-
-                SqlParameter p_AttendingSolicitor = new SqlParameter("@AttendingSolicitor", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_AttendingSolicitor.Value = AttendingSolicitor;
-                command.Parameters.Add(p_AttendingSolicitor);
-
-                SqlParameter p_SolicitorDeclaration = new SqlParameter("@SolicitorDeclaration", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_SolicitorDeclaration.Value = SolicitorDeclaration;
-                command.Parameters.Add(p_SolicitorDeclaration);
-
-                SqlParameter p_RefCoverLetter = new SqlParameter("@RefCoverLetter", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_RefCoverLetter.Value = RefCoverLetter;
-                command.Parameters.Add(p_RefCoverLetter);
-
-                SqlParameter p_RefCustNRIC = new SqlParameter("@RefCustNRIC", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_RefCustNRIC.Value = RefCustNRIC;
-                command.Parameters.Add(p_RefCustNRIC);
-
-                SqlParameter p_RefBoardResolution = new SqlParameter("@RefBoardResolution", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_RefBoardResolution.Value = RefBoardResolution;
-                command.Parameters.Add(p_RefBoardResolution);
-
-                SqlParameter p_RefLandSearch = new SqlParameter("@RefLandSearch", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_RefLandSearch.Value = RefLandSearch;
-                command.Parameters.Add(p_RefLandSearch);
-
-                SqlParameter p_RefPrincipalSPA = new SqlParameter("@RefPrincipalSPA", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_RefPrincipalSPA.Value = RefPrincipalSPA;
-                command.Parameters.Add(p_RefPrincipalSPA);
-
-                SqlParameter p_RefLUToDev = new SqlParameter("@RefLUToDev", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_RefLUToDev.Value = RefLUToDev;
-                command.Parameters.Add(p_RefLUToDev);
-
-                SqlParameter p_RefSpecimenOfCaveator = new SqlParameter("@RefSpecimenOfCaveator", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_RefSpecimenOfCaveator.Value = RefSpecimenOfCaveator;
-                command.Parameters.Add(p_RefSpecimenOfCaveator);
-
-                SqlParameter p_RefDocAdminFeeForm = new SqlParameter("@RefDocAdminFeeForm", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_RefDocAdminFeeForm.Value = RefDocAdminFeeForm;
-                command.Parameters.Add(p_RefDocAdminFeeForm);
-
-                SqlParameter p_ExeFacilitiesAgreement = new SqlParameter("@ExeFacilitiesAgreement", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_ExeFacilitiesAgreement.Value = ExeFacilitiesAgreement;
-                command.Parameters.Add(p_ExeFacilitiesAgreement);
-
-                SqlParameter p_ExeChargeAnnexure = new SqlParameter("@ExeChargeAnnexure", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_ExeChargeAnnexure.Value = ExeChargeAnnexure;
-                command.Parameters.Add(p_ExeChargeAnnexure);
-
-                SqlParameter p_ExeDeedOfAssignment = new SqlParameter("@ExeDeedOfAssignment", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_ExeDeedOfAssignment.Value = ExeDeedOfAssignment;
-                command.Parameters.Add(p_ExeDeedOfAssignment);
-
-                SqlParameter p_ExePowerOfAttorney = new SqlParameter("@ExePowerOfAttorney", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_ExePowerOfAttorney.Value = ExePowerOfAttorney;
-                command.Parameters.Add(p_ExePowerOfAttorney);
-
-                SqlParameter p_ExeLetterOfGuarantee = new SqlParameter("@ExeLetterOfGuarantee", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_ExeLetterOfGuarantee.Value = ExeLetterOfGuarantee;
-                command.Parameters.Add(p_ExeLetterOfGuarantee);
-
-                SqlParameter p_ExeChargeOverCashDeposit = new SqlParameter("@ExeChargeOverCashDeposit", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_ExeChargeOverCashDeposit.Value = ExeChargeOverCashDeposit;
-                command.Parameters.Add(p_ExeChargeOverCashDeposit);
-
-                SqlParameter p_ExeForm34 = new SqlParameter("@ExeForm34", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_ExeForm34.Value = ExeForm34;
-                command.Parameters.Add(p_ExeForm34);
-
-                SqlParameter p_ExeEntryOfPrivateCaveat = new SqlParameter("@ExeEntryOfPrivateCaveat", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_ExeEntryOfPrivateCaveat.Value = ExeEntryOfPrivateCaveat;
-                command.Parameters.Add(p_ExeEntryOfPrivateCaveat);
-
-                SqlParameter p_Status = new SqlParameter("@Status", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_Status.Value = Status;
-                command.Parameters.Add(p_Status);
-
-                SqlParameter p_SStatus = new SqlParameter("@SStatus", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_SStatus.Value = SStatus;
-                command.Parameters.Add(p_SStatus);
-
-                SqlParameter p_SStatusOthers = new SqlParameter("@SStatusOthers", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_SStatusOthers.Value = SStatusOthers;
-                command.Parameters.Add(p_SStatusOthers);
-
-                SqlParameter p_SolicitorRefReportAttachmentURL = new SqlParameter("@SolicitorRefReportAttachmentURL", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_SolicitorRefReportAttachmentURL.Value = SolicitorRefReportAttachmentURL;
-                command.Parameters.Add(p_SolicitorRefReportAttachmentURL);
-
-                SqlParameter p_SolicitorRefReportAttachment = new SqlParameter("@SolicitorRefReportAttachment", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_SolicitorRefReportAttachment.Value = SolicitorRefReportAttachment;
-                command.Parameters.Add(p_SolicitorRefReportAttachment);
-
-                SqlParameter p_SolicitorRefReportAttachmentDate = new SqlParameter("@SolicitorRefReportAttachmentDate", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_SolicitorRefReportAttachmentDate.Value = SolicitorRefReportAttachmentDate;
-                command.Parameters.Add(p_SolicitorRefReportAttachmentDate);
-
-                SqlParameter p_RefOtherDocRemark = new SqlParameter("@RefOtherDocRemark", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_RefOtherDocRemark.Value = RefOtherDocRemark;
-                command.Parameters.Add(p_RefOtherDocRemark);
-
-                SqlParameter p_exeF16ANLC = new SqlParameter("@exeF16ANLC", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_exeF16ANLC.Value = exeF16ANLC;
-                command.Parameters.Add(p_exeF16ANLC);
-
-                /*
-                SqlParameter p_CIFNew = new SqlParameter("@CIFNew", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_CIFNew.Value = CIFNew;
-                command.Parameters.Add(p_CIFNew);
-                */
-
-                SqlParameter p_Completed = new SqlParameter("@Completed", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_Completed.Value = Completed;
-                command.Parameters.Add(p_Completed);
-
-                SqlParameter p_error = new SqlParameter("@error", SqlDbType.NVarChar, -1);
-                p_error.Direction = ParameterDirection.InputOutput;
-                p_error.Value = error;
-                command.Parameters.Add(p_error);
-
-                sqlDAPRE = new SqlDataAdapter();
-
-                /*
-                //sqlDAPRE.SelectCommand = new SqlCommand("dbo.usp_SQLSolicitorDPSubmission_Main @ARN ,@SolicitorEmail ,@SolicitorCancellationReportAttachmentURL ,@SolicitorCancellationReportAttachment ,@SolicitorCancellationReportAttachmentDate , @SolicitorReferenceNumber ,@PersonInChargeName ,@DocAdminFeePaid ,@Remarks ,@SolicitorCIFNumber  , @ExecutionDateByCustomer , @SNPCompletionDateCommence , @SNPCompletionDate , @SNPExtendedCompletionDate , @DeveloperBillingDueForPayment , @DeveloperBillingDueDate , @AttendingSolicitor ,@SolicitorDeclaration , @RefCoverLetter , @RefCustNRIC , @RefBoardResolution , @RefLandSearch , @RefPrincipalSPA , @RefLUToDev , @RefSpecimenOfCaveator , @RefDocAdminFeeForm , @ExeFacilitiesAgreement , @ExeChargeAnnexure , @ExeDeedOfAssignment , @ExePowerOfAttorney , @ExeLetterOfGuarantee , @ExeChargeOverCashDeposit , @ExeForm34 , @ExeEntryOfPrivateCaveat , @Status ,@SStatus ,@SStatusOthers ,@SolicitorRefReportAttachmentURL ,@SolicitorRefReportAttachment ,@SolicitorRefReportAttachmentDate ,@RefOtherDocRemark ,@F16ANLC ,@CIFNew ,@Completed , @Error output ", connPRE);
-                sqlDAPRE.SelectCommand = new SqlCommand("dbo.usp_SQLSolicitorDPSubmission_Main", connPRE);
-                sqlDAPRE.SelectCommand.CommandType = CommandType.StoredProcedure;
-
-                sqlDAPRE.SelectCommand.Parameters.AddWithValue("@arn", arn);
-                sqlDAPRE.SelectCommand.Parameters.AddWithValue("@SolicitorEmail", SolicitorEmail);                
-                sqlDAPRE.SelectCommand.Parameters.AddWithValue("@SolicitorCancellationReportAttachmentURL", SolicitorCancellationReportAttachmentURL);
-                sqlDAPRE.SelectCommand.Parameters.AddWithValue("@SolicitorCancellationReportAttachment", SolicitorCancellationReportAttachment);
-                sqlDAPRE.SelectCommand.Parameters.AddWithValue("@SolicitorCancellationReportAttachmentDate", SolicitorCancellationReportAttachmentDate);
-
-                sqlDAPRE.SelectCommand.Parameters.AddWithValue("@SolicitorReferenceNumber", SolicitorReferenceNumber);
-                //sqlDAPRE.SelectCommand.Parameters.AddWithValue("@SolicitorReferenceNumber", DBNULL.Value);
-                sqlDAPRE.SelectCommand.Parameters.AddWithValue("@PersonInChargeName", PersonInChargeName);
-                sqlDAPRE.SelectCommand.Parameters.AddWithValue("@DocAdminFeePaid", DocAdminFeePaid);
-                sqlDAPRE.SelectCommand.Parameters.AddWithValue("@Remarks", Remarks);
-                sqlDAPRE.SelectCommand.Parameters.AddWithValue("@SolicitorCIFNumber", SolicitorCIFNumber);
-                sqlDAPRE.SelectCommand.Parameters.AddWithValue("@ExecutionDateByCustomer", ExecutionDateByCustomer);
-
-                sqlDAPRE.SelectCommand.Parameters.AddWithValue("@SNPCompletionDateCommence", SNPCompletionDateCommence);
-                sqlDAPRE.SelectCommand.Parameters.AddWithValue("@SNPCompletionDate", SNPCompletionDate);
-                sqlDAPRE.SelectCommand.Parameters.AddWithValue("@SNPExtendedCompletionDate", SNPExtendedCompletionDate);
-                sqlDAPRE.SelectCommand.Parameters.AddWithValue("@DeveloperBillingDueForPayment", DeveloperBillingDueForPayment);
-                sqlDAPRE.SelectCommand.Parameters.AddWithValue("@DeveloperBillingDueDate", DeveloperBillingDueDate);
-                sqlDAPRE.SelectCommand.Parameters.AddWithValue("@AttendingSolicitor", AttendingSolicitor);
-
-                sqlDAPRE.SelectCommand.Parameters.AddWithValue("@SolicitorDeclaration", SolicitorDeclaration);
-                sqlDAPRE.SelectCommand.Parameters.AddWithValue("@RefCoverLetter", RefCoverLetter);
-                sqlDAPRE.SelectCommand.Parameters.AddWithValue("@RefCustNRIC", RefCustNRIC);
-                sqlDAPRE.SelectCommand.Parameters.AddWithValue("@RefBoardResolution", RefBoardResolution);
-                sqlDAPRE.SelectCommand.Parameters.AddWithValue("@RefLandSearch", RefLandSearch);
-                sqlDAPRE.SelectCommand.Parameters.AddWithValue("@RefPrincipalSPA", RefPrincipalSPA);
-
-                sqlDAPRE.SelectCommand.Parameters.AddWithValue("@RefLUToDev", RefLUToDev);
-                sqlDAPRE.SelectCommand.Parameters.AddWithValue("@RefSpecimenOfCaveator", RefSpecimenOfCaveator);
-                sqlDAPRE.SelectCommand.Parameters.AddWithValue("@RefDocAdminFeeForm", RefDocAdminFeeForm);                
-                sqlDAPRE.SelectCommand.Parameters.AddWithValue("@ExeFacilitiesAgreement", ExeFacilitiesAgreement); 
-                sqlDAPRE.SelectCommand.Parameters.AddWithValue("@ExeChargeAnnexure", ExeChargeAnnexure);
-
-                sqlDAPRE.SelectCommand.Parameters.AddWithValue("@ExeDeedOfAssignment", ExeDeedOfAssignment);
-                sqlDAPRE.SelectCommand.Parameters.AddWithValue("@ExePowerOfAttorney", ExePowerOfAttorney);
-                sqlDAPRE.SelectCommand.Parameters.AddWithValue("@ExeLetterOfGuarantee", ExeLetterOfGuarantee);
-                sqlDAPRE.SelectCommand.Parameters.AddWithValue("@ExeChargeOverCashDeposit", ExeChargeOverCashDeposit);
-                sqlDAPRE.SelectCommand.Parameters.AddWithValue("@ExeForm34", ExeForm34);
-                sqlDAPRE.SelectCommand.Parameters.AddWithValue("@ExeEntryOfPrivateCaveat", ExeEntryOfPrivateCaveat);
-
-                sqlDAPRE.SelectCommand.Parameters.AddWithValue("@Status", Status);
-                sqlDAPRE.SelectCommand.Parameters.AddWithValue("@SStatus", SStatus);
-                sqlDAPRE.SelectCommand.Parameters.AddWithValue("@SStatusOthers", SStatusOthers);
-                sqlDAPRE.SelectCommand.Parameters.AddWithValue("@SolicitorRefReportAttachmentURL", SolicitorRefReportAttachmentURL);
-                sqlDAPRE.SelectCommand.Parameters.AddWithValue("@SolicitorRefReportAttachment", SolicitorRefReportAttachment);
-                sqlDAPRE.SelectCommand.Parameters.AddWithValue("@SolicitorRefReportAttachmentDate", SolicitorRefReportAttachmentDate);
-
-                sqlDAPRE.SelectCommand.Parameters.AddWithValue("@RefOtherDocRemark", RefOtherDocRemark);
-                sqlDAPRE.SelectCommand.Parameters.AddWithValue("@F16ANLC", F16ANLC);
-                sqlDAPRE.SelectCommand.Parameters.AddWithValue("@CIFNew", CIFNew);
-                sqlDAPRE.SelectCommand.Parameters.AddWithValue("@Completed", Completed);
-
-                sqlDAPRE.SelectCommand.Parameters.AddWithValue("@error", "");
-                sqlDAPRE.SelectCommand.Parameters["@error"].Direction = ParameterDirection.Output;
-                */
-
-                sqlDAPRE.SelectCommand = command;
-                DataSet dsPRE = new DataSet("ds");
-                sqlDAPRE.Fill(dsPRE);
-
-                error = Convert.ToString(p_error.Value);
-
-                //return outputValue;
-
-            }
-            catch (Exception ex)
-            {
-                error = "usp_SQLSolicitorDPSubmission_Main failed with exception: " + ex.Message.ToString();
-                //outputValue = "usp_SQLSolicitorDPSubmission_Main failed with exception: " + ex.Message.ToString();
-                string errorDetail;
-                 errorDetail = "Input Param:" + "arn:" + arn ;
-                 LogErrorToDB("usp_SQLSolicitorDPSubmission_Main", "Exception", error, errorDetail);
-                //return outputValue;
-            }
-        }
-
-
-        [WebMethod]
-        public void DP_SQLValuerDPSubmission_Main
-            (
-                string arn,
-                string valueremail,
-                string ValuerReportAttachmentURL,
-                string ValuerReportAttachment,
-                string ValuerReportAttachmentDate,
-                string VRInstructionDate,
-                string ValuerReference,
-                string PersonInChargeName,
-                string VUpdateInfoStatus,
-                string VLowerOMVStatus,
-                string VUpdateInfoStatusOthers,
-                string VLowerOMVReasons,
-                string DateOfValuation,
-                string MarketValue,
-                string FireInsuranceValue,
-                string InvoiceNumber,
-                string ShortfallAmount,
-                string Declaration,
-                string status,
-                string ValuationFeeFinancedByBankFlag,
-                string LF_PayeeName,
-                string LF_BilledAmount,
-                string LF_AccountNumber,
-                string LF_Bank,
-                string LF_PaymentDescription,
-                string LF_PaymentMode,
-                string Completed,
-                ref string error
-                 )
-        {
-            error = "";
-
-            try
-            {
-                // log the result in db
-                DataSet ds = null;
-                DataTable dt = null;
-                SqlConnection conn = null;
-                SqlDataAdapter sqlDA = null;
-
-                string strDataSource = clsGlobal.MG_SQL_DATA_SOURCE;
-                string strDBName = clsGlobal.MG_SQL_DB_NAME;
-                string strID = clsGlobal.MG_SQL_ID;
-                string strPassword = clsGlobal.MG_SQL_PASSWORD;
-                bool blnIsWinAuth = clsGlobal.MG_SQL_IS_WIN_AUTH;
-
-                string connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Persist Security Info=True;User ID=" + strID + ";Password=" + strPassword;
-                if (blnIsWinAuth)
-                {
-                    connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Integrated Security=True;";
-                }
-
-                SqlConnection connPRE = null;
-                SqlDataAdapter sqlDAPRE = null;
-
-                connPRE = new SqlConnection(connstr);
-
-                SqlCommand command = new SqlCommand("usp_SQLValuerDPSubmission_Main", connPRE);
-                command.CommandType = CommandType.StoredProcedure;
-
-                SqlParameter p_arn = new SqlParameter("@arn", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_arn.Value = arn;
-                command.Parameters.Add(p_arn);
-
-                SqlParameter p_valueremail = new SqlParameter("@valueremail", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_valueremail.Value = valueremail;
-                command.Parameters.Add(p_valueremail);
-
-                SqlParameter p_ValuerReportAttachmentURL = new SqlParameter("@ValuerReportAttachmentURL", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_ValuerReportAttachmentURL.Value = ValuerReportAttachmentURL;
-                command.Parameters.Add(p_ValuerReportAttachmentURL);
-
-                SqlParameter p_ValuerReportAttachment = new SqlParameter("@ValuerReportAttachment", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_ValuerReportAttachment.Value = ValuerReportAttachment;
-                command.Parameters.Add(p_ValuerReportAttachment);
-
-                SqlParameter p_ValuerReportAttachmentDate = new SqlParameter("@ValuerReportAttachmentDate", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_ValuerReportAttachmentDate.Value = ValuerReportAttachmentDate;
-                command.Parameters.Add(p_ValuerReportAttachmentDate);
-
-                SqlParameter p_VRInstructionDate = new SqlParameter("@VRInstructionDate", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_VRInstructionDate.Value = VRInstructionDate;
-                command.Parameters.Add(p_VRInstructionDate);                
-
-                SqlParameter p_ValuerReference = new SqlParameter("@ValuerReference", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_ValuerReference.Value = ValuerReference;
-                command.Parameters.Add(p_ValuerReference);
-
-                SqlParameter p_PersonInChargeName = new SqlParameter("@PersonInChargeName", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_PersonInChargeName.Value = PersonInChargeName;
-                command.Parameters.Add(p_PersonInChargeName);
-
-                SqlParameter p_VUpdateInfoStatus = new SqlParameter("@VUpdateInfoStatus", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_VUpdateInfoStatus.Value = VUpdateInfoStatus;
-                command.Parameters.Add(p_VUpdateInfoStatus);
-
-                SqlParameter p_VLowerOMVStatus = new SqlParameter("@VLowerOMVStatus", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_VLowerOMVStatus.Value = VLowerOMVStatus;
-                command.Parameters.Add(p_VLowerOMVStatus);
-
-                SqlParameter p_VUpdateInfoStatusOthers = new SqlParameter("@VUpdateInfoStatusOthers", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_VUpdateInfoStatusOthers.Value = VUpdateInfoStatusOthers;
-                command.Parameters.Add(p_VUpdateInfoStatusOthers);
-
-                SqlParameter p_VLowerOMVReasons = new SqlParameter("@VLowerOMVReasons", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_VLowerOMVReasons.Value = VLowerOMVReasons;
-                command.Parameters.Add(p_VLowerOMVReasons);
-
-                SqlParameter p_DateOfValuation = new SqlParameter("@DateOfValuation", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_DateOfValuation.Value = DateOfValuation;
-                command.Parameters.Add(p_DateOfValuation);
-
-                SqlParameter p_MarketValue = new SqlParameter("@MarketValue", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_MarketValue.Value = MarketValue;
-                command.Parameters.Add(p_MarketValue);
-
-                SqlParameter p_FireInsuranceValue = new SqlParameter("@FireInsuranceValue", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_FireInsuranceValue.Value = FireInsuranceValue;
-                command.Parameters.Add(p_FireInsuranceValue);
-
-                SqlParameter p_InvoiceNumber = new SqlParameter("@InvoiceNumber", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_InvoiceNumber.Value = InvoiceNumber;
-                command.Parameters.Add(p_InvoiceNumber);
-
-                SqlParameter p_ShortfallAmount = new SqlParameter("@ShortfallAmount", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_ShortfallAmount.Value = ShortfallAmount;
-                command.Parameters.Add(p_ShortfallAmount);
-
-                SqlParameter p_Declaration = new SqlParameter("@Declaration", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_Declaration.Value = Declaration;
-                command.Parameters.Add(p_Declaration);
-
-                SqlParameter p_status = new SqlParameter("@status", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_status.Value = status;
-                command.Parameters.Add(p_status);
-
-                SqlParameter p_ValuationFeeFinancedByBankFlag = new SqlParameter("@ValuationFeeFinancedByBankFlag", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_ValuationFeeFinancedByBankFlag.Value = ValuationFeeFinancedByBankFlag;
-                command.Parameters.Add(p_ValuationFeeFinancedByBankFlag);
-
-                SqlParameter p_LF_PayeeName = new SqlParameter("@LF_PayeeName", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_LF_PayeeName.Value = LF_PayeeName;
-                command.Parameters.Add(p_LF_PayeeName);
-
-                SqlParameter p_LF_BilledAmount = new SqlParameter("@LF_BilledAmount", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_LF_BilledAmount.Value = LF_BilledAmount;
-                command.Parameters.Add(p_LF_BilledAmount);
-
-                SqlParameter p_LF_AccountNumber = new SqlParameter("@LF_AccountNumber", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_LF_AccountNumber.Value = LF_AccountNumber;
-                command.Parameters.Add(p_LF_AccountNumber);
-
-                SqlParameter p_LF_Bank = new SqlParameter("@LF_Bank", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_LF_Bank.Value = LF_Bank;
-                command.Parameters.Add(p_LF_Bank);
-
-                SqlParameter p_LF_PaymentDescription = new SqlParameter("@LF_PaymentDescription", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_LF_PaymentDescription.Value = LF_PaymentDescription;
-                command.Parameters.Add(p_LF_PaymentDescription);
-
-                SqlParameter p_LF_PaymentMode = new SqlParameter("@LF_PaymentMode", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_LF_PaymentMode.Value = LF_PaymentMode;
-                command.Parameters.Add(p_LF_PaymentMode);
-
-                SqlParameter p_Completed = new SqlParameter("@Completed", SqlDbType.NVarChar, -1);
-                //param.Direction = ParameterDirection.InputOutput;
-                p_Completed.Value = Completed;
-                command.Parameters.Add(p_Completed);
-
-                SqlParameter p_result = new SqlParameter("@result", SqlDbType.NVarChar, -1);
-                p_result.Direction = ParameterDirection.InputOutput;
-                p_result.Value = error;
-                command.Parameters.Add(p_result);
-
-                sqlDAPRE = new SqlDataAdapter();
-
-                sqlDAPRE.SelectCommand = command;
-                DataSet dsPRE = new DataSet("ds");
-                sqlDAPRE.Fill(dsPRE);
-
-                error = Convert.ToString(p_result.Value);                
-
-            }
-            catch (Exception ex)
-            {
-                error = "DP_SQLValuerDPSubmission_Main failed with exception: " + ex.Message.ToString();                
-                string errorDetail;
-                errorDetail = "Input Param:" + "arn:" + arn;
-                LogErrorToDB("DP_SQLValuerDPSubmission_Main", "Exception", error, errorDetail);                
-            }
-        }
-
 
         [WebMethod]
         public void DP_SolicitorDisbursementSubmissionAttachment_DeleteAllAttachments(string arn, ref string error)
@@ -12644,9 +18516,9 @@ namespace HLBBWS
                 }
 
         [WebMethod]
-        public void TBD_DP_UpdatePhaseCode()
+        public void DP_ValuerV2_Attachment_add_withattachment(string arn, string k2fileattachment, string attachmenttype, ref string error)
         {
-            //error = "";
+            error = "";
 
             try
             {
@@ -12674,70 +18546,86 @@ namespace HLBBWS
                 connPRE = new SqlConnection(connstr);
 
                 sqlDAPRE = new SqlDataAdapter();
-                sqlDAPRE.SelectCommand = new SqlCommand("dbo.ddProject_LOADSUpdatePhaseCode_Select", connPRE);
-                // sqlDAPRE.SelectCommand.Parameters.AddWithValue("@solicitoremail", solicitorcode);
-                // sqlDAPRE.SelectCommand.Parameters.AddWithValue("@arn", arn);
-                // sqlDAPRE.SelectCommand.Parameters.AddWithValue("@attachment", k2fileattachment);
+                sqlDAPRE.SelectCommand = new SqlCommand("dbo.SQLValuerDPSubmissionV2_Attachment_Insert @arn, @attachmentype,  @attachment, @error output", connPRE);
+                sqlDAPRE.SelectCommand.Parameters.AddWithValue("@arn", arn);
+                sqlDAPRE.SelectCommand.Parameters.AddWithValue("@attachmentype", attachmenttype);
+              
+                sqlDAPRE.SelectCommand.Parameters.AddWithValue("@attachment", k2fileattachment);
+
+                sqlDAPRE.SelectCommand.Parameters.Add("@error", SqlDbType.NVarChar, 4000);
+                sqlDAPRE.SelectCommand.Parameters["@error"].Direction = ParameterDirection.Output;
 
                 DataSet dsPRE = new DataSet("ds");
                 sqlDAPRE.Fill(dsPRE);
 
-                if (dsPRE.Tables.Count > 0)
-                {
-                    dt = dsPRE.Tables[0];
+                error = sqlDAPRE.SelectCommand.Parameters["@error"].Value.ToString();
 
-                    if (dt.Rows.Count > 0)
-                    {
-                        for (int i = 0; i < dt.Rows.Count; i++)
-                        {
-
-                            //string arn = dt.Rows[i]["arn"].ToString();
-                           // HLBBWS.AppWS ws = new AppWS();
-                           // List<HLBBWS.AppWS.structureLOADS> list = new List<HLBBWS.AppWS.structureLOADS>();
-
-                           // list = ws.DP_NewLI_GetDataFromLOADS(dt.Rows[i]["ARN"].ToString());
-
-                            //if (list.Count > 0)
-                           // {
-                               // if (list[0].respInfo_respCode == "00")
-                               // {
-                                    SqlConnection conn2 = null;
-                                    conn2 = new SqlConnection(connstr);
-                                    
-                                    SqlDataAdapter sqlDAPRE2 = null;
-
-                                    sqlDAPRE2 = new SqlDataAdapter();
-                                    sqlDAPRE2.SelectCommand = new SqlCommand("dbo.ddProject_LOADSUpdatePhaseCode_Update @arn, @PhaseCode, @PhaseName, @AddressLine1, @SPAValue, @Category", conn2);
-                                    sqlDAPRE2.SelectCommand.Parameters.AddWithValue("@arn", dt.Rows[i]["ARN"].ToString());
-                                    sqlDAPRE2.SelectCommand.Parameters.AddWithValue("@PhaseCode", "phase code 1");
-                                    sqlDAPRE2.SelectCommand.Parameters.AddWithValue("@PhaseName", "phase name 1");
-                                    sqlDAPRE2.SelectCommand.Parameters.AddWithValue("@AddressLine1", "addr line 1");
-                                    sqlDAPRE2.SelectCommand.Parameters.AddWithValue("@SPAValue", "10000.00");
-                                    sqlDAPRE2.SelectCommand.Parameters.AddWithValue("@Category", "cat 1");
-
-                                    //sqlcommand1.Parameters.AddWithValue("@ARN", dt.Rows[i]["ARN"].ToString());
-                                    /*
-                                    sqlcommand1.Parameters.AddWithValue("@PhaseCode", list[0].loanApplicationInfo_appStatus);
-                                    */
-
-                                    DataSet dsPRE2 = new DataSet("ds");
-                                    sqlDAPRE2.Fill(dsPRE2);
-
-                              //  }
-                          //  }
-                        }
-                    }
-                }
             }
             catch (Exception ex)
             {
-                //error = "DP_SolicitorDPSubmissionAttachment_add_withattachment failed with exception: " + ex.Message.ToString();
+                error = "DP_ValuerV2_Attachment_add_withattachment failed with exception: " + ex.Message.ToString();
                 string errorDetail;
-                //errorDetail = "Input Param:" + "arn:" + arn + ", solicitorcode:" + solicitorcode;
-                //LogErrorToDB("DP_SolicitorDPSubmissionAttachment_add_withattachment", "Exception", error, errorDetail);
+                errorDetail = "Input Param:" + "arn:" + arn ;
+                LogErrorToDB("DP_ValuerV2_Attachment_add_withattachment", "Exception", error, errorDetail);
             }
         }
 
+        [WebMethod]
+        public void DP_Sol2_Doc_Attachment_Add(string arn, string k2fileattachment, string attachmenttype, ref string error)
+        {
+            error = "";
+
+            try
+            {
+                // log the result in db
+                DataSet ds = null;
+                DataTable dt = null;
+                SqlConnection conn = null;
+                SqlDataAdapter sqlDA = null;
+
+                string strDataSource = clsGlobal.MG_SQL_DATA_SOURCE;
+                string strDBName = clsGlobal.MG_SQL_DB_NAME;
+                string strID = clsGlobal.MG_SQL_ID;
+                string strPassword = clsGlobal.MG_SQL_PASSWORD;
+                bool blnIsWinAuth = clsGlobal.MG_SQL_IS_WIN_AUTH;
+
+                string connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Persist Security Info=True;User ID=" + strID + ";Password=" + strPassword;
+                if (blnIsWinAuth)
+                {
+                    connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Integrated Security=True;";
+                }
+
+                SqlConnection connPRE = null;
+                SqlDataAdapter sqlDAPRE = null;
+
+                connPRE = new SqlConnection(connstr);
+
+                sqlDAPRE = new SqlDataAdapter();
+                sqlDAPRE.SelectCommand = new SqlCommand("dbo.Sol2_DocSubmission_Attachment_Insert @arn, @attachmentype,  @attachment, @error output", connPRE);
+                sqlDAPRE.SelectCommand.Parameters.AddWithValue("@arn", arn);
+                sqlDAPRE.SelectCommand.Parameters.AddWithValue("@attachmentype", attachmenttype);
+                sqlDAPRE.SelectCommand.Parameters.AddWithValue("@attachment", k2fileattachment);
+
+                sqlDAPRE.SelectCommand.Parameters.Add("@error", SqlDbType.NVarChar, 4000);
+                sqlDAPRE.SelectCommand.Parameters["@error"].Direction = ParameterDirection.Output;
+
+              
+                DataSet dsPRE = new DataSet("ds");
+                sqlDAPRE.Fill(dsPRE);
+
+                error = sqlDAPRE.SelectCommand.Parameters["@error"].Value.ToString();
+
+            }
+            catch (Exception ex)
+            {
+                error = "DP_Sol2_Doc_Attachment_Add failed with exception: " + ex.Message.ToString();
+                string errorDetail;
+                errorDetail = "Input Param:" + "arn:" + arn;
+                LogErrorToDB("DP_Sol2_Doc_Attachment_Add", "Exception", error, errorDetail);
+            }
+        }
+
+       
         public struct SolicitorDisbursementSubmissionAttachmentSelectAll
         {
             public string AttachmentID;
@@ -14617,6 +20505,242 @@ namespace HLBBWS
         }
 
         [WebMethod]
+        public void DP_SolicitorLogin_V2(string SolCode, string SolPassword, ref string ForcePasswordChange, ref string PasswordExpiryWarning, ref string error, ref string encryptedusername, ref string encryptedpassword, ref string sessionid)
+        {
+            error = "";
+            ForcePasswordChange = "";
+            PasswordExpiryWarning = "";
+
+            try
+            {
+
+                DataSet ds = null;
+                DataTable dt = null;
+                SqlConnection conn = null;
+                SqlDataAdapter sqlDA = null;
+
+                string strDataSource = clsGlobal.MG_SQL_DATA_SOURCE;
+                string strDBName = clsGlobal.MG_SQL_DB_NAME;
+                string strID = clsGlobal.MG_SQL_ID;
+                string strPassword = clsGlobal.MG_SQL_PASSWORD;
+                bool blnIsWinAuth = clsGlobal.MG_SQL_IS_WIN_AUTH;
+
+                string connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Persist Security Info=True;User ID=" + strID + ";Password=" + strPassword;
+                if (blnIsWinAuth)
+                {
+                    connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Integrated Security=True;";
+                }
+
+                // start get encrypted key
+                SqlConnection connBeta = null;
+                SqlDataAdapter sqlDABeta = null;
+                DataTable dtBeta = null;
+
+                connBeta = new SqlConnection(connstr);
+
+                sqlDABeta = new SqlDataAdapter();
+                sqlDABeta.SelectCommand = new SqlCommand("dbo.usp_get_encryptionkey ", connBeta);
+
+                DataSet dsBETA = new DataSet("ds");
+                sqlDABeta.Fill(dsBETA);
+
+                DataTable dtBETA = dsBETA.Tables[0];
+                string EncryptionKey = dtBETA.Rows[0]["EncryptionKey"].ToString();
+
+                // end get encrypted key
+
+                // start call usp_SQLSolicitor_Login                               
+
+                SqlConnection connAlpha = null;
+                SqlDataAdapter sqlDAlpha = null;
+
+                connAlpha = new SqlConnection(connstr);
+
+                sqlDAlpha = new SqlDataAdapter();
+                sqlDAlpha.SelectCommand = new SqlCommand("dbo.usp_SQLSolicitor_Login @SolicitorCode, @SolicitorPassword, @error output ", connAlpha);
+                sqlDAlpha.SelectCommand.Parameters.AddWithValue("@SolicitorCode", SolCode);
+                sqlDAlpha.SelectCommand.Parameters.AddWithValue("@SolicitorPassword", SolPassword);
+
+                sqlDAlpha.SelectCommand.Parameters.Add("@error", SqlDbType.NVarChar, 4000);
+                sqlDAlpha.SelectCommand.Parameters["@error"].Direction = ParameterDirection.Output;
+
+                //sqlDAlpha.SelectCommand.Parameters.AddWithValue("@UserName", UserName);
+                //sqlDAlpha.SelectCommand.Parameters.AddWithValue("@SolicitorCurrentPassword", SolicitorCurrentPasswordEncrypted);
+                //sqlDAlpha.SelectCommand.Parameters.AddWithValue("@error", error);
+
+                DataSet dsAlpha = new DataSet("ds");
+                sqlDAlpha.Fill(dsAlpha);
+
+                error = sqlDAlpha.SelectCommand.Parameters["@error"].Value.ToString();
+
+                // SolicitorCurrentPasswordDecrypted = DecryptText(SolicitorCurrentPasswordEncrypted, EncryptionKey);
+
+                // end call usp_SQLSolicitor_Login
+
+                if (error == "")
+                {
+                    // start call usp_SQLSolicitor_getPassword     
+
+                    SqlConnection connPRE = null;
+                    SqlDataAdapter sqlDAPRE = null;
+
+                    connPRE = new SqlConnection(connstr);
+
+                    sqlDAPRE = new SqlDataAdapter();
+                    sqlDAPRE.SelectCommand = new SqlCommand("dbo.usp_SQLSolicitor_getPassword @SolicitorCode, @SolicitorPassword output,@EncryptionKey output ", connPRE);
+                    sqlDAPRE.SelectCommand.Parameters.AddWithValue("@SolicitorCode", SolCode);
+                    //sqlDAPRE.SelectCommand.Parameters.AddWithValue("@SolicitorNewPassword", NewPasswordDecrypted);
+                    //sqlDAPRE.SelectCommand.Parameters.AddWithValue("@SolicitorNewPasswordConfirmation", NewPasswordConfirmationDecrypted);
+
+                    sqlDAPRE.SelectCommand.Parameters.Add("@SolicitorPassword", SqlDbType.NVarChar, 4000);
+                    sqlDAPRE.SelectCommand.Parameters["@SolicitorPassword"].Direction = ParameterDirection.Output;
+
+                    sqlDAPRE.SelectCommand.Parameters.Add("@EncryptionKey", SqlDbType.NVarChar, 4000);
+                    sqlDAPRE.SelectCommand.Parameters["@EncryptionKey"].Direction = ParameterDirection.Output;
+
+                    DataSet dsPRE = new DataSet("ds");
+                    sqlDAPRE.Fill(dsPRE);
+
+                    string EncryptedSolicitorPasswordFromDB = sqlDAPRE.SelectCommand.Parameters["@SolicitorPassword"].Value.ToString();
+
+                    // end call usp_SQLSolicitor_getPassword     
+
+                    string DecryptedSolicitorPasswordFromDB = DecryptText(EncryptedSolicitorPasswordFromDB, EncryptionKey);
+
+                    if (DecryptedSolicitorPasswordFromDB == SolPassword)
+                    {
+                        //start call usp_SolicitorLogin_ForcePasswordChangeCheck
+                        SqlConnection connEpsilon = null;
+                        SqlDataAdapter sqlDAEpsilon = null;
+                        DataTable dtEpsilon = null;
+
+                        connEpsilon = new SqlConnection(connstr);
+
+                        sqlDAEpsilon = new SqlDataAdapter();
+                        sqlDAEpsilon.SelectCommand = new SqlCommand("dbo.usp_SolicitorLogin_ForcePasswordChangeCheck @solicitorcode,@error output ", connEpsilon);
+                        sqlDAEpsilon.SelectCommand.Parameters.AddWithValue("@solicitorcode", SolCode);
+
+                        sqlDAEpsilon.SelectCommand.Parameters.Add("@error", SqlDbType.NVarChar, 4000);
+                        sqlDAEpsilon.SelectCommand.Parameters["@error"].Direction = ParameterDirection.Output;
+
+                        DataSet dsEpsilon = new DataSet("ds");
+                        sqlDAEpsilon.Fill(dsEpsilon);
+
+                        ForcePasswordChange = sqlDAEpsilon.SelectCommand.Parameters["@error"].Value.ToString();
+                        //end call usp_SolicitorLogin_ForcePasswordChangeCheck
+
+                        //start call usp_SolicitorLogin_GetExpiryWarning
+                        SqlConnection connZata = null;
+                        SqlDataAdapter sqlDAZata = null;
+                        DataTable dtZata = null;
+
+                        connZata = new SqlConnection(connstr);
+
+                        sqlDAZata = new SqlDataAdapter();
+                        sqlDAZata.SelectCommand = new SqlCommand("dbo.usp_SolicitorLogin_GetExpiryWarning @scode,@error output ", connZata);
+                        sqlDAZata.SelectCommand.Parameters.AddWithValue("@scode", SolCode);
+
+                        sqlDAZata.SelectCommand.Parameters.Add("@error", SqlDbType.NVarChar, 4000);
+                        sqlDAZata.SelectCommand.Parameters["@error"].Direction = ParameterDirection.Output;
+
+                        DataSet dsZata = new DataSet("ds");
+                        sqlDAZata.Fill(dsZata);
+
+                        PasswordExpiryWarning = sqlDAZata.SelectCommand.Parameters["@error"].Value.ToString();
+                        //end call usp_SolicitorLogin_GetExpiryWarning
+
+                        encryptedusername = EncryptText(SolCode, EncryptionKey);
+                        encryptedpassword = EncryptText(DecryptedSolicitorPasswordFromDB, EncryptionKey);
+
+                        //DataSet dsSession = null;
+                        DataTable dtSession = null;
+                        SqlConnection connSession = null;
+                        SqlDataAdapter sqlDASession = null;
+
+                        string strDataSourceSession = clsGlobal.MG_SQL_DATA_SOURCE;
+                        string strDBNameSession = clsGlobal.MG_SQL_DB_NAME;
+                        string strIDSession = clsGlobal.MG_SQL_ID;
+                        string strPasswordSession = clsGlobal.MG_SQL_PASSWORD;
+                        bool blnIsWinAuthSession = clsGlobal.MG_SQL_IS_WIN_AUTH;
+
+                        connSession = new SqlConnection(connstr);
+
+                        sqlDASession = new SqlDataAdapter();
+                        sqlDASession.SelectCommand = new SqlCommand("dbo.Sol2_Session_Create @SolCode,@ClientSessionID output,@error output ", connSession);
+                        sqlDASession.SelectCommand.Parameters.AddWithValue("@SolCode", SolCode);
+
+                        sqlDASession.SelectCommand.Parameters.Add("@ClientSessionID", SqlDbType.BigInt);
+                        sqlDASession.SelectCommand.Parameters["@ClientSessionID"].Direction = ParameterDirection.Output;
+
+                        sqlDASession.SelectCommand.Parameters.Add("@error", SqlDbType.NVarChar, 4000);
+                        sqlDASession.SelectCommand.Parameters["@error"].Direction = ParameterDirection.Output;
+
+                        DataSet dsSession = new DataSet("ds");
+                        sqlDASession.Fill(dsSession);
+
+                        sessionid = sqlDASession.SelectCommand.Parameters["@ClientSessionID"].Value.ToString();
+                    }
+
+                    else
+                    {
+                        // start call usp_SolicitorLoginSessionCheck  
+                        SqlConnection connDELTA = null;
+                        SqlDataAdapter sqlDADELTA = null;
+                        DataTable dtDELTA = null;
+
+                        connDELTA = new SqlConnection(connstr);
+
+                        sqlDADELTA = new SqlDataAdapter();
+                        sqlDADELTA.SelectCommand = new SqlCommand("dbo.usp_SolicitorLoginSessionCheck @solicitorcode,  @error output", connDELTA);
+                        sqlDADELTA.SelectCommand.Parameters.AddWithValue("@solicitorcode", SolCode);
+
+                        sqlDADELTA.SelectCommand.Parameters.Add("@error", SqlDbType.NVarChar, 4000);
+                        sqlDADELTA.SelectCommand.Parameters["@error"].Direction = ParameterDirection.Output;
+
+                        DataSet dsDELTA = new DataSet("ds");
+                        sqlDADELTA.Fill(dsDELTA);
+
+                        error = sqlDADELTA.SelectCommand.Parameters["@error"].Value.ToString();
+
+                        //end call usp_SolicitorLoginSessionCheck
+
+                        if (error == "")
+                        {
+                            //start call usp_SolicitorLogin_getNumberOfTrialLeft
+                            SqlConnection connGAMA = null;
+                            SqlDataAdapter sqlDAGAMA = null;
+                            DataTable dtGAMA = null;
+
+                            connGAMA = new SqlConnection(connstr);
+
+                            sqlDAGAMA = new SqlDataAdapter();
+                            sqlDAGAMA.SelectCommand = new SqlCommand("dbo.usp_SolicitorLogin_getNumberOfTrialLeft @solicitorcode,@error output ", connGAMA);
+                            sqlDAGAMA.SelectCommand.Parameters.AddWithValue("@solicitorcode", SolCode);
+
+                            sqlDAGAMA.SelectCommand.Parameters.Add("@error", SqlDbType.NVarChar, 4000);
+                            sqlDAGAMA.SelectCommand.Parameters["@error"].Direction = ParameterDirection.Output;
+
+                            DataSet dsGAMA = new DataSet("ds");
+                            sqlDAGAMA.Fill(dsGAMA);
+
+                            error = dsGAMA.Tables[0].Rows[0]["msg"].ToString();
+
+                            //error = sqlDAGAMA.SelectCommand.Parameters["@error"].Value.ToString();
+                            //end call usp_SolicitorLogin_getNumberOfTrialLeft
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                error = "DP_SolicitorLogin_V2 failed with exception: " + ex.Message.ToString();
+                string errorDetail;
+                errorDetail = "Input Param:" + " SolCode:" + SolCode;
+                LogErrorToDB("DP_SolicitorLogin_V2", "Exception", error, errorDetail);
+            }
+        }
+
+        [WebMethod]
         public void DP_DeveloperLogin(string DevCode, string DevPassword, ref string ForcePasswordChange, ref string PasswordExpiryWarning, ref string error)
         {
             error = "";
@@ -15009,6 +21133,258 @@ namespace HLBBWS
         }
 
         [WebMethod]
+        public void DP_ValuerLogin_V2(string ValCode, string ValPassword, ref string ForcePasswordChange, ref string PasswordExpiryWarning, ref string error, ref string encryptedusername, ref string encryptedpassword, ref string sessionid)
+        {
+            error = "";
+            ForcePasswordChange = "";
+            PasswordExpiryWarning = "";
+            encryptedusername = "";
+            encryptedpassword = "";
+
+            try
+            {
+
+                DataSet ds = null;
+                DataTable dt = null;
+                SqlConnection conn = null;
+                SqlDataAdapter sqlDA = null;
+
+                string strDataSource = clsGlobal.MG_SQL_DATA_SOURCE;
+                string strDBName = clsGlobal.MG_SQL_DB_NAME;
+                string strID = clsGlobal.MG_SQL_ID;
+                string strPassword = clsGlobal.MG_SQL_PASSWORD;
+                bool blnIsWinAuth = clsGlobal.MG_SQL_IS_WIN_AUTH;
+
+                string connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Persist Security Info=True;User ID=" + strID + ";Password=" + strPassword;
+                if (blnIsWinAuth)
+                {
+                    connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Integrated Security=True;";
+                }
+
+                // start get encrypted key
+                SqlConnection connBeta = null;
+                SqlDataAdapter sqlDABeta = null;
+                DataTable dtBeta = null;
+
+                connBeta = new SqlConnection(connstr);
+
+                sqlDABeta = new SqlDataAdapter();
+                sqlDABeta.SelectCommand = new SqlCommand("dbo.usp_get_encryptionkey ", connBeta);
+
+                DataSet dsBETA = new DataSet("ds");
+                sqlDABeta.Fill(dsBETA);
+
+                DataTable dtBETA = dsBETA.Tables[0];
+                string EncryptionKey = dtBETA.Rows[0]["EncryptionKey"].ToString();
+
+                // end get encrypted key
+
+                // start call usp_SQDeveloper_Login                               
+
+                SqlConnection connAlpha = null;
+                SqlDataAdapter sqlDAlpha = null;
+
+                connAlpha = new SqlConnection(connstr);
+
+                sqlDAlpha = new SqlDataAdapter();
+                sqlDAlpha.SelectCommand = new SqlCommand("dbo.usp_SQLValuer_Login @ValuerCode, @ValuerPassword, @error output ", connAlpha);
+                sqlDAlpha.SelectCommand.Parameters.AddWithValue("@ValuerCode", ValCode);
+                sqlDAlpha.SelectCommand.Parameters.AddWithValue("@ValuerPassword", ValPassword);
+
+                sqlDAlpha.SelectCommand.Parameters.Add("@error", SqlDbType.NVarChar, 4000);
+                sqlDAlpha.SelectCommand.Parameters["@error"].Direction = ParameterDirection.Output;
+
+                /*
+                sqlDAlpha = new SqlDataAdapter();
+                sqlDAlpha.SelectCommand = new SqlCommand("dbo.usp_SQLValuer_Login @DeveloperCode, @DeveloperPassword, @error output ", connAlpha);
+                sqlDAlpha.SelectCommand.Parameters.AddWithValue("@DeveloperCode", DevCode);
+                sqlDAlpha.SelectCommand.Parameters.AddWithValue("@DeveloperPassword", DevPassword);
+
+                sqlDAlpha.SelectCommand.Parameters.Add("@error", SqlDbType.NVarChar, 4000);
+                sqlDAlpha.SelectCommand.Parameters["@error"].Direction = ParameterDirection.Output;
+                */
+
+                DataSet dsAlpha = new DataSet("ds");
+                sqlDAlpha.Fill(dsAlpha);
+
+                error = sqlDAlpha.SelectCommand.Parameters["@error"].Value.ToString();
+
+                // end call usp_SQDeveloper_Login
+
+                if (error == "")
+                {
+                    // start call usp_SQLDeveloper_getPassword     
+
+                    SqlConnection connPRE = null;
+                    SqlDataAdapter sqlDAPRE = null;
+
+                    connPRE = new SqlConnection(connstr);
+                    /*
+                    sqlDAPRE = new SqlDataAdapter();
+                    sqlDAPRE.SelectCommand = new SqlCommand("dbo.ddProject_getPassword @DeveloperCode, @DeveloperPassword output,@EncryptionKey output ", connPRE);
+                    sqlDAPRE.SelectCommand.Parameters.AddWithValue("@DeveloperCode", DevCode);
+
+                    sqlDAPRE.SelectCommand.Parameters.Add("@DeveloperPassword", SqlDbType.NVarChar, 4000);
+                    sqlDAPRE.SelectCommand.Parameters["@DeveloperPassword"].Direction = ParameterDirection.Output;
+
+                    sqlDAPRE.SelectCommand.Parameters.Add("@EncryptionKey", SqlDbType.NVarChar, 4000);
+                    sqlDAPRE.SelectCommand.Parameters["@EncryptionKey"].Direction = ParameterDirection.Output;
+
+                    DataSet dsPRE = new DataSet("ds");
+                    sqlDAPRE.Fill(dsPRE);
+                    */
+                    sqlDAPRE = new SqlDataAdapter();
+                    sqlDAPRE.SelectCommand = new SqlCommand("dbo.usp_SQLValuer_getPassword @ValuerCode, @ValuerPassword output,@EncryptionKey output ", connPRE);
+                    sqlDAPRE.SelectCommand.Parameters.AddWithValue("@ValuerCode", ValCode);
+
+                    sqlDAPRE.SelectCommand.Parameters.Add("@ValuerPassword", SqlDbType.NVarChar, 4000);
+                    sqlDAPRE.SelectCommand.Parameters["@ValuerPassword"].Direction = ParameterDirection.Output;
+
+                    sqlDAPRE.SelectCommand.Parameters.Add("@EncryptionKey", SqlDbType.NVarChar, 4000);
+                    sqlDAPRE.SelectCommand.Parameters["@EncryptionKey"].Direction = ParameterDirection.Output;
+
+                    DataSet dsPRE = new DataSet("ds");
+                    sqlDAPRE.Fill(dsPRE);
+
+
+                    string EncryptedValuerPasswordFromDB = sqlDAPRE.SelectCommand.Parameters["@ValuerPassword"].Value.ToString();
+
+                    // end call usp_SQLDeveloper_getPassword     
+
+                    string DecryptedValuerPasswordFromDB = DecryptText(EncryptedValuerPasswordFromDB, EncryptionKey);
+
+                    if (DecryptedValuerPasswordFromDB == ValPassword)
+                    {
+                        //start call usp_ValuerLogin_ForcePasswordChangeCheck
+                        SqlConnection connEpsilon = null;
+                        SqlDataAdapter sqlDAEpsilon = null;
+                        DataTable dtEpsilon = null;
+
+                        connEpsilon = new SqlConnection(connstr);
+
+                        sqlDAEpsilon = new SqlDataAdapter();
+                        sqlDAEpsilon.SelectCommand = new SqlCommand("dbo.usp_ValuerLogin_ForcePasswordChangeCheck @Valuercode,@error output ", connEpsilon);
+                        sqlDAEpsilon.SelectCommand.Parameters.AddWithValue("@Valuercode", ValCode);
+
+                        sqlDAEpsilon.SelectCommand.Parameters.Add("@error", SqlDbType.NVarChar, 4000);
+                        sqlDAEpsilon.SelectCommand.Parameters["@error"].Direction = ParameterDirection.Output;
+
+                        DataSet dsEpsilon = new DataSet("ds");
+                        sqlDAEpsilon.Fill(dsEpsilon);
+
+                        ForcePasswordChange = sqlDAEpsilon.SelectCommand.Parameters["@error"].Value.ToString();
+                        //end call usp_ValuerLogin_ForcePasswordChangeCheck
+
+                        //start call usp_ValuerLogin_GetExpiryWarning
+                        SqlConnection connZata = null;
+                        SqlDataAdapter sqlDAZata = null;
+                        DataTable dtZata = null;
+
+                        connZata = new SqlConnection(connstr);
+
+                        sqlDAZata = new SqlDataAdapter();
+                        sqlDAZata.SelectCommand = new SqlCommand("dbo.usp_ValuerLogin_GetExpiryWarning @vcode,@error output ", connZata);
+                        sqlDAZata.SelectCommand.Parameters.AddWithValue("@vcode", ValCode);
+
+                        sqlDAZata.SelectCommand.Parameters.Add("@error", SqlDbType.NVarChar, 4000);
+                        sqlDAZata.SelectCommand.Parameters["@error"].Direction = ParameterDirection.Output;
+
+                        DataSet dsZata = new DataSet("ds");
+                        sqlDAZata.Fill(dsZata);
+
+                        PasswordExpiryWarning = sqlDAZata.SelectCommand.Parameters["@error"].Value.ToString();
+                        //end call usp_ValuerLogin_GetExpiryWarning
+
+                        encryptedusername = EncryptText(ValCode, EncryptionKey);
+                        encryptedpassword = EncryptText(DecryptedValuerPasswordFromDB, EncryptionKey);
+
+                        //DataSet dsSession = null;
+                        DataTable dtSession = null;
+                        SqlConnection connSession = null;
+                        SqlDataAdapter sqlDASession = null;
+
+                        string strDataSourceSession = clsGlobal.MG_SQL_DATA_SOURCE;
+                        string strDBNameSession = clsGlobal.MG_SQL_DB_NAME;
+                        string strIDSession = clsGlobal.MG_SQL_ID;
+                        string strPasswordSession = clsGlobal.MG_SQL_PASSWORD;
+                        bool blnIsWinAuthSession = clsGlobal.MG_SQL_IS_WIN_AUTH;
+
+                        connSession = new SqlConnection(connstr);
+
+                        sqlDASession = new SqlDataAdapter();
+                        sqlDASession.SelectCommand = new SqlCommand("dbo.Val2_Session_Create @ValCode,@ClientSessionID output,@error output ", connSession);
+                        sqlDASession.SelectCommand.Parameters.AddWithValue("@ValCode", ValCode);
+
+                        sqlDASession.SelectCommand.Parameters.Add("@ClientSessionID", SqlDbType.BigInt);
+                        sqlDASession.SelectCommand.Parameters["@ClientSessionID"].Direction = ParameterDirection.Output;
+
+                        sqlDASession.SelectCommand.Parameters.Add("@error", SqlDbType.NVarChar, 4000);
+                        sqlDASession.SelectCommand.Parameters["@error"].Direction = ParameterDirection.Output;
+
+                        DataSet dsSession = new DataSet("ds");
+                        sqlDASession.Fill(dsSession);
+
+                        sessionid = sqlDASession.SelectCommand.Parameters["@ClientSessionID"].Value.ToString();
+                    }
+                    else
+                    {
+                        // start call usp_ValuerLoginSessionCheck  
+                        SqlConnection connDELTA = null;
+                        SqlDataAdapter sqlDADELTA = null;
+                        DataTable dtDELTA = null;
+
+                        connDELTA = new SqlConnection(connstr);
+
+                        sqlDADELTA = new SqlDataAdapter();
+                        sqlDADELTA.SelectCommand = new SqlCommand("dbo.usp_ValuerLoginSessionCheck @valuercode,  @error output", connDELTA);
+                        sqlDADELTA.SelectCommand.Parameters.AddWithValue("@valuercode", ValCode);
+
+                        sqlDADELTA.SelectCommand.Parameters.Add("@error", SqlDbType.NVarChar, 4000);
+                        sqlDADELTA.SelectCommand.Parameters["@error"].Direction = ParameterDirection.Output;
+
+                        DataSet dsDELTA = new DataSet("ds");
+                        sqlDADELTA.Fill(dsDELTA);
+
+                        error = sqlDADELTA.SelectCommand.Parameters["@error"].Value.ToString();
+
+                        //end call usp_ValuerLoginSessionCheck
+
+                        if (error == "")
+                        {
+                            //start call usp_ValuerLogin_getNumberOfTrialLeft
+                            SqlConnection connGAMA = null;
+                            SqlDataAdapter sqlDAGAMA = null;
+                            DataTable dtGAMA = null;
+
+                            connGAMA = new SqlConnection(connstr);
+
+                            sqlDAGAMA = new SqlDataAdapter();
+                            sqlDAGAMA.SelectCommand = new SqlCommand("dbo.usp_ValuerLogin_getNumberOfTrialLeft @Valuercode,@error output ", connGAMA);
+                            sqlDAGAMA.SelectCommand.Parameters.AddWithValue("@Valuercode", ValCode);
+
+                            sqlDAGAMA.SelectCommand.Parameters.Add("@error", SqlDbType.NVarChar, 4000);
+                            sqlDAGAMA.SelectCommand.Parameters["@error"].Direction = ParameterDirection.Output;
+
+                            DataSet dsGAMA = new DataSet("ds");
+                            sqlDAGAMA.Fill(dsGAMA);
+
+                            error = dsGAMA.Tables[0].Rows[0]["msg"].ToString();
+
+                            //end call usp_ValuerLogin_getNumberOfTrialLeft
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                error = "DP_ValuerLogin_V2 failed with exception: " + ex.Message.ToString();
+                string errorDetail;
+                errorDetail = "Input Param:" + " ValCode:" + ValCode;
+                LogErrorToDB("DP_ValuerLogin_V2", "Exception", error, errorDetail);
+            }
+        }
+
+        [WebMethod]
         public void DP_SolicitorForcePasswordChangeLogin(string EncryptedUISolCode, string EncryptedUISolPassword, ref string error)
         {
             error = "";
@@ -15124,6 +21500,126 @@ namespace HLBBWS
                 string errorDetail;
                 errorDetail = "Input Param:" + " SolCode:" + DecryptedUISolCode;
                 LogErrorToDB("DP_SolicitorForcePasswordChangeLogin", "Exception", error, errorDetail);
+            }
+        }
+
+        [WebMethod]
+        public void DP_SolicitorForcePasswordChangeLogin_V2(string EncryptedUISolCode, string EncryptedUISolPassword, ref string error, ref string solcode)
+        {
+            error = "";
+            //ForcePasswordChange = "";
+            //PasswordExpiryWarning = "";
+
+            string DecryptedUISolCode = "";
+            string DecryptedUISolPassword = "";
+
+            try
+            {
+
+                DataSet ds = null;
+                DataTable dt = null;
+                SqlConnection conn = null;
+                SqlDataAdapter sqlDA = null;
+
+                string strDataSource = clsGlobal.MG_SQL_DATA_SOURCE;
+                string strDBName = clsGlobal.MG_SQL_DB_NAME;
+                string strID = clsGlobal.MG_SQL_ID;
+                string strPassword = clsGlobal.MG_SQL_PASSWORD;
+                bool blnIsWinAuth = clsGlobal.MG_SQL_IS_WIN_AUTH;
+
+                string connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Persist Security Info=True;User ID=" + strID + ";Password=" + strPassword;
+                if (blnIsWinAuth)
+                {
+                    connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Integrated Security=True;";
+                }
+
+                // start get encrypted key
+                SqlConnection connBeta = null;
+                SqlDataAdapter sqlDABeta = null;
+                DataTable dtBeta = null;
+
+                connBeta = new SqlConnection(connstr);
+
+                sqlDABeta = new SqlDataAdapter();
+                sqlDABeta.SelectCommand = new SqlCommand("dbo.usp_get_encryptionkey ", connBeta);
+
+                DataSet dsBETA = new DataSet("ds");
+                sqlDABeta.Fill(dsBETA);
+
+                DataTable dtBETA = dsBETA.Tables[0];
+                string EncryptionKey = dtBETA.Rows[0]["EncryptionKey"].ToString();
+
+                // end get encrypted key
+
+
+
+                DecryptedUISolCode = DecryptText(EncryptedUISolCode, EncryptionKey);
+                DecryptedUISolPassword = DecryptText(EncryptedUISolPassword, EncryptionKey);
+                // start call usp_Maintenance_SQLSolicitor_Login_Check                               
+
+                SqlConnection connAlpha = null;
+                SqlDataAdapter sqlDAlpha = null;
+
+                connAlpha = new SqlConnection(connstr);
+
+                sqlDAlpha = new SqlDataAdapter();
+                sqlDAlpha.SelectCommand = new SqlCommand("dbo.usp_Maintenance_SQLSolicitor_Login_Check @SolicitorCode, @SolicitorPassword, @error output ", connAlpha);
+                sqlDAlpha.SelectCommand.Parameters.AddWithValue("@SolicitorCode", DecryptedUISolCode);
+                sqlDAlpha.SelectCommand.Parameters.AddWithValue("@SolicitorPassword", DecryptedUISolPassword);
+
+                sqlDAlpha.SelectCommand.Parameters.Add("@error", SqlDbType.NVarChar, 4000);
+                sqlDAlpha.SelectCommand.Parameters["@error"].Direction = ParameterDirection.Output;
+
+                DataSet dsAlpha = new DataSet("ds");
+                sqlDAlpha.Fill(dsAlpha);
+
+                error = sqlDAlpha.SelectCommand.Parameters["@error"].Value.ToString();
+
+                // end call usp_Maintenance_SQLSolicitor_Login_Check
+
+                if (error == "")
+                {
+                    // start call usp_SQLSolicitor_getPassword     
+
+                    SqlConnection connPRE = null;
+                    SqlDataAdapter sqlDAPRE = null;
+
+                    connPRE = new SqlConnection(connstr);
+
+                    sqlDAPRE = new SqlDataAdapter();
+                    sqlDAPRE.SelectCommand = new SqlCommand("dbo.usp_SQLSolicitor_getPassword @SolicitorCode, @SolicitorPassword output,@EncryptionKey output ", connPRE);
+                    sqlDAPRE.SelectCommand.Parameters.AddWithValue("@SolicitorCode", DecryptedUISolCode);
+                    //sqlDAPRE.SelectCommand.Parameters.AddWithValue("@SolicitorNewPassword", NewPasswordDecrypted);
+                    //sqlDAPRE.SelectCommand.Parameters.AddWithValue("@SolicitorNewPasswordConfirmation", NewPasswordConfirmationDecrypted);
+
+                    sqlDAPRE.SelectCommand.Parameters.Add("@SolicitorPassword", SqlDbType.NVarChar, 4000);
+                    sqlDAPRE.SelectCommand.Parameters["@SolicitorPassword"].Direction = ParameterDirection.Output;
+
+                    sqlDAPRE.SelectCommand.Parameters.Add("@EncryptionKey", SqlDbType.NVarChar, 4000);
+                    sqlDAPRE.SelectCommand.Parameters["@EncryptionKey"].Direction = ParameterDirection.Output;
+
+                    DataSet dsPRE = new DataSet("ds");
+                    sqlDAPRE.Fill(dsPRE);
+
+                    string EncryptedSolicitorPasswordFromDB = sqlDAPRE.SelectCommand.Parameters["@SolicitorPassword"].Value.ToString();
+
+                    // end call usp_SQLSolicitor_getPassword     
+
+                    string DecryptedSolicitorPasswordFromDB = DecryptText(EncryptedSolicitorPasswordFromDB, EncryptionKey);
+                    solcode = DecryptedUISolCode;
+
+                    if (DecryptedSolicitorPasswordFromDB != DecryptedUISolPassword)
+                    {
+                        error = "Please login to continue";
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                error = "DP_SolicitorForcePasswordChangeLogin_V2 failed with exception: " + ex.Message.ToString();
+                string errorDetail;
+                errorDetail = "Input Param:" + " SolCode:" + DecryptedUISolCode;
+                LogErrorToDB("DP_SolicitorForcePasswordChangeLogin_V2", "Exception", error, errorDetail);
             }
         }
 
@@ -15351,6 +21847,122 @@ namespace HLBBWS
                 string errorDetail;
                 errorDetail = "Input Param:" + " ValCode:" + DecryptedUIValCode;
                 LogErrorToDB("DP_ValuerForcePasswordChangeLogin", "Exception", error, errorDetail);
+            }
+        }
+
+        [WebMethod]
+        public void DP_ValuerForcePasswordChangeLogin_V2(string EncryptedUIValCode, string EncryptedUIValPassword, ref string error, ref string valcode)
+        {
+            error = "";
+            //ForcePasswordChange = "";
+            //PasswordExpiryWarning = "";
+
+            string DecryptedUIValCode = "";
+            string DecryptedUIValPassword = "";
+
+            try
+            {
+
+                DataSet ds = null;
+                DataTable dt = null;
+                SqlConnection conn = null;
+                SqlDataAdapter sqlDA = null;
+
+                string strDataSource = clsGlobal.MG_SQL_DATA_SOURCE;
+                string strDBName = clsGlobal.MG_SQL_DB_NAME;
+                string strID = clsGlobal.MG_SQL_ID;
+                string strPassword = clsGlobal.MG_SQL_PASSWORD;
+                bool blnIsWinAuth = clsGlobal.MG_SQL_IS_WIN_AUTH;
+
+                string connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Persist Security Info=True;User ID=" + strID + ";Password=" + strPassword;
+                if (blnIsWinAuth)
+                {
+                    connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Integrated Security=True;";
+                }
+
+                // start get encrypted key
+                SqlConnection connBeta = null;
+                SqlDataAdapter sqlDABeta = null;
+                DataTable dtBeta = null;
+
+                connBeta = new SqlConnection(connstr);
+
+                sqlDABeta = new SqlDataAdapter();
+                sqlDABeta.SelectCommand = new SqlCommand("dbo.usp_get_encryptionkey ", connBeta);
+
+                DataSet dsBETA = new DataSet("ds");
+                sqlDABeta.Fill(dsBETA);
+
+                DataTable dtBETA = dsBETA.Tables[0];
+                string EncryptionKey = dtBETA.Rows[0]["EncryptionKey"].ToString();
+
+                // end get encrypted key
+
+                DecryptedUIValCode = DecryptText(EncryptedUIValCode, EncryptionKey);
+                DecryptedUIValPassword = DecryptText(EncryptedUIValPassword, EncryptionKey);
+                // start call usp_Maintenance_SQLValuer_Login_Check                               
+
+                SqlConnection connAlpha = null;
+                SqlDataAdapter sqlDAlpha = null;
+
+                connAlpha = new SqlConnection(connstr);
+
+                sqlDAlpha = new SqlDataAdapter();
+                sqlDAlpha.SelectCommand = new SqlCommand("dbo.usp_Maintenance_SQLValuer_Login_Check @ValuerCode, @ValuerPassword, @error output ", connAlpha);
+                sqlDAlpha.SelectCommand.Parameters.AddWithValue("@ValuerCode", DecryptedUIValCode);
+                sqlDAlpha.SelectCommand.Parameters.AddWithValue("@ValuerPassword", DecryptedUIValPassword);
+
+                sqlDAlpha.SelectCommand.Parameters.Add("@error", SqlDbType.NVarChar, 4000);
+                sqlDAlpha.SelectCommand.Parameters["@error"].Direction = ParameterDirection.Output;
+
+                DataSet dsAlpha = new DataSet("ds");
+                sqlDAlpha.Fill(dsAlpha);
+
+                error = sqlDAlpha.SelectCommand.Parameters["@error"].Value.ToString();
+
+                // end call usp_Maintenance_SQLValuer_Login_Check
+
+                if (error == "")
+                {
+                    // start call usp_SQLValuer_getPassword     
+
+                    SqlConnection connPRE = null;
+                    SqlDataAdapter sqlDAPRE = null;
+
+                    connPRE = new SqlConnection(connstr);
+
+                    sqlDAPRE = new SqlDataAdapter();
+                    sqlDAPRE.SelectCommand = new SqlCommand("dbo.usp_SQLValuer_getPassword @ValuerCode, @ValuerPassword output,@EncryptionKey output ", connPRE);
+                    sqlDAPRE.SelectCommand.Parameters.AddWithValue("@ValuerCode", DecryptedUIValCode);
+
+                    sqlDAPRE.SelectCommand.Parameters.Add("@ValuerPassword", SqlDbType.NVarChar, 4000);
+                    sqlDAPRE.SelectCommand.Parameters["@ValuerPassword"].Direction = ParameterDirection.Output;
+
+                    sqlDAPRE.SelectCommand.Parameters.Add("@EncryptionKey", SqlDbType.NVarChar, 4000);
+                    sqlDAPRE.SelectCommand.Parameters["@EncryptionKey"].Direction = ParameterDirection.Output;
+
+                    DataSet dsPRE = new DataSet("ds");
+                    sqlDAPRE.Fill(dsPRE);
+
+                    string EncryptedValuerPasswordFromDB = sqlDAPRE.SelectCommand.Parameters["@ValuerPassword"].Value.ToString();
+                    valcode = DecryptedUIValCode;
+
+                    // end call usp_SQLValuer_getPassword     
+
+                    string DecryptedValuerPasswordFromDB = DecryptText(EncryptedValuerPasswordFromDB, EncryptionKey);
+
+                    if (DecryptedValuerPasswordFromDB != DecryptedUIValPassword)
+                    {
+                        error = "Please login to continue";
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                error = "DP_ValuerForcePasswordChangeLogin_V2 failed with exception: " + ex.Message.ToString();
+                string errorDetail;
+                errorDetail = "Input Param:" + " ValCode:" + DecryptedUIValCode;
+                LogErrorToDB("DP_ValuerForcePasswordChangeLogin_V2", "Exception", error, errorDetail);
             }
         }
 
@@ -16072,7 +22684,8 @@ namespace HLBBWS
             {
                 error = "DP_SaveValuerAttachment failed with exception: " + ex.Message.ToString();
                 string errorDetail;
-                errorDetail = "Input Param:" + "arn:" + arn + ", k2fileattachment:" + k2fileattachment;
+               // errorDetail = "Input Param:" + "arn:" + arn + ", k2fileattachment:" + k2fileattachment;
+                errorDetail = "Input Param:" + "arn:" + arn ;
                 LogErrorToDB("DP_SaveValuerAttachment", "Exception", error, errorDetail);
             }
         }
@@ -16593,7 +23206,8 @@ namespace HLBBWS
             {
                 error = "DP_SetDeveloperPortalNotificationOfPaymentPassword failed with exception: " + ex.Message.ToString();
                 string errorDetail;
-                errorDetail = "Input Param: arn:" + DevCode + "filecontent:" + filecontent;
+                //errorDetail = "Input Param: arn:" + DevCode + "filecontent:" + filecontent;
+                errorDetail = "Input Param: arn:" + DevCode ;
                 LogErrorToDB("DP_SetDeveloperPortalNotificationOfPaymentPassword", "Exception", error, errorDetail);
             }
             return protectedfilecontent;
@@ -16729,8 +23343,146 @@ namespace HLBBWS
             {
                 error = "DP_SetNotificationOfPaymentPassword failed with exception: " + ex.Message.ToString();
                 string errorDetail;
-                errorDetail = "Input Param: arn:" + id + "filecontent:" + filecontent;
+               // errorDetail = "Input Param: arn:" + id + "filecontent:" + filecontent;
+                errorDetail = "Input Param: arn:" + id ;
                 LogErrorToDB("DP_SetNotificationOfPaymentPassword", "Exception", error, errorDetail);
+            }
+            return protectedfilecontent;
+        }
+
+        [WebMethod]
+        public string Sol2_NotificationOfPayment_ValuationFee_GeneratePDFPassword(string id, string filecontent)
+        {
+            string error = "";
+            string protectedfilecontent = "";
+            //string output_xml = input_xml;
+
+            try
+            {
+                /*
+                List<k2filestructure> list = new List<k2filestructure>();
+                list = DP_GetK2FileNameAndContent(input_xml);
+
+                string filename = "";
+                string filecontent = "";
+
+                foreach (var file in list)
+                {
+                    filename = file.filename;
+                    filecontent = file.filecontent;
+                }
+                */
+
+                DataSet ds = null;
+                DataTable dt = null;
+                SqlConnection conn = null;
+                SqlDataAdapter sqlDA = null;
+
+                string strDataSource = clsGlobal.MG_SQL_DATA_SOURCE;
+                string strDBName = clsGlobal.MG_SQL_DB_NAME;
+                string strID = clsGlobal.MG_SQL_ID;
+                string strPassword = clsGlobal.MG_SQL_PASSWORD;
+                bool blnIsWinAuth = clsGlobal.MG_SQL_IS_WIN_AUTH;
+
+                string connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Persist Security Info=True;User ID=" + strID + ";Password=" + strPassword;
+                if (blnIsWinAuth)
+                {
+                    connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Integrated Security=True;";
+                }
+                conn = new SqlConnection(connstr);
+                conn.Open();
+
+                sqlDA = new SqlDataAdapter();
+                sqlDA.SelectCommand = new SqlCommand("usp_ws_setting_getDU1pdfmasterpassword", conn);
+
+                ds = new DataSet("ds");
+                sqlDA.Fill(ds);
+                dt = ds.Tables[0];
+
+                string masterpw = "";
+
+                if (ds.Tables.Count > 0)
+                {
+                    if (dt.Rows.Count > 0)
+                    {
+                        for (int j = 0; j < dt.Rows.Count; j++)
+                        {
+                            masterpw = dt.Rows[j]["pdfmasterpassword"].ToString();
+                        }
+                    }
+                }
+                //conn.Close();
+
+                //start get pdf password for sol                                 
+                //conn.Open();
+                SqlDataAdapter sqlDA2 = null;
+                sqlDA2 = new SqlDataAdapter();
+                sqlDA2.SelectCommand = new SqlCommand("dbo.sol2_NotificationOfPayment_ValuationFee_ProcessEDMSEmail_GeneratePDFPassword @arn, @password output", conn);
+                sqlDA2.SelectCommand.Parameters.AddWithValue("@arn", id);
+                sqlDA2.SelectCommand.Parameters.Add("@password", SqlDbType.NVarChar, 4000);
+                sqlDA2.SelectCommand.Parameters["@password"].Direction = ParameterDirection.Output;
+
+                ds = new DataSet("ds");
+                sqlDA2.Fill(ds);
+
+                string PDFPassword = sqlDA2.SelectCommand.Parameters["@password"].Value.ToString();
+
+                conn.Close();
+                //end get pdf password for sol 
+
+                byte[] byteFileContent = null;
+                byte[] outputbyteFileContent = null;
+
+                byteFileContent = Convert.FromBase64String(filecontent);
+
+                Stream stream = new MemoryStream(byteFileContent);
+                MemoryStream outputstream = new MemoryStream();
+
+                Aspose.Pdf.License license = new Aspose.Pdf.License();
+
+                license.SetLicense("Aspose.PDF.NET.lic");
+
+                Document doc = new Document(stream);
+
+                // doc.Encrypt(PDFPassword, masterpw, 0, CryptoAlgorithm.AESx256);
+                doc.Encrypt(masterpw, PDFPassword, 0, CryptoAlgorithm.AESx256);
+                doc.Save(outputstream);
+                outputbyteFileContent = outputstream.ToArray();
+                protectedfilecontent = Convert.ToBase64String(outputbyteFileContent, 0, outputbyteFileContent.Length);
+
+                /*
+                XDocument xdoc = XDocument.Parse(output_xml);
+
+                IEnumerable<XElement> xfile = xdoc.Elements("file");
+
+                foreach (XElement node in xfile)
+                {
+                    XElement content = node.Element("content");
+                    content.Value = protectedfilecontent;
+                }
+
+                //xdoc.Save(output_xml);
+
+                output_xml = xdoc.ToString();
+                */
+                //XmlDocument xml = new XmlDocument();
+                //xml.LoadXml(output_xml); // suppose that myXmlString contains "<Names>...</Names>"
+
+                //XmlNodeList xnList = xml.SelectNodes("/file");
+                //XmlNode node = xml.SelectSingleNode("/file");
+                //node.Attributes["content"].Value = protectedfilecontent;
+
+                // var element = xml.Elements("file/content").Single();
+                // element.Value = "foo";
+
+            }
+            catch (Exception ex)
+            {
+                error = "Sol2_NotificationOfPayment_ValuationFee_GeneratePDFPassword failed with exception: " + ex.Message.ToString();
+                string errorDetail;
+               // errorDetail = "Input Param: arn:" + id + "filecontent:" + filecontent;
+                errorDetail = "Input Param: arn:" + id ;
+                LogErrorToDB("Sol2_NotificationOfPayment_ValuationFee_GeneratePDFPassword", "Exception", error, errorDetail);
             }
             return protectedfilecontent;
         }
@@ -16865,7 +23617,8 @@ namespace HLBBWS
             {
                 error = "DP_SetNotificationOfPaymentPasswordDeveloper failed with exception: " + ex.Message.ToString();
                 string errorDetail;
-                errorDetail = "Input Param: arn:" + id + "filecontent:" + filecontent;
+              //  errorDetail = "Input Param: arn:" + id + "filecontent:" + filecontent;
+                errorDetail = "Input Param: arn:" + id ;
                 LogErrorToDB("DP_SetNotificationOfPaymentPasswordDeveloper", "Exception", error, errorDetail);
                 throw ex;
             }
@@ -17692,7 +24445,7 @@ namespace HLBBWS
             // ArrayList arr_att = new ArrayList();
             // ArrayList arr_name = new ArrayList();
 
-           // try {
+          //try {
                 SqlConnection conn_LOADSGetCase = new SqlConnection(connstr);
                 SqlDataAdapter sqlDA_LOADSGetCase;
 
@@ -17720,57 +24473,59 @@ namespace HLBBWS
                         for (int j = 0; j < dt_LOADSGetCase.Rows.Count; j++)
                         {
                             arn = dt_LOADSGetCase.Rows[j]["arn"].ToString();
-                            
+
                             HLBBWS.AppWS ws = new AppWS();
                             List<HLBBWS.AppWS.structureLOADS> list = new List<HLBBWS.AppWS.structureLOADS>();
 
                             // string DP_GetDataFromLOADS_error = "";
-                            
-                            list = ws.DP_GetDataFromLOADS(arn);
 
-                            
-                             if (list.Count > 0)
-                             {
-
-
-                                if (list[0].respInfo_respCode == "00")
+                            try 
+                            { 
+                                list = ws.DP_GetDataFromLOADS(arn);
+                                
+                                if (list.Count > 0)
                                 {
-                                    SqlConnection conn2 = null;
-                                    conn2 = new SqlConnection(connstr);
 
-                                    SqlCommand sqlcommand1 = new SqlCommand("dbo.ddProject_LoadDevPortalNewFields @arn  ,	@phaseCode,@phaseName ,@unitParcelNo ,@spaValue,@category ", conn2);
 
-                                    sqlcommand1.Parameters.AddWithValue("@arn", arn);
+                                    if (list[0].respInfo_respCode == "00")
+                                    {
+                                        SqlConnection conn2 = null;
+                                        conn2 = new SqlConnection(connstr);
 
-                                    //dev portal new fields 
+                                        SqlCommand sqlcommand1 = new SqlCommand("dbo.ddProject_LoadDevPortalNewFields @arn  ,	@phaseCode,@phaseName ,@unitParcelNo ,@spaValue,@category ", conn2);
+
+                                        sqlcommand1.Parameters.AddWithValue("@arn", arn);
+
+                                        //dev portal new fields 
                                     
-                                    sqlcommand1.Parameters.AddWithValue("@phaseCode", list[0].loanApplicationInfo_phaseCode);
-                                    sqlcommand1.Parameters.AddWithValue("@phaseName", list[0].loanApplicationInfo_phaseName);
-                                    sqlcommand1.Parameters.AddWithValue("@unitParcelNo", list[0].loanApplicationInfo_unitParcelNo);
-                                    sqlcommand1.Parameters.AddWithValue("@spaValue", list[0].loanApplicationInfo_spaValue);
-                                    sqlcommand1.Parameters.AddWithValue("@category", list[0].loanApplicationInfo_category);
+                                        sqlcommand1.Parameters.AddWithValue("@phaseCode", list[0].loanApplicationInfo_phaseCode);
+                                        sqlcommand1.Parameters.AddWithValue("@phaseName", list[0].loanApplicationInfo_phaseName);
+                                        sqlcommand1.Parameters.AddWithValue("@unitParcelNo", list[0].loanApplicationInfo_unitParcelNo);
+                                        sqlcommand1.Parameters.AddWithValue("@spaValue", list[0].loanApplicationInfo_spaValue);
+                                        sqlcommand1.Parameters.AddWithValue("@category", list[0].loanApplicationInfo_category);
                                     
                                     
-                                    conn2.Open();
-                                    int rowsAffected2 = sqlcommand1.ExecuteNonQuery();
-                                    conn2.Close();
+                                        conn2.Open();
+                                        int rowsAffected2 = sqlcommand1.ExecuteNonQuery();
+                                        conn2.Close();
 
 
+                                    }
                                 }
+                            }
+                            catch (Exception ex)
+                            {
+                                string error = "OneTime_ExtractAndImportNewLOADSFields failed with exception: " + ex.Message.ToString();
+                                string errorDetail;
+                                errorDetail = "Input Param:" + arn;
+                                LogErrorToDB("OneTime_ExtractAndImportNewLOADSFields", "Exception", error, errorDetail);
                             }
                         }
                     }
                 }
-                /*
-            }
-            catch (Exception ex)
-            {
-                string error = "OneTime_ExtractAndImportNewLOADSFields failed with exception: " + ex.Message.ToString();
-                string errorDetail;
-                errorDetail = "Input Param: N/A";
-                LogErrorToDB("OneTime_ExtractAndImportNewLOADSFields", "Exception", error, errorDetail);
-            }
-            */
+                
+            
+            
             
             //string filename = dsAlpha.Tables[0].Rows[0]["PDFFileName"].ToString();
             //string file = dsAlpha.Tables[0].Rows[0]["PDF"].ToString();
@@ -18659,6 +25414,312 @@ namespace HLBBWS
             }
         }
 
+        public class InfobipInitialResponse_Status
+        {
+            public int groupId { get; set; } = 0;
+            public string groupName { get; set; } = "";
+            public int id { get; set; } = 0;
+            public string name { get; set; } = "";
+            public string description { get; set; } = "";
+        }
+
+        public class InfobipInitialResponse_Message
+        {
+            public string to { get; set; } = "";
+            public int messageCount { get; set; } = 0;
+            public string messageId { get; set; } = "";
+            public InfobipInitialResponse_Status status { get; set; }
+        }
+
+        public class InfobipInitialResponse
+        {
+            public List<InfobipInitialResponse_Message> messages { get; set; }
+        }
+        [WebMethod]
+        public void Test_InfobipAPI(string Header, string Body, string Receiver, ref string IsSuccessful, ref string StatusDescription, ref string ErrorMessage)
+        {
+            //// start get email detail            
+
+            //string strDataSource = clsGlobal.MG_SQL_DATA_SOURCE;
+            //string strDBName = clsGlobal.MG_SQL_DB_NAME;
+            //string strID = clsGlobal.MG_SQL_ID;
+            //string strPassword = clsGlobal.MG_SQL_PASSWORD;
+            //bool blnIsWinAuth = clsGlobal.MG_SQL_IS_WIN_AUTH;
+
+            ///*
+            //var Environment = Configuration["EnvironmentX"];
+            //var blnIsWinAuth = Configuration[Environment + ":MG_SQL_Auth_Mode"];
+            //var strDataSource = Configuration[Environment + ":MG_SQL_Server"];
+            //var strDBName = Configuration[Environment + ":MG_SQL_Database"];
+            //var strID = Configuration[Environment + ":MG_SQL_ID"];
+            //var strPassword = Configuration[Environment + ":MG_SQL_Pwd"];
+            //*/
+
+            //string connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Persist Security Info=True;User ID=" + strID + ";Password=" + strPassword;
+            //if (blnIsWinAuth)
+            //{
+            //    connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Integrated Security=True;";
+            //}
+
+            //SqlConnection conn = new SqlConnection(connstr);
+
+            //SqlDataAdapter sqlDA;
+            //sqlDA = new SqlDataAdapter();
+            //sqlDA.SelectCommand = new SqlCommand("dbo.usp_EmailLogV2_GetRecord @runningid", conn);
+            //sqlDA.SelectCommand.Parameters.AddWithValue("@runningid", runningid);
+
+            //DataSet ds = new DataSet();
+
+            //sqlDA.Fill(ds);
+
+            //string Header = ds.Tables[0].Rows[0]["Header"].ToString();
+            //string Body = ds.Tables[0].Rows[0]["Body"].ToString();
+            //string Receiver = ds.Tables[0].Rows[0]["Receiver"].ToString();
+            //int AttachmentCount = System.Convert.ToInt32(ds.Tables[0].Rows[0]["AttachmentCount"].ToString());
+            //string InfobipFlag = ds.Tables[0].Rows[0]["InfobipFlag"].ToString();
+            ////string Status = ds.Tables[0].Rows[0]["Status"].ToString();
+
+            //ArrayList arrfilepath = new ArrayList();
+            //ArrayList arrfilename = new ArrayList();
+            //ArrayList arrfiletype = new ArrayList();
+            ////ArrayList arrReceiver = new ArrayList();
+
+            //string[] arrReceiver = Receiver.Split(',');
+
+
+            // end get email detail
+
+            // start get attachment detail if exists 
+            //if ((int)AttachmentCount > 0)
+            //{
+            //    sqlDA = new SqlDataAdapter();
+            //    sqlDA.SelectCommand = new SqlCommand("dbo.usp_EmailLogV2_AttachmentMapping_GetRecord @runningid", conn);
+            //    sqlDA.SelectCommand.Parameters.AddWithValue("@runningid", runningid);
+
+            //    ds = new DataSet();
+
+            //    sqlDA.Fill(ds);
+
+            //    //ArrayList arrfilename = new ArrayList();
+            //    //ArrayList arrcontent = new ArrayList();
+
+
+            //    for (int i = 0; i < ds.Tables[0].Rows.Count; i++)
+            //    {
+            //        string FileName = ds.Tables[0].Rows[0]["FileName"].ToString();
+            //        string Base64FileContent = ds.Tables[0].Rows[0]["Base64FileContent"].ToString();
+
+            //        string[] arrstr = FileName.Split('.');
+
+            //        string subfilename = arrstr[0];
+            //        string subfiletype = arrstr[1];
+            //        // arrfilename.Add(FileName);
+            //        // arrcontent.Add(Base64FileContent);
+
+            //        // start generate attachment file if applicable 
+
+            //        long long_datetime = long.Parse(System.DateTime.Now.ToString("yyyyMMddHHmmssff"));
+            //        //System.Web.HttpContext.Current
+
+            //        string savefilepath = HttpContext.Current.Server.MapPath("~/");
+            //        // string savefilepath = GetCurrentDirectory();
+            //        // string savefilepath = Directory.GetCurrentDirectory();
+            //        // string savefilepath = System.Web.HttpContext.Current.Server.MapPath("~/");
+            //        savefilepath += "\\files\\";
+
+            //        string newfilename = long_datetime.ToString() + "." + subfiletype;
+
+            //        byte[] byteFileContent = Convert.FromBase64String(Base64FileContent);
+
+            //        System.IO.File.WriteAllBytes(savefilepath + newfilename, byteFileContent);
+
+            //        arrfilepath.Add(savefilepath + newfilename);
+            //        arrfilename.Add(newfilename);
+            //        arrfiletype.Add(subfiletype);
+            //        // end generate attachment file if applicable 
+            //    }
+
+
+
+
+            //}
+
+            // end get attachment detail if exists 
+
+
+            string infobip_base64credentials = ConfigurationManager.AppSettings["infobip_base64credentials"].ToString();
+            string infobip_url_send = ConfigurationManager.AppSettings["infobip_url_send"].ToString();
+            string infobip_user = ConfigurationManager.AppSettings["infobip_user"].ToString();
+            string infobip_proxyserver = ConfigurationManager.AppSettings["infobip_proxyserver"].ToString();
+            Int32 infobip_proxyport = System.Convert.ToInt32(ConfigurationManager.AppSettings["infobip_proxyport"].ToString());
+            bool BypassProxyOnLocal = System.Convert.ToBoolean(ConfigurationManager.AppSettings["BypassProxyOnLocal"].ToString());
+
+
+            if (BypassProxyOnLocal)
+            {
+                // start call infobip api            
+                System.Net.ServicePointManager.ServerCertificateValidationCallback = delegate { return true; };
+                System.Net.ServicePointManager.Expect100Continue = true;
+                System.Net.ServicePointManager.SecurityProtocol = System.Net.SecurityProtocolType.Tls12;
+            }
+
+
+            //System.Net.ServicePointManager.ServerCertificateValidationCallback = delegate { return true; };
+            //System.Net.ServicePointManager.Expect100Continue = true;
+            //System.Net.ServicePointManager.SecurityProtocol = System.Net.SecurityProtocolType.Tls12;
+
+            // System.Uri  infobip_proxyserver = new System.Uri(ConfigurationManager.AppSettings["infobip_proxyserver"]);
+
+
+            /*
+            var infobip_base64credentials = Configuration[Environment + ":infobip_base64credentials"];
+            var infobip_url = Configuration[Environment + ":infobip_url_send"];
+            var infobip_user = Configuration[Environment + ":infobip_user"];           
+            */
+            // restClient.Proxy = new WebProxy(myProxyUrl, myProxyHost);
+
+
+
+            var client = new RestClient(infobip_url_send);
+
+            //System.Diagnostics.Debug.WriteLine("setting up proxy");
+            //ClientScript.RegisterStartupScript(this.GetType(), "myalert", "alert('setting up proxy');", true);
+            //System.Web.HttpContext.Current.Response.Write("<SCRIPT LANGUAGE=\"JavaScript\">alert(\"setting up proxy\")</SCRIPT>");
+
+            if (!BypassProxyOnLocal)
+            {
+                client.ConfigureWebRequest(wr => wr.Proxy = new WebProxy(infobip_proxyserver, infobip_proxyport) { BypassProxyOnLocal = false });
+            }
+
+
+
+
+            //WebProxy pr = new WebProxy(infobip_proxyserver, 20);
+            //WebProxy myproxy = new WebProxy(infobip_proxyserver, infobip_proxyport);
+
+            //client.ConfigureWebRequest(wr => wr.Proxy = new WebProxy(infobip_proxyserver,9999) );
+
+            // var client = new RestClient(infobip_url_send) { Proxy = _webProxy }; ;
+            // var client.ConfigureWebRequest(wr => wr.Proxy = new WebProxy("127.0.0.1", 8888) { BypassProxyOnLocal = false });
+
+            client.Timeout = -1;
+
+            var request = new RestRequest();
+            request.Method = Method.POST;
+
+            request.AddHeader("Authorization", "Basic " + infobip_base64credentials);
+            request.AlwaysMultipartFormData = true;
+            request.AddParameter("from", infobip_user);
+            request.AddParameter("subject", Header);
+            //request.AddParameter("to", Receiver);
+
+            //for (int i = 0; i < arrReceiver.Length; i++)
+            //{
+            //    if (arrReceiver[i] != "")
+            //    {
+            //        request.AddParameter("to", arrReceiver[i]);
+            //    }
+            //}
+
+            request.AddParameter("to", Receiver);
+
+            request.AddParameter("HTML", Body);
+
+            //if (AttachmentCount > 0)
+            //{
+            //    for (int i = 0; i < arrfilepath.Count; i++)
+            //    {
+            //        request.AddFile("attachment", System.IO.File.ReadAllBytes(arrfilepath[i].ToString()), arrfilename[i].ToString() + "." + arrfiletype[i].ToString());
+            //    }
+            //}
+
+            // System.Diagnostics.Debug.WriteLine("calling API");
+            // System.Web.HttpContext.Current.Response.Write("<SCRIPT LANGUAGE=\"JavaScript\">alert(\"calling API\")</SCRIPT>");
+            IRestResponse response = client.Execute(request);
+
+            IsSuccessful = response.IsSuccessful.ToString();
+
+            //string StatusCode = "";
+
+            //if (response.StatusCode != null)
+            //{
+            //    StatusCode = response.StatusCode.ToString()
+            //}
+
+            StatusDescription = response.StatusDescription?.ToString() ?? "";
+
+            //if (response.StatusDescription != null)
+            //{
+            //    StatusDescription = response.StatusDescription.ToString();
+            //}
+
+            ErrorMessage = response.ErrorMessage?.ToString() ?? "";
+
+            //if (response.ErrorMessage != null )
+            //{
+            //    ErrorMessage = response.ErrorMessage?.ToString() ?? "";
+            //}
+
+
+            //System.Diagnostics.Debug.WriteLine("checking response");
+            //System.Web.HttpContext.Current.Response.Write("<SCRIPT LANGUAGE=\"JavaScript\">alert(\"checking response\")</SCRIPT>");
+            //if (IsSuccessful == "True")
+            //{
+            //    InfobipInitialResponse obj = System.Text.Json.JsonSerializer.Deserialize<InfobipInitialResponse>(response.Content.ToString());
+
+            //    InfobipInitialResponse_Message msg = (InfobipInitialResponse_Message)obj.messages[0];
+            //    string messageId = msg.messageId;
+
+            //    InfobipInitialResponse_Status sts = (InfobipInitialResponse_Status)obj.messages[0].status;
+
+            //    string StatusGroupID = sts.groupId.ToString();
+            //    string StatusGroupName = sts.groupName.ToString();
+            //    /*
+            //    ALTER procedure[dbo].[usp_EmailLogV2_UpdateStatus]
+            //    @runningid bigint = null,
+            //    @MessageID nvarchar(max) = null,
+            //    @StatusGroupID nvarchar(max) = null,
+            //    @StatusGroupName nvarchar(max) = null,
+            //    @Logs nvarchar(max) = null
+            //    */
+
+            //    // start update email status 
+
+
+            //    sqlDA = new SqlDataAdapter();
+
+            //    sqlDA.SelectCommand = new SqlCommand("dbo.usp_EmailLogV2_UpdateStatus @runningid, @MessageID, @StatusGroupID, @StatusGroupName,@Logs", conn);
+            //    sqlDA.SelectCommand.Parameters.AddWithValue("@runningid", runningid);
+            //    sqlDA.SelectCommand.Parameters.AddWithValue("@MessageID", messageId);
+            //    sqlDA.SelectCommand.Parameters.AddWithValue("@StatusGroupID", StatusGroupID);
+            //    sqlDA.SelectCommand.Parameters.AddWithValue("@StatusGroupName", StatusGroupName);
+            //    sqlDA.SelectCommand.Parameters.AddWithValue("@Logs", response.Content.ToString());
+
+            //    ds = new DataSet();
+
+            //    sqlDA.Fill(ds);
+            //    // end update email status 
+
+            //    // start gelete physical file 
+            //    if (AttachmentCount > 0)
+            //    {
+            //        for (int i = 0; i < arrfilepath.Count; i++)
+            //        {
+            //            System.IO.File.Delete(arrfilepath[i].ToString());
+            //        }
+            //    }
+
+            //    // end delete physical file 
+            //}
+            //else
+            //{
+            //    //throw Exception (StatusDescription.ToString());
+            //    throw new Exception("ErrorMessage:" + ErrorMessage.ToString() + ",StatusDescription:" + StatusDescription.ToString());
+            //}
+
+
+
+        }
         //[WebMethod]
         //public void NewPhaseCodeEmail()
         //{
@@ -18740,7 +25801,313 @@ namespace HLBBWS
         //    }
         //}
 
-        
+        [WebMethod]
+        public void DP_NewSolicitor_Attachment(ref string error)
+        {
+            error = "";
+
+            //try
+            //{
+            //    // log the result in db
+            //    DataSet ds = null;
+            //    DataTable dt = null;
+            //    SqlConnection conn = null;
+            //    SqlDataAdapter sqlDA = null;
+
+            //    string strDataSource = clsGlobal.MG_SQL_DATA_SOURCE;
+            //    string strDBName = clsGlobal.MG_SQL_DB_NAME;
+            //    string strID = clsGlobal.MG_SQL_ID;
+            //    string strPassword = clsGlobal.MG_SQL_PASSWORD;
+            //    bool blnIsWinAuth = clsGlobal.MG_SQL_IS_WIN_AUTH;
+
+            //    string strDataSource2 = clsGlobal.MG_SQL_DATA_SOURCE2;
+            //    string strDBName2 = clsGlobal.MG_SQL_DB_NAME2;
+            //    string strID2 = clsGlobal.MG_SQL_ID2;
+            //    string strPassword2 = clsGlobal.MG_SQL_PASSWORD2;
+            //    bool blnIsWinAuth2 = clsGlobal.MG_SQL_IS_WIN_AUTH2;
+
+            //    string connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Persist Security Info=True;User ID=" + strID + ";Password=" + strPassword;
+            //    if (blnIsWinAuth)
+            //    {
+            //        connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Integrated Security=True;";
+            //    }
+
+            //    string connstr2 = @"Data Source=" + strDataSource2 + ";Initial Catalog=" + strDBName2 + ";Persist Security Info=True;User ID=" + strID2 + ";Password=" + strPassword2;
+            //    if (blnIsWinAuth2)
+            //    {
+            //        connstr2 = @"Data Source=" + strDataSource2 + ";Initial Catalog=" + strDBName2 + ";Integrated Security=True;";
+            //    }
+
+            //    SqlConnection connPRE = null;
+            //    SqlDataAdapter sqlDAPRE = null;
+
+            //    connPRE = new SqlConnection(connstr);
+
+            //    sqlDAPRE = new SqlDataAdapter();
+            //    sqlDAPRE.SelectCommand = new SqlCommand("dbo.[usp_ws_getFireEyeFlag]", connPRE);
+
+            //    string fireeye_flag;
+            //    fireeye_flag = "";
+            //    DataSet dsPRE = new DataSet("ds");
+            //    sqlDAPRE.Fill(dsPRE);
+
+            //    if (dsPRE.Tables.Count > 0)
+            //    {
+            //        DataTable dtPRE = dsPRE.Tables[0];
+            //        fireeye_flag = dtPRE.Rows[0]["fireeye_flag"].ToString();
+            //    }
+
+            //    if (fireeye_flag == "1")
+            //    {
+            //        conn = new SqlConnection(connstr);
+
+            //        sqlDA = new SqlDataAdapter();
+            //        sqlDA.SelectCommand = new SqlCommand("dbo.[usp_ws_SQLSolicitorDPSubmission_ListUploadedARN]", conn);
+
+            //        string arn;
+            //        ds = new DataSet("ds");
+            //        sqlDA.Fill(ds);
+
+            //        if (ds.Tables.Count > 0)
+            //        {
+            //            dt = ds.Tables[0];
+            //            for (int i = 0; i < dt.Rows.Count; i++)
+            //            {
+            //                arn = dt.Rows[i]["ARN"].ToString();
+            //                // start validate arn 
+            //                SqlConnection conn1 = null;
+            //                conn1 = new SqlConnection(connstr2);
+            //                SqlDataAdapter sqlDA1 = new SqlDataAdapter();
+            //                sqlDA1.SelectCommand = new SqlCommand("dbo.[usp_ws_SolicitorSubmission_CheckARN] @ARN", conn1);
+            //                sqlDA1.SelectCommand.Parameters.AddWithValue("@arn", arn);
+
+            //                DataSet ds1 = null;
+            //                DataTable dt1 = null;
+
+            //                ds1 = new DataSet("ds");
+
+            //                sqlDA1.Fill(ds1);
+
+            //                if (ds1.Tables.Count > 0)
+            //                {
+            //                    /*
+            //                    SqlConnection conn2 = null;
+            //                    conn2 = new SqlConnection(connstr);
+            //                    SqlDataAdapter sqlDA2 = new SqlDataAdapter();
+            //                    sqlDA2.SelectCommand = new SqlCommand("dbo.[usp_SQLSolicitorDPSubmission_SelectAttachments] @ARN", conn2);
+            //                    sqlDA2.SelectCommand.Parameters.AddWithValue("@arn", arn);
+
+            //                    //SqlCommand sqlcommand0 = new SqlCommand("dbo.usp_SQLSolicitorDPSubmission_SelectAttachments @ARN", conn1);
+            //                    //sqlcommand0.Parameters.AddWithValue("@ARN", arn);
+
+            //                    DataSet ds2 = null;
+            //                    DataTable dt2 = null;
+
+            //                    ds2 = new DataSet("ds");
+            //                    sqlDA2.Fill(ds2);
+
+            //                    if (ds2.Tables.Count > 0)
+            //                    {
+            //                        dt2 = ds2.Tables[0];
+            //                        for (int j = 0; j < dt2.Rows.Count; j++)
+            //                        {
+            //                            SqlConnection conn3 = null;
+            //                            conn3 = new SqlConnection(connstr2);
+
+            //                            SqlCommand sqlcommand1 = new SqlCommand("dbo.usp_solicitorattachment_upload @ARN, @attachmentfilename, @attachmentcontent, @attachmentfiletype, @attachmentuploaddate ", conn3);
+
+            //                            sqlcommand1.Parameters.AddWithValue("@ARN", arn);
+            //                            sqlcommand1.Parameters.AddWithValue("@attachmentfilename", dt2.Rows[j]["attachmentfilename"].ToString());
+            //                            sqlcommand1.Parameters.AddWithValue("@attachmentcontent", dt2.Rows[j]["attachmentcontent"].ToString());
+            //                            sqlcommand1.Parameters.AddWithValue("@attachmentfiletype", dt2.Rows[j]["attachmentfiletype"].ToString());
+            //                            sqlcommand1.Parameters.AddWithValue("@attachmentuploaddate", dt2.Rows[j]["attachmentuploaddate"]);
+
+            //                            conn3.Open();
+            //                            int rowsAffected2 = sqlcommand1.ExecuteNonQuery();
+            //                            conn3.Close();
+
+            //                        }
+            //                    }
+            //                    conn2.Close();
+            //                    */
+            //                    SqlConnection conn4 = null;
+            //                    conn4 = new SqlConnection(connstr2);
+
+            //                    SqlCommand sqlcommand2 = new SqlCommand("dbo.usp_ws_solicitorattachment_create_master_data @ARN ", conn4);
+            //                    sqlcommand2.Parameters.AddWithValue("@ARN", arn);
+
+            //                    conn4.Open();
+            //                    int rowsAffected3 = sqlcommand2.ExecuteNonQuery();
+            //                    conn4.Close();
+            //                }
+            //                // end validate arn 
+            //                conn1.Close();
+
+            //            }
+
+            //        }
+            //        conn.Close();
+            //    }
+            //    else
+            //    {
+            //        // fireeye flag is set to off, directly save attachment to eDMS
+
+            //        // start get edms settings 
+            //        SqlConnection connx = new SqlConnection(connstr);
+
+            //        SqlDataAdapter sqlDAx = new SqlDataAdapter();
+            //        sqlDAx.SelectCommand = new SqlCommand("dbo.[usp_ws_getEDMS_Solicitor_Setting] @error output", connx);
+            //        sqlDAx.SelectCommand.Parameters.AddWithValue("@error", "");
+
+            //        DataSet dsx = new DataSet("ds");
+            //        DataTable dtx = null;
+
+            //        sqlDAx.Fill(dsx);
+            //        dtx = dsx.Tables[0];
+
+            //        var EDMSDocType = dtx.Rows[0]["EDMSDocType"];
+            //        var ProfileName = dtx.Rows[0]["ProfileName"];
+            //        var LoginUser = dtx.Rows[0]["LoginUser"];
+            //        var DefaultFileName = dtx.Rows[0]["DefaultFileName"];
+            //        var EDMSUploadFolder = dtx.Rows[0]["EDMSUploadFolder"];
+            //        var Category = dtx.Rows[0]["Category"];
+            //        connx.Close();
+            //        // end get edms settings
+
+
+            //        // start get all arn from staging
+            //        SqlConnection connALPHA = new SqlConnection(connstr);
+
+            //        SqlDataAdapter sqlDAALPHA = new SqlDataAdapter();
+            //        sqlDAALPHA.SelectCommand = new SqlCommand("dbo.[usp_ws_SolicitorSubmission_getallARNInStaging]", connALPHA);
+            //        //sqlDAALPHA.SelectCommand.Parameters.AddWithValue("@error", "");
+
+            //        DataSet dsAPLHA = new DataSet("ds");
+            //        DataTable dtALPHA = null;
+
+            //        sqlDAALPHA.Fill(dsAPLHA);
+            //        dtALPHA = dsAPLHA.Tables[0];
+
+            //        if (dsAPLHA.Tables.Count > 0)
+            //        {
+            //            dtALPHA = dsAPLHA.Tables[0];
+
+            //            for (int s = 0; s < dtALPHA.Rows.Count; s++)
+            //            {
+            //                var arn = dtALPHA.Rows[s]["arn"];
+
+            //                // start get customer name and id for the selected arn 
+            //                SqlConnection conny = new SqlConnection(connstr);
+
+            //                SqlDataAdapter sqlDAy = new SqlDataAdapter();
+            //                sqlDAy.SelectCommand = new SqlCommand("dbo.[usp_ws_getCustomerInfo_forARN] @arn, @error output", conny);
+            //                sqlDAy.SelectCommand.Parameters.AddWithValue("@arn", arn);
+            //                sqlDAy.SelectCommand.Parameters.AddWithValue("@error", "");
+
+            //                DataSet dsy = new DataSet("ds");
+            //                DataTable dty = null;
+
+            //                sqlDAy.Fill(dsy);
+            //                dty = dsy.Tables[0];
+            //                var CustomerID = dty.Rows[0]["CustomerID"].ToString();
+            //                if (CustomerID.ToString() == "")
+            //                {
+            //                    CustomerID = "N/A";
+            //                }
+            //                var CustomerName = dty.Rows[0]["CustomerName"].ToString();
+            //                if (CustomerName.ToString() == "")
+            //                {
+            //                    CustomerName = "N/A";
+            //                }
+            //                conny.Close();
+            //                // end get customer name and id for the selected arn 
+
+            //                // start get attachment detail 
+            //                SqlConnection conn1 = null;
+            //                conn1 = new SqlConnection(connstr);
+            //                SqlDataAdapter sqlDA1 = new SqlDataAdapter();
+
+            //                sqlDA1.SelectCommand = new SqlCommand("dbo.[usp_ws_list_SolicitorDocumentationSubmissionAttachmentInStaging] @ARN", conn1);
+            //                sqlDA1.SelectCommand.Parameters.AddWithValue("@arn", arn);
+
+
+            //                DataSet ds1 = null;
+            //                DataTable dt1 = null;
+
+            //                ds1 = new DataSet("ds");
+
+            //                sqlDA1.Fill(ds1);
+
+            //                if (ds1.Tables.Count > 0)
+            //                {
+            //                    dt1 = ds1.Tables[0];
+
+            //                    for (int j = 0; j < dt1.Rows.Count; j++)
+            //                    {
+            //                        var filename_original = dt1.Rows[j]["ItemFileName"];
+            //                        var filename_new = dt1.Rows[j]["ItemFileName"];
+            //                        var filecontent = dt1.Rows[j]["ItemContent"];
+            //                        //byte[] byteFileContent = Convert.FromBase64String(filecontent);
+            //                        var filetype = dt1.Rows[j]["ItemFileType"];
+            //                        // var attachmentuploaddate = dt1.Rows[j]["attachmentuploaddate"];
+            //                        //var fe_failed_description = dt1.Rows[j]["fe_failed_description"];
+            //                        //var fe_failed_code = dt1.Rows[j]["fe_failed_code"];
+            //                        //var d_result = dt1.Rows[j]["result"];
+
+            //                        string DP_ExportK2FileToEDMS_error = "";
+            //                        //ExportFileResponseData response = DP_ExportK2FileToEDMS(ProfileName.ToString(), EDMSUploadFolder.ToString(), filecontent.ToString(), filename_original + "." + filetype, arn.ToString(), EDMSDocType.ToString(), Category.ToString(), CustomerID.ToString(), CustomerName.ToString(), ref DP_ExportK2FileToEDMS_error);
+            //                        ExportFileResponseData response = DP_ExportK2FileToEDMS(ProfileName.ToString(), EDMSUploadFolder.ToString(), filecontent.ToString(), filename_original.ToString(), arn.ToString(), EDMSDocType.ToString(), Category.ToString(), CustomerID.ToString(), CustomerName.ToString(), ref DP_ExportK2FileToEDMS_error);
+
+            //                    }
+            //                }
+            //                conn1.Close();
+            //                // end get attachment detail 
+
+            //                // start move arn from staging to main usp_SQLSolicitorDPSubmission_Main_MoveToMain
+            //                SqlConnection connz = new SqlConnection(connstr);
+
+            //                SqlDataAdapter sqlDAz = new SqlDataAdapter();
+            //                sqlDAz.SelectCommand = new SqlCommand("dbo.[usp_ws_SQLSolicitorDPSubmission_Main_MoveToMain] @arn, @error output", connz);
+            //                sqlDAz.SelectCommand.Parameters.AddWithValue("@arn", arn);
+            //                sqlDAz.SelectCommand.Parameters.AddWithValue("@error", "");
+
+            //                DataSet dsz = new DataSet("ds");
+            //                DataTable dtz = null;
+            //                //dtz = dsz.Tables[0];
+            //                sqlDAz.Fill(dsz);
+            //                connz.Close();
+            //                // start move arn from staging to main 
+
+            //                // start delete staging data in temp db 
+            //                SqlConnection connmeta = new SqlConnection(connstr);
+
+            //                SqlDataAdapter sqlDAmeta = new SqlDataAdapter();
+            //                sqlDAmeta.SelectCommand = new SqlCommand("dbo.[usp_ws_deleterecords] @arn, @workflow, @error output", connmeta);
+            //                sqlDAmeta.SelectCommand.Parameters.AddWithValue("@arn", arn);
+            //                sqlDAmeta.SelectCommand.Parameters.AddWithValue("@workflow", "SolicitorDPSubmission");
+            //                sqlDAmeta.SelectCommand.Parameters.AddWithValue("@error", "");
+
+            //                DataSet dsmeta = new DataSet("ds");
+            //                //DataTable dtz = null;
+            //                //dtz = dsz.Tables[0];
+            //                sqlDAmeta.Fill(dsmeta);
+            //                connmeta.Close();
+            //                // start  delete staging data in temp db 
+            //            }
+            //        }
+            //        // end start get all arn in staging 
+            //    }
+
+
+            //}
+            //catch (Exception ex)
+            //{
+            //    error = "DP_NewSolicitor_Attachment failed with exception: " + ex.Message.ToString();
+            //    string errorDetail;
+            //    errorDetail = "Input Param: N/A";
+            //    LogErrorToDB("DP_NewSolicitor_Attachment", "Exception", error, errorDetail);
+            //}
+        }
     }
 
 

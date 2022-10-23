@@ -185,6 +185,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Content Include="APPWS_2022.asmx" />
     <Content Include="DevPortalMigration_S1_DevCodeImport.aspx" />
     <Content Include="InfobipAPI.asmx" />
     <Content Include="AppWS_K2.asmx" />
@@ -244,6 +245,10 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="APPWS_2022.asmx.cs">
+      <DependentUpon>APPWS_2022.asmx</DependentUpon>
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="DevPortalMigration_S1_DevCodeImport.aspx.cs">
       <DependentUpon>DevPortalMigration_S1_DevCodeImport.aspx</DependentUpon>
       <SubType>ASPXCodeBehind</SubType>
@@ -309,6 +314,7 @@
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
+    <Compile Include="LOADS_CLASS_TEST.cs" />
     <Compile Include="Properties\Settings.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
