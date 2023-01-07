@@ -1440,6 +1440,127 @@ namespace HLBBWS
         }
 
         [WebMethod]
+      //  public void Val2_CreateSubUser2(string name, string status, string devcode, string admin, ref string NewSubUserID)
+        public void Val2_CreateSubUser2(string NewID, int RunningID, string status, string code, string admin)
+        {
+
+            try
+            {
+
+                DataSet ds = null;
+                DataTable dt = null;
+                SqlConnection conn = null;
+                SqlDataAdapter sqlDA = null;
+
+                string strDataSource = clsGlobal.MG_SQL_DATA_SOURCE;
+                string strDBName = clsGlobal.MG_SQL_DB_NAME;
+                string strID = clsGlobal.MG_SQL_ID;
+                string strPassword = clsGlobal.MG_SQL_PASSWORD;
+                bool blnIsWinAuth = clsGlobal.MG_SQL_IS_WIN_AUTH;
+
+                string connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Persist Security Info=True;User ID=" + strID + ";Password=" + strPassword;
+                if (blnIsWinAuth)
+                {
+                    connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Integrated Security=True;";
+                }
+
+                // start get encrypted key
+                SqlConnection connBeta = null;
+                SqlDataAdapter sqlDABeta = null;
+                DataTable dtBeta = null;
+
+                connBeta = new SqlConnection(connstr);
+
+                sqlDABeta = new SqlDataAdapter();
+                sqlDABeta.SelectCommand = new SqlCommand("dbo.usp_get_encryptionkey ", connBeta);
+
+                DataSet dsBETA = new DataSet("ds");
+                sqlDABeta.Fill(dsBETA);
+
+                DataTable dtBETA = dsBETA.Tables[0];
+                string EncryptionKey = dtBETA.Rows[0]["EncryptionKey"].ToString();
+
+                // end get encrypted key
+
+                // start call ddProjectDeveloperSubUser_Create
+
+                SqlConnection connAlpha = null;
+                SqlDataAdapter sqlDAlpha = null;
+
+                connAlpha = new SqlConnection(connstr);
+
+                string error = "";
+
+                if (error == "")
+                {
+                    // start call reseet sp
+
+                    SqlDataAdapter sqlDAlpha_PwReset;
+                    sqlDAlpha_PwReset = new SqlDataAdapter();
+                    sqlDAlpha_PwReset.SelectCommand = new SqlCommand("dbo.Val2_SubUser_Admin_PasswordReset @Code, @LoginUserEmail, @DecryptedDefaultPassword output ", connAlpha);
+                    sqlDAlpha_PwReset.SelectCommand.Parameters.AddWithValue("@Code", code);
+                    sqlDAlpha_PwReset.SelectCommand.Parameters.AddWithValue("@LoginUserEmail", admin);
+
+
+                    sqlDAlpha_PwReset.SelectCommand.Parameters.Add("@DecryptedDefaultPassword", SqlDbType.NVarChar, -1);
+                    sqlDAlpha_PwReset.SelectCommand.Parameters["@DecryptedDefaultPassword"].Direction = ParameterDirection.Output;
+
+                    DataSet dsAlpha_PwReset = new DataSet("ds");
+                    sqlDAlpha_PwReset.Fill(dsAlpha_PwReset);
+
+                    string decrypteddefaultpw = sqlDAlpha_PwReset.SelectCommand.Parameters["@DecryptedDefaultPassword"].Value.ToString();
+                    // end call reset sp
+
+                    // encrypt pw
+                    string encryptedpw = EncryptText(decrypteddefaultpw, EncryptionKey);
+
+                    // start call final sp
+
+                    //@ID nvarchar(max) = null,
+                    //@EncryptedPassword nvarchar(max) = null,
+                    //@Status nvarchar(max) = null,
+                    //@Name nvarchar(max) = null, 	
+                    //@Email nvarchar(max) = null, 	
+                    //@SADA bit = null,
+                    //@LoginUserEmail nvarchar(max) = null,
+                    //@DeveloperCode nvarchar(max) = null,
+                    //@NewSubUserID nvarchar(max) = null output
+
+                    SqlDataAdapter sqlDAlphaFinal;
+
+                    sqlDAlphaFinal = new SqlDataAdapter();
+                    sqlDAlphaFinal.SelectCommand = new SqlCommand("dbo.Val2_SubUser_Create_Final2 @ID, @EncryptedPassword, @Status, @Name, @LoginUserEmail, @Code, @RunningID", connAlpha);
+                    sqlDAlphaFinal.SelectCommand.Parameters.AddWithValue("@ID", NewID);
+                    sqlDAlphaFinal.SelectCommand.Parameters.AddWithValue("@EncryptedPassword", encryptedpw);
+                    sqlDAlphaFinal.SelectCommand.Parameters.AddWithValue("@Status", status);
+                    sqlDAlphaFinal.SelectCommand.Parameters.AddWithValue("@Name", "");
+                   // sqlDAlphaFinal.SelectCommand.Parameters.AddWithValue("@Email", "");
+                    //sqlDAlphaFinal.SelectCommand.Parameters.AddWithValue("@SADA", "");
+                    sqlDAlphaFinal.SelectCommand.Parameters.AddWithValue("@LoginUserEmail", admin);
+                    sqlDAlphaFinal.SelectCommand.Parameters.AddWithValue("@Code", code);
+                    sqlDAlphaFinal.SelectCommand.Parameters.AddWithValue("@RunningID", RunningID);
+
+                    //sqlDAlphaFinal.SelectCommand.Parameters.Add("@NewSubUserID", SqlDbType.NVarChar, -1);
+                    //sqlDAlphaFinal.SelectCommand.Parameters["@NewSubUserID"].Direction = ParameterDirection.Output;
+
+                    DataSet dsAlphaFinal = new DataSet("ds");
+                    sqlDAlphaFinal.Fill(dsAlphaFinal);
+
+                    //NewSubUserID = sqlDAlphaFinal.SelectCommand.Parameters["@NewSubUserID"].Value.ToString();
+                    // start call final sp
+                }
+
+            }
+            catch (Exception ex)
+            {
+                string error = "Val2_CreateSubUser failed with exception: " + ex.Message.ToString();
+                string errorDetail;
+                errorDetail = "Input Param:N/A";
+                LogErrorToDB("Val2_CreateSubUser", "Exception", error, errorDetail);
+            }
+        }
+
+        [WebMethod]
         public void Sol2_CreateSubUser(string name, string status, string devcode, string admin, ref string NewSubUserID)
         {
             
@@ -1558,7 +1679,126 @@ namespace HLBBWS
             }
         }
 
+        [WebMethod]
+        public void Sol2_CreateSubUser2(string NewID, int RunningID, string status, string code, string admin)
+        {
 
+            try
+            {
+
+                DataSet ds = null;
+                DataTable dt = null;
+                SqlConnection conn = null;
+                SqlDataAdapter sqlDA = null;
+
+                string strDataSource = clsGlobal.MG_SQL_DATA_SOURCE;
+                string strDBName = clsGlobal.MG_SQL_DB_NAME;
+                string strID = clsGlobal.MG_SQL_ID;
+                string strPassword = clsGlobal.MG_SQL_PASSWORD;
+                bool blnIsWinAuth = clsGlobal.MG_SQL_IS_WIN_AUTH;
+
+                string connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Persist Security Info=True;User ID=" + strID + ";Password=" + strPassword;
+                if (blnIsWinAuth)
+                {
+                    connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Integrated Security=True;";
+                }
+
+                // start get encrypted key
+                SqlConnection connBeta = null;
+                SqlDataAdapter sqlDABeta = null;
+                DataTable dtBeta = null;
+
+                connBeta = new SqlConnection(connstr);
+
+                sqlDABeta = new SqlDataAdapter();
+                sqlDABeta.SelectCommand = new SqlCommand("dbo.usp_get_encryptionkey ", connBeta);
+
+                DataSet dsBETA = new DataSet("ds");
+                sqlDABeta.Fill(dsBETA);
+
+                DataTable dtBETA = dsBETA.Tables[0];
+                string EncryptionKey = dtBETA.Rows[0]["EncryptionKey"].ToString();
+
+                // end get encrypted key
+
+                // start call ddProjectDeveloperSubUser_Create
+
+                SqlConnection connAlpha = null;
+                SqlDataAdapter sqlDAlpha = null;
+
+                connAlpha = new SqlConnection(connstr);
+
+                string error = "";
+
+                if (error == "")
+                {
+                    // start call reseet sp
+
+                    SqlDataAdapter sqlDAlpha_PwReset;
+                    sqlDAlpha_PwReset = new SqlDataAdapter();
+                    sqlDAlpha_PwReset.SelectCommand = new SqlCommand("dbo.Sol2_SubUser_Admin_PasswordReset @Code, @LoginUserEmail, @DecryptedDefaultPassword output ", connAlpha);
+                    sqlDAlpha_PwReset.SelectCommand.Parameters.AddWithValue("@Code", code);
+                    sqlDAlpha_PwReset.SelectCommand.Parameters.AddWithValue("@LoginUserEmail", admin);
+
+
+                    sqlDAlpha_PwReset.SelectCommand.Parameters.Add("@DecryptedDefaultPassword", SqlDbType.NVarChar, -1);
+                    sqlDAlpha_PwReset.SelectCommand.Parameters["@DecryptedDefaultPassword"].Direction = ParameterDirection.Output;
+
+                    DataSet dsAlpha_PwReset = new DataSet("ds");
+                    sqlDAlpha_PwReset.Fill(dsAlpha_PwReset);
+
+                    string decrypteddefaultpw = sqlDAlpha_PwReset.SelectCommand.Parameters["@DecryptedDefaultPassword"].Value.ToString();
+                    // end call reset sp
+
+                    // encrypt pw
+                    string encryptedpw = EncryptText(decrypteddefaultpw, EncryptionKey);
+
+                    // start call final sp
+
+                    //@ID nvarchar(max) = null,
+                    //@EncryptedPassword nvarchar(max) = null,
+                    //@Status nvarchar(max) = null,
+                    //@Name nvarchar(max) = null, 	
+                    //@Email nvarchar(max) = null, 	
+                    //@SADA bit = null,
+                    //@LoginUserEmail nvarchar(max) = null,
+                    //@DeveloperCode nvarchar(max) = null,
+                    //@NewSubUserID nvarchar(max) = null output
+
+                    SqlDataAdapter sqlDAlphaFinal;
+
+                    sqlDAlphaFinal = new SqlDataAdapter();
+                    sqlDAlphaFinal.SelectCommand = new SqlCommand("dbo.Sol2_SubUser_Create_Final2 @ID, @EncryptedPassword, @Status, @Name, @LoginUserEmail, @Code, @RunningID", connAlpha);
+                    sqlDAlphaFinal.SelectCommand.Parameters.AddWithValue("@ID", NewID);
+                    sqlDAlphaFinal.SelectCommand.Parameters.AddWithValue("@EncryptedPassword", encryptedpw);
+                    sqlDAlphaFinal.SelectCommand.Parameters.AddWithValue("@Status", status);
+                    sqlDAlphaFinal.SelectCommand.Parameters.AddWithValue("@Name", "");
+                    //sqlDAlphaFinal.SelectCommand.Parameters.AddWithValue("@Email", "");
+                    //sqlDAlphaFinal.SelectCommand.Parameters.AddWithValue("@SADA", "");
+                    sqlDAlphaFinal.SelectCommand.Parameters.AddWithValue("@LoginUserEmail", admin);
+                    sqlDAlphaFinal.SelectCommand.Parameters.AddWithValue("@Code", code);
+                    sqlDAlphaFinal.SelectCommand.Parameters.AddWithValue("@RunningID", RunningID);
+                    //sqlDAlphaFinal.SelectCommand.Parameters.Add("@NewSubUserID", SqlDbType.NVarChar, -1);
+                    //sqlDAlphaFinal.SelectCommand.Parameters["@NewSubUserID"].Direction = ParameterDirection.Output;
+
+                    DataSet dsAlphaFinal = new DataSet("ds");
+                    sqlDAlphaFinal.Fill(dsAlphaFinal);
+
+                    //NewSubUserID = sqlDAlphaFinal.SelectCommand.Parameters["@NewSubUserID"].Value.ToString();
+
+
+                    // start call final sp
+                }
+
+            }
+            catch (Exception ex)
+            {
+                string error = "Sol2_CreateSubUser failed with exception: " + ex.Message.ToString();
+                string errorDetail;
+                errorDetail = "Input Param:N/A";
+                LogErrorToDB("Sol2_CreateSubUser", "Exception", error, errorDetail);
+            }
+        }
         [WebMethod]
         public void DP_CreateSubUser(string name, string email, string status, string devcode, string admin, ref string NewSubUserID)
         {
@@ -9521,6 +9761,309 @@ namespace HLBBWS
         }
 
         
+        //[WebMethod]
+        //public void DP_NewSolicitor_AttachmentV2(ref string error)
+        //{
+        //    error = "";
+
+        //    string savefilepath = HttpContext.Current.Server.MapPath("~/");
+        //    savefilepath = savefilepath + "Debug_UAT_DP_NewSolicitor_AttachmentV2.txt";
+
+        //    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+        //    {
+        //        writer.WriteLine("start debug");
+        //    }
+
+        //    try
+        //    {
+        //        // log the result in db
+        //        DataSet ds = null;
+        //        DataTable dt = null;
+        //        SqlConnection conn = null;
+        //        SqlDataAdapter sqlDA = null;
+
+        //        string strDataSource = clsGlobal.MG_SQL_DATA_SOURCE;
+        //        string strDBName = clsGlobal.MG_SQL_DB_NAME;
+        //        string strID = clsGlobal.MG_SQL_ID;
+        //        string strPassword = clsGlobal.MG_SQL_PASSWORD;
+        //        bool blnIsWinAuth = clsGlobal.MG_SQL_IS_WIN_AUTH;
+
+        //        /*
+        //        string strDataSource2 = clsGlobal.MG_SQL_DATA_SOURCE2;
+        //        string strDBName2 = clsGlobal.MG_SQL_DB_NAME2;
+        //        string strID2 = clsGlobal.MG_SQL_ID2;
+        //        string strPassword2 = clsGlobal.MG_SQL_PASSWORD2;
+        //        bool blnIsWinAuth2 = clsGlobal.MG_SQL_IS_WIN_AUTH2;
+        //        */
+
+        //        string connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Persist Security Info=True;User ID=" + strID + ";Password=" + strPassword;
+        //        if (blnIsWinAuth)
+        //        {
+        //            connstr = @"Data Source=" + strDataSource + ";Initial Catalog=" + strDBName + ";Integrated Security=True;";
+        //        }
+
+        //        /*
+        //        string connstr2 = @"Data Source=" + strDataSource2 + ";Initial Catalog=" + strDBName2 + ";Persist Security Info=True;User ID=" + strID2 + ";Password=" + strPassword2;
+        //        if (blnIsWinAuth2)
+        //        {
+        //            connstr2 = @"Data Source=" + strDataSource2 + ";Initial Catalog=" + strDBName2 + ";Integrated Security=True;";
+        //        }
+        //        */
+
+        //        using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+        //        {
+        //            writer.WriteLine("start get fireeye flag");
+        //        }
+
+        //        SqlConnection connPRE = null;
+        //        SqlDataAdapter sqlDAPRE = null;
+
+        //        connPRE = new SqlConnection(connstr);
+
+        //        sqlDAPRE = new SqlDataAdapter();
+        //        sqlDAPRE.SelectCommand = new SqlCommand("dbo.[usp_ws_getFireEyeFlag]", connPRE);
+
+        //        string fireeye_flag;
+        //        fireeye_flag = "";
+        //        DataSet dsPRE = new DataSet("ds");
+        //        sqlDAPRE.Fill(dsPRE);
+
+        //        if (dsPRE.Tables.Count > 0)
+        //        {
+        //            DataTable dtPRE = dsPRE.Tables[0];
+        //            fireeye_flag = dtPRE.Rows[0]["fireeye_flag"].ToString();
+        //        }
+
+        //        using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+        //        {
+        //            writer.WriteLine("fireeye flag value:" + fireeye_flag.ToString());
+        //        }
+
+        //        using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+        //        {
+        //            writer.WriteLine("Start Find Case");
+        //        }
+
+        //        conn = new SqlConnection(connstr);
+
+        //        sqlDA = new SqlDataAdapter();
+        //        sqlDA.SelectCommand = new SqlCommand("dbo.[Sol2_DocSubmission_ws_AVJob_FindCase]", conn);
+
+        //        string arn;
+        //        int NoOfAttachment;
+
+        //        ds = new DataSet("ds");
+        //        sqlDA.Fill(ds);
+
+        //        if (ds.Tables.Count > 0)
+        //        {
+        //            dt = ds.Tables[0];
+        //            for (int i = 0; i < dt.Rows.Count; i++)
+        //            {
+        //                arn = dt.Rows[i]["ARN"].ToString();
+        //                NoOfAttachment = Convert.ToInt32(dt.Rows[i]["NoOfAttachment"].ToString());
+
+        //                using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+        //                {
+        //                    writer.WriteLine("arn value:" + arn.ToString());
+        //                }
+
+        //                // get lisf of attachments
+        //                string WF = "SolicitorDPSubmission";
+
+        //                using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+        //                {
+        //                    writer.WriteLine("start find attachment");
+        //                }
+
+        //                SqlConnection conn1 = null;
+        //                conn1 = new SqlConnection(connstr);
+        //                SqlDataAdapter sqlDA1 = new SqlDataAdapter();
+        //                sqlDA1.SelectCommand = new SqlCommand("dbo.[Sol2_DocSubmission_ws_AVJob_ListAttachment] @ARN", conn1);
+        //                sqlDA1.SelectCommand.Parameters.AddWithValue("@arn", arn);
+
+        //                DataSet ds1 = null;
+        //                DataTable dt1 = null;
+
+        //                ds1 = new DataSet("ds");
+
+        //                sqlDA1.Fill(ds1);
+
+        //                dt1 = ds1.Tables[0];
+        //                for (int dd = 0; dd < dt1.Rows.Count; dd++)
+        //                {
+
+        //                    string k2attachment = dt1.Rows[dd]["K2Attachment"].ToString();
+        //                    string AttachmentFileName = dt1.Rows[dd]["AttachmentFileName"].ToString();
+        //                    string AttachmentContent = dt1.Rows[dd]["AttachmentContent"].ToString();
+        //                    string AttachmentFileType = dt1.Rows[dd]["AttachmentFileType"].ToString();
+        //                    string AttachmentChecksum = dt1.Rows[dd]["AttachmentChecksum"].ToString();
+        //                    string AttachmentType = dt1.Rows[dd]["AttachmentType"].ToString();
+        //                    //string AttachmentType = dt1.Rows[dd]["AttachmentType"].ToString();
+
+        //                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+        //                    {
+        //                        writer.WriteLine("attachment nane:" + AttachmentFileName.ToString());
+        //                    }
+
+        //                    // upload to attachment staging 
+        //                    if (fireeye_flag == "1")
+        //                    {
+        //                        using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+        //                        {
+        //                            writer.WriteLine("start move to staging");
+        //                        }
+
+        //                        AV_UploadFileToAttachmentStaging(WF, arn, k2attachment, ref error);
+
+        //                        using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+        //                        {
+        //                            writer.WriteLine("completed move to staging");
+        //                        }
+        //                    }
+        //                    else
+        //                    {
+        //                        // fireeye flag is set to off, directly save attachment to eDMS
+
+        //                        using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+        //                        {
+        //                            writer.WriteLine("start move to edms");
+        //                        }
+
+        //                        // start get edms settings 
+        //                        SqlConnection connx = new SqlConnection(connstr);
+
+        //                        SqlDataAdapter sqlDAx = new SqlDataAdapter();
+        //                        sqlDAx.SelectCommand = new SqlCommand("dbo.[usp_ws_getEDMS_Solicitor_Setting] @error output", connx);
+        //                        sqlDAx.SelectCommand.Parameters.AddWithValue("@error", "");
+
+        //                        DataSet dsx = new DataSet("ds");
+        //                        DataTable dtx = null;
+
+        //                        sqlDAx.Fill(dsx);
+        //                        dtx = dsx.Tables[0];
+
+        //                        var EDMSDocType = dtx.Rows[0]["EDMSDocType"];
+        //                        var ProfileName = dtx.Rows[0]["ProfileName"];
+        //                        var LoginUser = dtx.Rows[0]["LoginUser"];
+        //                        var DefaultFileName = dtx.Rows[0]["DefaultFileName"];
+        //                        var EDMSUploadFolder = dtx.Rows[0]["EDMSUploadFolder"];
+        //                        var Category = dtx.Rows[0]["Category"];
+        //                        connx.Close();
+
+        //                        // start get customer name and id for the selected arn 
+        //                        SqlConnection conny = new SqlConnection(connstr);
+
+        //                        SqlDataAdapter sqlDAy = new SqlDataAdapter();
+        //                        sqlDAy.SelectCommand = new SqlCommand("dbo.[usp_ws_getCustomerInfo_forARN] @arn, @error output", conny);
+        //                        sqlDAy.SelectCommand.Parameters.AddWithValue("@arn", arn);
+        //                        sqlDAy.SelectCommand.Parameters.AddWithValue("@error", "");
+
+        //                        DataSet dsy = new DataSet("ds");
+        //                        DataTable dty = null;
+
+        //                        sqlDAy.Fill(dsy);
+        //                        dty = dsy.Tables[0];
+        //                        var CustomerID = dty.Rows[0]["CustomerID"].ToString();
+        //                        if (CustomerID.ToString() == "")
+        //                        {
+        //                            CustomerID = "N/A";
+        //                        }
+        //                        var CustomerName = dty.Rows[0]["CustomerName"].ToString();
+        //                        if (CustomerName.ToString() == "")
+        //                        {
+        //                            CustomerName = "N/A";
+        //                        }
+        //                        conny.Close();
+
+        //                        string DP_ExportK2FileToEDMS_error = "";
+        //                        ExportFileResponseData response = DP_ExportK2FileToEDMS(ProfileName.ToString(), EDMSUploadFolder.ToString(), AttachmentContent.ToString(), AttachmentFileName.ToString(), arn.ToString(), EDMSDocType.ToString(), Category.ToString(), CustomerID.ToString(), CustomerName.ToString(), ref DP_ExportK2FileToEDMS_error);
+
+        //                        using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+        //                        {
+        //                            writer.WriteLine("completed move to edms");
+        //                        }
+        //                    }
+        //                }
+
+        //                using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+        //                {
+        //                    writer.WriteLine("start update start date");
+        //                }
+
+        //                //update AV start scan date 
+        //                SqlConnection connUpdateAVScanStartDate = new SqlConnection(connstr);
+
+        //                SqlDataAdapter sqlDAUpdateAVScanStartDate = new SqlDataAdapter();
+        //                sqlDAUpdateAVScanStartDate.SelectCommand = new SqlCommand("dbo.[Sol2_DocSubmission_ws_AVJob_AV_UpdateAVScanStartDate] @arn", connUpdateAVScanStartDate);
+        //                sqlDAUpdateAVScanStartDate.SelectCommand.Parameters.AddWithValue("@arn", arn);
+
+        //                DataSet dsUpdateAVScanStartDate = new DataSet("ds");
+
+        //                sqlDAUpdateAVScanStartDate.Fill(dsUpdateAVScanStartDate);
+
+        //                using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+        //                {
+        //                    writer.WriteLine("completed update start date");
+        //                }
+
+        //                if (fireeye_flag == "1")
+        //                {
+        //                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+        //                    {
+        //                        writer.WriteLine("start create master");
+        //                    }
+        //                    // create master data 
+        //                    AV_CreateMasterData(WF, arn, ref error);
+
+        //                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+        //                    {
+        //                        writer.WriteLine("completed create master");
+        //                    }
+        //                }
+        //                else
+        //                {
+        //                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+        //                    {
+        //                        writer.WriteLine("start move to main");
+        //                    }
+
+        //                    // start move arn from staging to main usp_SQLSolicitorDPSubmission_Main_MoveToMain
+        //                    SqlConnection connz = new SqlConnection(connstr);
+
+        //                    SqlDataAdapter sqlDAz = new SqlDataAdapter();
+        //                    sqlDAz.SelectCommand = new SqlCommand("dbo.[Sol2_DocSubmission_ws_MoveToMainV2] @arn, @error output", connz);
+        //                    sqlDAz.SelectCommand.Parameters.AddWithValue("@arn", arn);
+        //                    sqlDAz.SelectCommand.Parameters.AddWithValue("@error", "");
+
+        //                    DataSet dsz = new DataSet("ds");
+        //                    DataTable dtz = null;
+        //                    //dtz = dsz.Tables[0];
+        //                    sqlDAz.Fill(dsz);
+        //                    connz.Close();
+
+        //                    using (StreamWriter writer = new StreamWriter(savefilepath, append: true))
+        //                    {
+        //                        writer.WriteLine("completed move to main");
+        //                    }
+        //                }
+        //            }
+
+        //        }
+        //        conn.Close();
+
+
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        error = "DP_NewSolicitor_AttachmentV2 failed with exception: " + ex.Message.ToString();
+        //        string errorDetail;
+        //        errorDetail = "Input Param: N/A";
+        //        LogErrorToDB("DP_NewSolicitor_AttachmentV2", "Exception", error, errorDetail);
+        //    }
+        //}
+
+
         [WebMethod]
         public void DP_NewSolicitor_AttachmentV2(ref string error)
         {
@@ -9625,11 +10168,18 @@ namespace HLBBWS
                             string AttachmentContent = dt1.Rows[dd]["AttachmentContent"].ToString();
                             string AttachmentFileType = dt1.Rows[dd]["AttachmentFileType"].ToString();
                             string AttachmentChecksum = dt1.Rows[dd]["AttachmentChecksum"].ToString();
+                            string AttachmentType = dt1.Rows[dd]["AttachmentType"].ToString();
+                            //string AttachmentType = dt1.Rows[dd]["AttachmentType"].ToString();
+
+                            //20221202 
+                            string arn_AttachmentType = arn + "_" + AttachmentType;
 
                             // upload to attachment staging 
                             if (fireeye_flag == "1")
                             {
                                 AV_UploadFileToAttachmentStaging(WF, arn, k2attachment, ref error);
+                                //20221202 
+                               //AV_UploadFileToAttachmentStaging(WF, arn_AttachmentType, k2attachment, ref error);
                             }
                             else
                             {
@@ -9719,7 +10269,7 @@ namespace HLBBWS
                             DataTable dtz = null;
                             //dtz = dsz.Tables[0];
                             sqlDAz.Fill(dsz);
-                            connz.Close();                         
+                            connz.Close();
                         }
                     }
 
@@ -10161,7 +10711,9 @@ namespace HLBBWS
                 SqlConnection connx = new SqlConnection(connstr);
 
                 SqlDataAdapter sqlDAx = new SqlDataAdapter();
-                sqlDAx.SelectCommand = new SqlCommand("dbo.[usp_ws_getEDMS_ProjectDisbursement_Setting] @error output", connx);
+                //sqlDAx.SelectCommand = new SqlCommand("dbo.[usp_ws_getEDMS_ProjectDisbursement_Setting] @error output", connx);
+                sqlDAx.SelectCommand = new SqlCommand("dbo.[sol2_ws_getEDMS_NOP_Setting] @error output", connx);
+                
                 sqlDAx.SelectCommand.Parameters.AddWithValue("@error", "");
 
                 DataSet dsx = new DataSet("ds");
@@ -10678,7 +11230,9 @@ namespace HLBBWS
 
                         string DP_ExportK2FileToEDMS_error = "";
 
-                        ExportFileResponseData response = DP_ExportK2FileToEDMS(ProfileName.ToString(), EDMSUploadFolder.ToString(), filecontent.ToString(), filename_original.ToString(), arn.ToString(), EDMSDocType.ToString(), Category.ToString(), CustomerID.ToString(), CustomerName.ToString(), ref DP_ExportK2FileToEDMS_error);
+                        //ExportFileResponseData response = DP_ExportK2FileToEDMS(ProfileName.ToString(), EDMSUploadFolder.ToString(), filecontent.ToString(), filename_original.ToString(), arn.ToString(), EDMSDocType.ToString(), Category.ToString(), CustomerID.ToString(), CustomerName.ToString(), ref DP_ExportK2FileToEDMS_error);
+                        ExportFileResponseData response = DP_ExportK2FileToEDMS(ProfileName.ToString(), EDMSUploadFolder.ToString(), filecontent.ToString(), "Sol2_NotificationOfPayment_LegalFee.pdf", arn.ToString(), EDMSDocType.ToString(), Category.ToString(), CustomerID.ToString(), CustomerName.ToString(), ref DP_ExportK2FileToEDMS_error);
+
 
                         SqlConnection connEDMS_EMAIL_PRE = new SqlConnection(connstr);
                         SqlDataAdapter sqlDEDMS_EMAIL_PRE;
@@ -10921,7 +11475,9 @@ namespace HLBBWS
 
                         string DP_ExportK2FileToEDMS_error = "";
 
-                        ExportFileResponseData response = DP_ExportK2FileToEDMS(ProfileName.ToString(), EDMSUploadFolder.ToString(), filecontent.ToString(), filename_original.ToString(), arn.ToString(), EDMSDocType.ToString(), Category.ToString(), CustomerID.ToString(), CustomerName.ToString(), ref DP_ExportK2FileToEDMS_error);
+                        //ExportFileResponseData response = DP_ExportK2FileToEDMS(ProfileName.ToString(), EDMSUploadFolder.ToString(), filecontent.ToString(), filename_original.ToString(), arn.ToString(), EDMSDocType.ToString(), Category.ToString(), CustomerID.ToString(), CustomerName.ToString(), ref DP_ExportK2FileToEDMS_error);
+                        ExportFileResponseData response = DP_ExportK2FileToEDMS(ProfileName.ToString(), EDMSUploadFolder.ToString(), filecontent.ToString(), "Sol2_NotificationOfPayment_ValuationFee.pdf", arn.ToString(), EDMSDocType.ToString(), Category.ToString(), CustomerID.ToString(), CustomerName.ToString(), ref DP_ExportK2FileToEDMS_error);
+                        
 
                         SqlConnection connEDMS_EMAIL_PRE = new SqlConnection(connstr);
                         SqlDataAdapter sqlDEDMS_EMAIL_PRE;
@@ -11054,7 +11610,9 @@ namespace HLBBWS
                 SqlConnection connx = new SqlConnection(connstr);
 
                 SqlDataAdapter sqlDAx = new SqlDataAdapter();
-                sqlDAx.SelectCommand = new SqlCommand("dbo.[aa_ws_getEDMS_SolicitorDisbursement_Setting] @error output", connx);
+               // sqlDAx.SelectCommand = new SqlCommand("dbo.[aa_ws_getEDMS_SolicitorDisbursement_Setting] @error output", connx);
+                sqlDAx.SelectCommand = new SqlCommand("dbo.sol2_ws_getEDMS_NOP_Setting @error output", connx);
+                
                 sqlDAx.SelectCommand.Parameters.AddWithValue("@error", "");
 
                 DataSet dsx = new DataSet("ds");
@@ -11108,13 +11666,16 @@ namespace HLBBWS
 
                     for (int j = 0; j < dtMasterList.Rows.Count; j++)
                     {
-                        //string arn = dtMasterList.Rows[j]["arn"].ToString();
+                        string arn = dtMasterList.Rows[j]["arn"].ToString();
                         //string runningid = dtMasterList.Rows[j]["RunningID"].ToString();
                         //string pdfid = dtMasterList.Rows[j]["ProcessPDFID"].ToString();
                         string receiveremail = dtMasterList.Rows[j]["receiveremail"].ToString();
                         string EmailBody = dtMasterList.Rows[j]["EmailBody"].ToString();
                         string EmailHeader = dtMasterList.Rows[j]["EmailHeader"].ToString();
-                        
+
+                        //20221227
+                        int AttachmentForEmail = 0;
+
                         var filename_original = "";
                         var filename_new = "";
                         var filecontent = "";
@@ -11128,8 +11689,9 @@ namespace HLBBWS
                         connSolEmail = new SqlConnection(connstr);
                         SqlDataAdapter sqlDASolEmail = new SqlDataAdapter();
 
-                        sqlDASolEmail.SelectCommand = new SqlCommand("dbo.sol2_NotificationOfPayment_NonFLVM_LS_ProcessEDMS_ListRecordBySolEmail @SolEmail", connSolEmail);
+                        sqlDASolEmail.SelectCommand = new SqlCommand("dbo.sol2_NotificationOfPayment_NonFLVM_LS_ProcessEDMS_ListRecordBySolEmail @SolEmail, @arn", connSolEmail);
                         sqlDASolEmail.SelectCommand.Parameters.AddWithValue("@SolEmail", receiveremail);
+                        sqlDASolEmail.SelectCommand.Parameters.AddWithValue("@arn", arn);
 
                         DataSet dsSolEmail = null;
                         DataTable dtSOlEmail = null;
@@ -11144,10 +11706,12 @@ namespace HLBBWS
 
                             for (int jj = 0; jj < dtSOlEmail.Rows.Count; jj++)
                             {
-                                string arn = dtSOlEmail.Rows[jj]["arn"].ToString();
+                                //string arn = dtSOlEmail.Rows[jj]["arn"].ToString();
                                 string runningid = dtSOlEmail.Rows[jj]["RunningID"].ToString();
                                 string pdfid = dtSOlEmail.Rows[jj]["ProcessPDFID"].ToString();
 
+                                //20221227
+                                string EmailRequired = dtSOlEmail.Rows[jj]["EmailRequired"].ToString();
 
                                 SqlConnection conn1 = null;
                                 conn1 = new SqlConnection(connstr);
@@ -11206,11 +11770,12 @@ namespace HLBBWS
 
                                 string DP_ExportK2FileToEDMS_error = "";
 
-                                ExportFileResponseData response = DP_ExportK2FileToEDMS(ProfileName.ToString(), EDMSUploadFolder.ToString(), filecontent.ToString(), filename_original.ToString(), arn.ToString(), EDMSDocType.ToString(), Category.ToString(), CustomerID.ToString(), CustomerName.ToString(), ref DP_ExportK2FileToEDMS_error);
+                                // ExportFileResponseData response = DP_ExportK2FileToEDMS(ProfileName.ToString(), EDMSUploadFolder.ToString(), filecontent.ToString(), filename_original.ToString(), arn.ToString(), EDMSDocType.ToString(), Category.ToString(), CustomerID.ToString(), CustomerName.ToString(), ref DP_ExportK2FileToEDMS_error);
+                                ExportFileResponseData response = DP_ExportK2FileToEDMS(ProfileName.ToString(), EDMSUploadFolder.ToString(), filecontent.ToString(), "Sol2_NotificationOfPayment_NonFLVM_LS.pdf", arn.ToString(), EDMSDocType.ToString(), Category.ToString(), CustomerID.ToString(), CustomerName.ToString(), ref DP_ExportK2FileToEDMS_error);
 
                                 if (Flag == 1)
                                 {
-
+                                    /*
                                     SqlConnection connEDMS_EMAIL_2 = new SqlConnection(connstr);
                                     SqlDataAdapter sqlDEDMS_EMAIL_2;
 
@@ -11223,33 +11788,45 @@ namespace HLBBWS
 
                                     string filename = dsAlpha.Tables[0].Rows[0]["PDFFileName"].ToString();
                                     string file = dsAlpha.Tables[0].Rows[0]["PDF"].ToString();
+                                    */
 
-                                    string EncryptedFile = DP_SetNotificationOfPaymentPassword(arn, file);
+                                    //20221227
+                                    if ( EmailRequired == "1")
+                                    {
+                                        AttachmentForEmail = 1;
 
-                                    if (concadinatedfilename == "")
-                                    {
-                                        concadinatedfilename =  filename;
-                                    }
-                                    else
-                                    {
-                                        concadinatedfilename = concadinatedfilename + "," + filename;
-                                    }
+                                        string filename = filename_original;
+                                        string file = filecontent;
 
-                                    if (concadinatedfilecontent == "")
-                                    {
-                                        concadinatedfilecontent =  EncryptedFile;
+                                        string EncryptedFile = DP_SetNotificationOfPaymentPassword(arn, file);
+
+                                        if (concadinatedfilename == "")
+                                        {
+                                            concadinatedfilename = filename;
+                                        }
+                                        else
+                                        {
+                                            concadinatedfilename = concadinatedfilename + "," + filename;
+                                        }
+
+                                        if (concadinatedfilecontent == "")
+                                        {
+                                            concadinatedfilecontent = EncryptedFile;
+                                        }
+                                        else
+                                        {
+                                            concadinatedfilecontent = concadinatedfilecontent + "," + EncryptedFile;
+                                        }
                                     }
-                                    else
-                                    {
-                                        concadinatedfilecontent = concadinatedfilecontent + "," + EncryptedFile;
-                                    }
-                                    
+                                   
+
+
                                 }
                             }
                         }
                         connSolEmail.Close();
 
-                        if (Flag == 1)
+                         if (Flag == 1)
                         {
                             if (receiveremail != "")
                             {
@@ -11257,17 +11834,24 @@ namespace HLBBWS
 
                                 //SendMail(ReceiverEmail, EmailHeader, EmailBody, EncryptedFile, filename);
 
-                                //Infobip enhancement 
-                                SendMailV2("SendToSolicitor-NotificationOfPayment", "SolicitorEmail", receiveremail, EmailHeader, EmailBody, receiveremail, 1, 1, concadinatedfilename, concadinatedfilecontent);
+                                //20221227
+                                if (AttachmentForEmail ==1)
+                                {
+                                    //Infobip enhancement 
+                                    SendMailV2("SendToSolicitor-NotificationOfPayment", "CreditApplicationNumber", arn, EmailHeader, EmailBody, receiveremail, 1, 1, concadinatedfilename, concadinatedfilecontent);
+
+                                }
                             }
-                        }
+                         }
+
                         // start move record to completed 
 
                         SqlConnection connMoveToMain = new SqlConnection(connstr);
 
                         SqlDataAdapter sqlDAMoveToMain = new SqlDataAdapter();
-                        sqlDAMoveToMain.SelectCommand = new SqlCommand("dbo.sol2_NotificationOfPayment_NonFLVM_LS_UpdateProcessEmailEndInfoBySolEmail @solemail", connMoveToMain);
+                        sqlDAMoveToMain.SelectCommand = new SqlCommand("dbo.sol2_NotificationOfPayment_NonFLVM_LS_UpdateProcessEmailEndInfoBySolEmail @solemail,@arn", connMoveToMain);
                         sqlDAMoveToMain.SelectCommand.Parameters.AddWithValue("@solemail", receiveremail);
+                        sqlDAMoveToMain.SelectCommand.Parameters.AddWithValue("@arn", arn);
 
                         DataSet dsMoveToMain = new DataSet("ds");
                         //DataTable dtARN = null;
@@ -11331,7 +11915,8 @@ namespace HLBBWS
                 SqlConnection connx = new SqlConnection(connstr);
 
                 SqlDataAdapter sqlDAx = new SqlDataAdapter();
-                sqlDAx.SelectCommand = new SqlCommand("dbo.[aa_ws_getEDMS_SolicitorDisbursement_Setting] @error output", connx);
+                //sqlDAx.SelectCommand = new SqlCommand("dbo.[aa_ws_getEDMS_SolicitorDisbursement_Setting] @error output", connx);
+                sqlDAx.SelectCommand = new SqlCommand("dbo.sol2_ws_getEDMS_NOP_Setting @error output", connx);               
                 sqlDAx.SelectCommand.Parameters.AddWithValue("@error", "");
 
                 DataSet dsx = new DataSet("ds");
@@ -11387,12 +11972,15 @@ namespace HLBBWS
 
                     for (int j = 0; j < dtMasterList.Rows.Count; j++)
                     {
-                        //string arn = dtMasterList.Rows[j]["arn"].ToString();
+                        string arn = dtMasterList.Rows[j]["arn"].ToString();
                         //string runningid = dtMasterList.Rows[j]["RunningID"].ToString();
                         //string pdfid = dtMasterList.Rows[j]["ProcessPDFID"].ToString();
                         string receiveremail = dtMasterList.Rows[j]["receiveremail"].ToString();
                         string EmailBody = dtMasterList.Rows[j]["EmailBody"].ToString();
                         string EmailHeader = dtMasterList.Rows[j]["EmailHeader"].ToString();
+
+                        //20221227
+                        int AttachmentForEmail = 0;
 
                         var filename_original = "";
                         var filename_new = "";
@@ -11407,8 +11995,9 @@ namespace HLBBWS
                         connSolEmail = new SqlConnection(connstr);
                         SqlDataAdapter sqlDASolEmail = new SqlDataAdapter();
 
-                        sqlDASolEmail.SelectCommand = new SqlCommand("dbo.sol2_NotificationOfPayment_NonFLVM_PR_ProcessEDMS_ListRecordBySolEmail @SolEmail", connSolEmail);
+                        sqlDASolEmail.SelectCommand = new SqlCommand("dbo.sol2_NotificationOfPayment_NonFLVM_PR_ProcessEDMS_ListRecordBySolEmail @SolEmail,@arn", connSolEmail);
                         sqlDASolEmail.SelectCommand.Parameters.AddWithValue("@SolEmail", receiveremail);
+                        sqlDASolEmail.SelectCommand.Parameters.AddWithValue("@arn", arn);
 
                         DataSet dsSolEmail = null;
                         DataTable dtSOlEmail = null;
@@ -11423,9 +12012,11 @@ namespace HLBBWS
 
                             for (int jj = 0; jj < dtSOlEmail.Rows.Count; jj++)
                             {
-                                string arn = dtSOlEmail.Rows[jj]["arn"].ToString();
+                                //string arn = dtSOlEmail.Rows[jj]["arn"].ToString();
                                 string runningid = dtSOlEmail.Rows[jj]["RunningID"].ToString();
                                 string pdfid = dtSOlEmail.Rows[jj]["ProcessPDFID"].ToString();
+                                //20221227
+                                string EmailRequired = dtSOlEmail.Rows[jj]["EmailRequired"].ToString();
 
 
                                 SqlConnection conn1 = null;
@@ -11485,11 +12076,13 @@ namespace HLBBWS
 
                                 string DP_ExportK2FileToEDMS_error = "";
 
-                                ExportFileResponseData response = DP_ExportK2FileToEDMS(ProfileName.ToString(), EDMSUploadFolder.ToString(), filecontent.ToString(), filename_original.ToString(), arn.ToString(), EDMSDocType.ToString(), Category.ToString(), CustomerID.ToString(), CustomerName.ToString(), ref DP_ExportK2FileToEDMS_error);
+                              //  ExportFileResponseData response = DP_ExportK2FileToEDMS(ProfileName.ToString(), EDMSUploadFolder.ToString(), filecontent.ToString(), filename_original.ToString(), arn.ToString(), EDMSDocType.ToString(), Category.ToString(), CustomerID.ToString(), CustomerName.ToString(), ref DP_ExportK2FileToEDMS_error);
+                                ExportFileResponseData response = DP_ExportK2FileToEDMS(ProfileName.ToString(), EDMSUploadFolder.ToString(), filecontent.ToString(), "Sol2_NotificationOfPayment_NonFLVM_PR.pdf", arn.ToString(), EDMSDocType.ToString(), Category.ToString(), CustomerID.ToString(), CustomerName.ToString(), ref DP_ExportK2FileToEDMS_error);
+                               // ExportFileResponseData response = DP_ExportK2FileToEDMS(ProfileName.ToString(), EDMSUploadFolder.ToString(), filecontent.ToString(), "Sol2_NotificationOfPayment_NonFLVM_PR.pdf", arn.ToString(), EDMSDocType.ToString(), Category.ToString(), CustomerID.ToString(), CustomerName.ToString(), ref DP_ExportK2FileToEDMS_error);
 
                                 if (Flag == 1)
                                 {
-
+                                    /*
                                     SqlConnection connEDMS_EMAIL_2 = new SqlConnection(connstr);
                                     SqlDataAdapter sqlDEDMS_EMAIL_2;
 
@@ -11502,26 +12095,38 @@ namespace HLBBWS
 
                                     string filename = dsAlphaEDMS_EMAIL_2.Tables[0].Rows[0]["PDFFileName"].ToString();
                                     string file = dsAlphaEDMS_EMAIL_2.Tables[0].Rows[0]["PDF"].ToString();
+                                    */
 
-                                    string EncryptedFile = DP_SetNotificationOfPaymentPassword(arn, file);
+                                    //20221227 
+                                    if (EmailRequired == "1")
+                                    {
+                                        AttachmentForEmail = 1;
+                                        string filename = filename_original;
+                                        string file = filecontent;
 
-                                    if (concadinatedfilename == "")
-                                    {
-                                        concadinatedfilename = filename;
-                                    }
-                                    else
-                                    {
-                                        concadinatedfilename = concadinatedfilename + "," + filename;
+                                        string EncryptedFile = DP_SetNotificationOfPaymentPassword(arn, file);
+
+                                        if (concadinatedfilename == "")
+                                        {
+                                            concadinatedfilename = filename;
+                                        }
+                                        else
+                                        {
+                                            concadinatedfilename = concadinatedfilename + "," + filename;
+                                        }
+
+                                        if (concadinatedfilecontent == "")
+                                        {
+                                            concadinatedfilecontent = EncryptedFile;
+                                        }
+                                        else
+                                        {
+                                            concadinatedfilecontent = concadinatedfilecontent + "," + EncryptedFile;
+                                        }
                                     }
 
-                                    if (concadinatedfilecontent == "")
-                                    {
-                                        concadinatedfilecontent = EncryptedFile;
-                                    }
-                                    else
-                                    {
-                                        concadinatedfilecontent = concadinatedfilecontent + "," + EncryptedFile;
-                                    }
+
+                                   
                                 }
                             }
                         }
@@ -11535,17 +12140,23 @@ namespace HLBBWS
 
                                 //SendMail(ReceiverEmail, EmailHeader, EmailBody, EncryptedFile, filename);
 
-                                //Infobip enhancement 
-                                SendMailV2("SendToSolicitor-NotificationOfPayment", "SolicitorEmail", receiveremail, EmailHeader, EmailBody, receiveremail, 1, 1, concadinatedfilename, concadinatedfilecontent);
+                                //20221227
+                                if (AttachmentForEmail == 1)
+                                {
+                                    //Infobip enhancement 
+                                    SendMailV2("SendToSolicitor-NotificationOfPayment", "CreditApplicationNumber", arn, EmailHeader, EmailBody, receiveremail, 1, 1, concadinatedfilename, concadinatedfilecontent);
+                                }
                             }
                         }
+
                         // start move record to completed 
 
                         SqlConnection connMoveToMain = new SqlConnection(connstr);
 
                         SqlDataAdapter sqlDAMoveToMain = new SqlDataAdapter();
-                        sqlDAMoveToMain.SelectCommand = new SqlCommand("dbo.sol2_NotificationOfPayment_NonFLVM_PR_UpdateProcessEmailEndInfoBySolEmail @solemail", connMoveToMain);
+                        sqlDAMoveToMain.SelectCommand = new SqlCommand("dbo.sol2_NotificationOfPayment_NonFLVM_PR_UpdateProcessEmailEndInfoBySolEmail @solemail,@arn", connMoveToMain);
                         sqlDAMoveToMain.SelectCommand.Parameters.AddWithValue("@solemail", receiveremail);
+                        sqlDAMoveToMain.SelectCommand.Parameters.AddWithValue("@arn", arn);
 
                         DataSet dsMoveToMain = new DataSet("ds");
                         //DataTable dtARN = null;
@@ -14681,6 +15292,7 @@ namespace HLBBWS
                 sqlDAPRE.SelectCommand.Parameters.AddWithValue("@arn", folio);
                 sqlDAPRE.SelectCommand.Parameters.AddWithValue("@k2attachment", attachment);
                 sqlDAPRE.SelectCommand.Parameters.AddWithValue("@WF", WF);
+                //sqlDAPRE.SelectCommand.Parameters.AddWithValue("@fileID", fileID);
                 sqlDAPRE.SelectCommand.Parameters.AddWithValue("@error", error);
 
                 //string fireeye_flag;
@@ -15230,8 +15842,30 @@ namespace HLBBWS
                                 var DefaultFileName = dtx.Rows[0]["DefaultFileName"];
                                 var EDMSUploadFolder = dtx.Rows[0]["EDMSUploadFolder"];
                                 var Category = dtx.Rows[0]["Category"];
-                                connx.Close();
+                                //connx.Close();
                                 // end get edms settings
+
+                                // start get edms settings for CRA01 Letter Of Offer 
+                                SqlConnection conn_LO = new SqlConnection(connstr);
+
+                                SqlDataAdapter sqlDA_LO = new SqlDataAdapter();
+                                sqlDA_LO.SelectCommand = new SqlCommand("dbo.[usp_ws_getEDMS_Solicitor_LO_Setting] @error output", connx);
+                                sqlDA_LO.SelectCommand.Parameters.AddWithValue("@error", "");
+
+                                DataSet ds_LO = new DataSet("ds");
+                                DataTable dt_LO = null;
+
+                                sqlDA_LO.Fill(ds_LO);
+                                dt_LO = ds_LO.Tables[0];
+
+                                var EDMSDocType_LO = dt_LO.Rows[0]["EDMSDocType"];
+                                var ProfileName_LO = dt_LO.Rows[0]["ProfileName"];
+                                var LoginUser_LO = dt_LO.Rows[0]["LoginUser"];
+                                var DefaultFileName_LO = dt_LO.Rows[0]["DefaultFileName"];
+                                var EDMSUploadFolder_LO = dt_LO.Rows[0]["EDMSUploadFolder"];
+                                var Category_LO = dt_LO.Rows[0]["Category"];
+                                //connx.Close();
+                                // end get edms settings for CRA01 Letter Of Offer 
 
                                 // start get customer name and id for the selected arn 
                                 SqlConnection conny = new SqlConnection(connstr);
@@ -15290,9 +15924,46 @@ namespace HLBBWS
                                         var fe_failed_description = dt1.Rows[j]["fe_failed_description"];
                                         var fe_failed_code = dt1.Rows[j]["fe_failed_code"];
                                         var d_result = dt1.Rows[j]["result"];
+                                        var SHA2_256 = dt1.Rows[j]["SHA2_256"];
 
-                                        string DP_ExportK2FileToEDMS_error = "";
-                                        ExportFileResponseData response = DP_ExportK2FileToEDMS(ProfileName.ToString(), EDMSUploadFolder.ToString(), filecontent.ToString(), filename_original + "." + filetype, arn, EDMSDocType.ToString(), Category.ToString(), CustomerID.ToString(), CustomerName.ToString(), ref DP_ExportK2FileToEDMS_error);
+                                        //string strSHA2_256 = Convert.ToBase64String(SHA2_256);
+
+                                        // start get attachment type 
+                                        //SqlConnection conn1 = null;
+                                        conn1 = new SqlConnection(connstr);
+                                        SqlDataAdapter sqlDA_Att = new SqlDataAdapter();
+                                        sqlDA_Att.SelectCommand = new SqlCommand("dbo.[Sol2_DocSubmission_ws_AVJob_GetAttachmentType2] @arn, @filecontent, @attachmenttype output", conn1);
+                                        sqlDA_Att.SelectCommand.Parameters.AddWithValue("@arn", arn);
+                                        sqlDA_Att.SelectCommand.Parameters.AddWithValue("@filecontent", filecontent);
+                                        //sqlDA_Att.SelectCommand.Parameters.AddWithValue("@error", error);
+
+                                        sqlDA_Att.SelectCommand.Parameters.Add("@attachmenttype", SqlDbType.NVarChar, -1);
+                                        sqlDA_Att.SelectCommand.Parameters["@attachmenttype"].Direction = ParameterDirection.Output;
+
+                                        DataSet ds_Att = null;
+                                        //DataTable dt_Att = null;
+
+                                        ds_Att = new DataSet("ds");
+
+                                        sqlDA_Att.Fill(ds_Att);
+
+                                        string AttachmentType = sqlDA_Att.SelectCommand.Parameters["@attachmenttype"].Value.ToString();
+
+                                        if (AttachmentType == "Letter Of Offer")
+                                        {
+                                            string DP_ExportK2FileToEDMS_error = "";
+                                            //ExportFileResponseData response = DP_ExportK2FileToEDMS(ProfileName_LO.ToString(), EDMSUploadFolder_LO.ToString(), filecontent.ToString(), filename_original + "." + filetype, arn, EDMSDocType_LO.ToString(), Category_LO.ToString(), CustomerID.ToString(), CustomerName.ToString(), ref DP_ExportK2FileToEDMS_error);
+                                            ExportFileResponseData response = DP_ExportK2FileToEDMS(ProfileName_LO.ToString(), EDMSUploadFolder_LO.ToString(), filecontent.ToString(), "LetterOfOffer.pdf", arn, EDMSDocType_LO.ToString(), Category_LO.ToString(), CustomerID.ToString(), CustomerName.ToString(), ref DP_ExportK2FileToEDMS_error);
+
+                                        }
+
+                                        if (AttachmentType == "Supporting Document")
+                                        {
+                                            string DP_ExportK2FileToEDMS_error = "";
+                                           // ExportFileResponseData response = DP_ExportK2FileToEDMS(ProfileName.ToString(), EDMSUploadFolder.ToString(), filecontent.ToString(), filename_original + "." + filetype, arn, EDMSDocType.ToString(), Category.ToString(), CustomerID.ToString(), CustomerName.ToString(), ref DP_ExportK2FileToEDMS_error);
+                                            ExportFileResponseData response = DP_ExportK2FileToEDMS(ProfileName.ToString(), EDMSUploadFolder.ToString(), filecontent.ToString(), "SupportingDocument.pdf", arn, EDMSDocType.ToString(), Category.ToString(), CustomerID.ToString(), CustomerName.ToString(), ref DP_ExportK2FileToEDMS_error);
+                                        }
+
 
                                     }
                                 }
@@ -16263,7 +16934,7 @@ namespace HLBBWS
                         var arn = dt.Rows[a]["ARN"];
                         var draftID = dt.Rows[a]["Draft"];
 
-                        if (result.ToString() == "passed")                        
+                        if (result.ToString() == "passed")
                         {
                             // start get edms settings 
                             SqlConnection connx = new SqlConnection(connstr);
@@ -16562,7 +17233,7 @@ namespace HLBBWS
                     }
                 }
 
-                
+
 
 
 
@@ -17101,7 +17772,8 @@ namespace HLBBWS
                                         var d_result = dt1.Rows[j]["result"];
 
                                         string DP_ExportK2FileToEDMS_error = "";
-                                        ExportFileResponseData response = DP_ExportK2FileToEDMS(ProfileName.ToString(), EDMSUploadFolder.ToString(), filecontent.ToString(), filename_original + "." + filetype, arn, EDMSDocType.ToString(), Category.ToString(), CustomerID.ToString(), CustomerName.ToString(), ref DP_ExportK2FileToEDMS_error);
+                                        //ExportFileResponseData response = DP_ExportK2FileToEDMS(ProfileName.ToString(), EDMSUploadFolder.ToString(), filecontent.ToString(), filename_original + "." + filetype, arn, EDMSDocType.ToString(), Category.ToString(), CustomerID.ToString(), CustomerName.ToString(), ref DP_ExportK2FileToEDMS_error);
+                                        ExportFileResponseData response = DP_ExportK2FileToEDMS(ProfileName.ToString(), EDMSUploadFolder.ToString(), filecontent.ToString(), "VR.pdf", arn, EDMSDocType.ToString(), Category.ToString(), CustomerID.ToString(), CustomerName.ToString(), ref DP_ExportK2FileToEDMS_error);
 
                                     }
                                 }

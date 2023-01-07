@@ -111,9 +111,12 @@ namespace HLBBWS
             
             string error = "";
            HLBBWS.AppWS ws = new AppWS();
-           // HLBBWS.InfobipAPI ws = new InfobipAPI();
+           
+          //  ws.Sol2_NotificationOfPayment_NonFLVM_PR_ProcessEDMSEmail(ref error);
+            ws.DP_CompletedSolicitor_AttachmentV2(ref error);
+            // HLBBWS.InfobipAPI ws = new InfobipAPI();
 
-           // ws.Infobip_SendEmail(75,ref error);
+            // ws.Infobip_SendEmail(75,ref error);
             string testdate;
             testdate = " ";
 
@@ -184,7 +187,7 @@ namespace HLBBWS
             string str8 = "";
             string str9 = "";
             string str10 = "";
-            ws.Sol2_PendingPhysicalDocReceivedEmailLog_Doc(ref error);
+           // ws.Sol2_PendingPhysicalDocReceivedEmailLog_Doc(ref error);
             // ws.DP_LdapAuthentication("workgroup", "jasonangota", "", ref str1, ref str2, ref str3, ref str4, ref str5, ref str6, ref str7, ref str8);
             // int wfid = ws.k2_getworkflowid("DisChecker_Approval");
             // ws.k2_startworkflowbyID(wfid,"123");

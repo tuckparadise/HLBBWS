@@ -1,0 +1,97 @@
+start debug
+start get fireeye flag
+fireeye flag value:1
+Start Find Case
+arn value:AMP/MG/2018/Z0100413
+start find attachment
+attachment nane:ECheckList (22).pdf
+start move to staging
+completed move to staging
+attachment nane:ECheckList (19).pdf
+start move to staging
+completed move to staging
+start update start date
+completed update start date
+start create master
+completed create master
+start debug
+start get fireeye flag
+fireeye flag value:0
+Start Find Case
+arn value:AMP/MG/2018/Z0100414
+start find attachment
+attachment nane:ECheckList (20).pdf
+start move to edms
+completed move to edms
+attachment nane:ECheckList (17).pdf
+start move to edms
+completed move to edms
+start update start date
+completed update start date
+start move to main
+completed move to main
+start debug
+start get fireeye flag
+fireeye flag value:0
+Start Find Case
+arn value:AMP/MG/2018/Z0100414
+start find attachment
+attachment nane:ECheckList (20).pdf
+start move to edms
+completed move to edms
+attachment nane:ECheckList (15).pdf
+start move to edms
+completed move to edms
+start update start date
+completed update start date
+start move to main
+completed move to main
+start debug
+start get fireeye flag
+fireeye flag value:0
+Start Find Case
+arn value:SAN/MG/2014/Z0100026
+start find attachment
+attachment nane:NotificationOfPayment_ValuationFee (1).pdf
+start move to edms
+completed move to edms
+attachment nane:NotificationOfPayment_ValuationFee.pdf
+start move to edms
+completed move to edms
+start update start date
+completed update start date
+start move to main
+completed move to main
+start debug
+start get fireeye flag
+fireeye flag value:0
+Start Find Case
+arn value:JBU/MG/2016/Z0100037
+start find attachment
+start debug
+attachment nane:SANMG2019Z0100352.pdf
+start move to edms
+completed move to edms
+attachment nane:AMPMG2021R0100548 (1).pdf
+start move to edms
+completed move to edms
+start update start date
+completed update start date
+start move to main
+completed move to main
+start debug
+start get fireeye flag
+fireeye flag value:1
+Start Find Case
+arn value:tai/rb/2017/z0000238
+start find attachment
+attachment nane:KLMMG2021R0103177 (5).pdf
+start move to staging
+completed move to staging
+attachment nane:KLMMG2021R0103177 (4).pdf
+start move to staging
+completed move to staging
+start update start date
+completed update start date
+start create master
+completed create master

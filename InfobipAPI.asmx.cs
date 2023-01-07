@@ -149,8 +149,8 @@ namespace HLBBWS
 
                 for (int i = 0; i < ds.Tables[0].Rows.Count; i++)
                 {
-                    string FileName = ds.Tables[0].Rows[0]["FileName"].ToString();
-                    string Base64FileContent = ds.Tables[0].Rows[0]["Base64FileContent"].ToString();
+                    string FileName = ds.Tables[0].Rows[i]["FileName"].ToString();
+                    string Base64FileContent = ds.Tables[0].Rows[i]["Base64FileContent"].ToString();
 
                     string[] arrstr = FileName.Split('.');
 
@@ -160,17 +160,20 @@ namespace HLBBWS
                     // arrcontent.Add(Base64FileContent);
 
                     // start generate attachment file if applicable 
-
-                    long long_datetime = long.Parse(System.DateTime.Now.ToString("yyyyMMddHHmmssff"));
+                    //20221227
+                    //long long_datetime = long.Parse(System.DateTime.Now.ToString("yyyyMMddHHmmssffffff"));
+                    string long_datetime = System.DateTime.Now.ToString("yyyyMMddHHmmssffffff");
+                    //long long_datetime = long.Parse(System.DateTime.Now.ToString("yyyyMMdd"));
                     //System.Web.HttpContext.Current
-                    
+
                     string savefilepath = HttpContext.Current.Server.MapPath("~/");
                     // string savefilepath = GetCurrentDirectory();
                     // string savefilepath = Directory.GetCurrentDirectory();
                     // string savefilepath = System.Web.HttpContext.Current.Server.MapPath("~/");
                     savefilepath += "\\files\\";
 
-                   string newfilename = long_datetime.ToString() + "." + subfiletype;
+                   //string newfilename = long_datetime.ToString() + "." + subfiletype;
+                    string newfilename = long_datetime + "." + subfiletype;
 
                     byte[] byteFileContent = Convert.FromBase64String(Base64FileContent);
 
@@ -483,7 +486,7 @@ namespace HLBBWS
 
                 for (int i = 0; i < ds.Tables[0].Rows.Count; i++)
                 {
-                    long long_datetime = long.Parse(System.DateTime.Now.ToString("yyyyMMddHHmmssff"));
+                    long long_datetime = long.Parse(System.DateTime.Now.ToString("yyyyMMddHHmmssffff"));
 
                     string FileName = ds.Tables[0].Rows[0]["FileName"].ToString();
                     string Base64FileContent = ds.Tables[0].Rows[0]["Base64FileContent"].ToString();
